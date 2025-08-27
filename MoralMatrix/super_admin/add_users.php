@@ -132,6 +132,8 @@ $tempPassword = generateTempPassword();
         <input type = "text" id="password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
         <button type="button" onclick ="generatePass()">Generate Password</button>
 
+    </form>
+
         <script>
 function generatePass() {
     let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
