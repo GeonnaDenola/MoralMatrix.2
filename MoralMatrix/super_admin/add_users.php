@@ -131,7 +131,8 @@ $tempPassword = generateTempPassword();
         <label for = "password">Temporary Password:</label><br>
         <input type = "text" id="password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
         <button type="button" onclick ="generatePass()">Generate Password</button>
-
+         
+         <button type="submit" class= "btn_submit">Add Admin Account</button>
     </form>
 
         <script>
@@ -149,8 +150,5 @@ function generatePass() {
             <img id="preview" src="" alt="Image Preview">
         </div><br><br>
 
-   
-
-        <button type="submit" class= "btn_submit">Add Admin Account</button>
 </body>
 </html>
