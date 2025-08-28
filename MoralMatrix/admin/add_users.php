@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $photo = "";
 
         if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-            $photo = file_get_contents($_FILES["photo"]["tmp_name"]);
+            $photo = $_FILES["photo"]["name"];
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
