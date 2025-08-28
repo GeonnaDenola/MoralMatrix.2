@@ -117,6 +117,7 @@ $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     institute VARCHAR(255),
     course VARCHAR(255),
     level INT,
+    section VARCHAR(50),
     guardian VARCHAR(50),
     guardian_mobile VARCHAR(15),
     password VARCHAR(255) NOT NULL,
