@@ -109,6 +109,7 @@ $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(50) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
+    middle_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
     email VARCHAR(50) NOT NULL,
