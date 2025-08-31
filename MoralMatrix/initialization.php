@@ -46,7 +46,7 @@ $sqlCreateLoginSchema = "CREATE TABLE IF NOT EXISTS accounts (
     id_number VARCHAR(50) NOT NULL,
     email VARCHAR(50) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    account_type ENUM('super_admin', 'administrator', 'ccdu', 'faculty', 'student') NOT NULL
+    account_type ENUM('super_admin', 'administrator', 'ccdu', 'faculty', 'student', 'security') NOT NULL
 )";
 if ($conn->query($sqlCreateLoginSchema) === FALSE) {
     handleQueryError($sqlCreateLoginSchema, $conn);
@@ -84,6 +84,7 @@ $sqlCreateFacultyAccountSchema = "CREATE TABLE IF NOT EXISTS faculty_account (
 )";
 if ($conn->query($sqlCreateFacultyAccountSchema) === FALSE) {
     handleQueryError($sqlCreateFacultyAccountSchema, $conn);
+
 }
 
 // CCDU table
@@ -96,12 +97,30 @@ $sqlCreateCcduAccountSchema = "CREATE TABLE IF NOT EXISTS ccdu_account (
     email VARCHAR(50) NOT NULL,
     password VARCHAR(255) NOT NULL,
     photo BLOB,
-    institute VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )";
 if ($conn->query($sqlCreateCcduAccountSchema) === FALSE) {
     handleQueryError($sqlCreateCcduAccountSchema, $conn);
+
+}
+
+// Security table
+$sqlCreateSecurityAccountSchema = "CREATE TABLE IF NOT EXISTS security_account (
+    record_id INT AUTO_INCREMENT PRIMARY KEY,
+    security_id VARCHAR(50) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    mobile VARCHAR(15) NOT NULL,
+    email VARCHAR(50) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    photo BLOB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
+if ($conn->query($sqlCreateSecurityAccountSchema) === FALSE) {
+    handleQueryError($sqlCreateSecurityAccountSchema, $conn);
+
 }
 
 // Student table
