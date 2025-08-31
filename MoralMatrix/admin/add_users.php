@@ -39,10 +39,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         $account_type = "student";
 
-        $sql_student = "INSERT INTO student_account (student_id, first_name, middle_name, last_name, mobile, email, institute, course, level, section, guardian, guardian_mobile, photo) VALUE ('$student_id', '$first_name', '$middle_name', '$last_name', '$mobile', '$email', '$institute', '$course', '$level', '$section', '$guardian', '$guardian_mobile', '$photo')";
+        $sql_student = "INSERT INTO student_account (student_id, first_name, middle_name, last_name, mobile, email, institute, course, level, section, guardian, guardian_mobile, photo) VALUES ('$student_id', '$first_name', '$middle_name', '$last_name', '$mobile', '$email', '$institute', '$course', '$level', '$section', '$guardian', '$guardian_mobile', '$photo')";
 
         if ($conn->query($sql_student) === TRUE){
-            $sql_account = "INSERT INTO accounts (id_number, email, password, account_type) VALUE ('$student_id', '$email', '$hashedPassword', '$account_type')";
+            $sql_account = "INSERT INTO accounts (id_number, email, password, account_type) VALUES ('$student_id', '$email', '$hashedPassword', '$account_type')";
 
             if ($conn->query($sql_account) === TRUE){
                 echo "Account Added Succesfully";
@@ -76,10 +76,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         $account_type = "faculty";
 
-        $sql_faculty = "INSERT INTO faculty_account (faculty_id, first_name, last_name, mobile, email, institute, photo) VALUE ('$faculty_id', '$first_name', '$last_name', '$mobile', '$email', '$institute', '$photo')";
+        $sql_faculty = "INSERT INTO faculty_account (faculty_id, first_name, last_name, mobile, email, institute, photo) VALUES ('$faculty_id', '$first_name', '$last_name', '$mobile', '$email', '$institute', '$photo')";
 
         if ($conn->query($sql_faculty) === TRUE){
-            $sql_account = "INSERT INTO accounts (id_number, email, password, account_type) VALUE ('$faculty_id', '$email', '$hashedPassword', '$account_type')";
+            $sql_account = "INSERT INTO accounts (id_number, email, password, account_type) VALUES ('$faculty_id', '$email', '$hashedPassword', '$account_type')";
 
             if ($conn->query($sql_account) === TRUE){
                 echo "Account Added Succesfully";
@@ -93,7 +93,76 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $conn->close();
         
     }
-       
+
+// CCDU
+    elseif($_POST['account_type'] === "ccdu"){
+        $ccdu_id = $_POST['ccdu_id'];
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+        $mobile = $_POST['mobile'];
+        $email = $_POST['email'];
+        $password = $_POST['password'];
+        $photo = "";
+
+         if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+            $photo = $_FILES["photo"]["name"];
+        }
+
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $account_type = "ccdu";
+
+         $sql_ccdu = "INSERT INTO ccdu_account (ccdu_id, first_name, last_name, mobile, email, photo) VALUES ('$ccdu_id', '$first_name', '$last_name', '$mobile', '$email', '$photo')";
+
+        if ($conn->query($sql_ccdu) === TRUE){
+            $sql_account = "INSERT INTO accounts (id_number, email, password, account_type) VALUES ('$ccdu_id', '$email', '$hashedPassword', '$account_type')";
+
+            if ($conn->query($sql_account) === TRUE){
+                echo "Account Added Succesfully";
+            } else {
+                echo "Error registering account";
+            }
+        } else {
+            echo "Error inserting";
+        }
+
+         $conn->close();
+        
+    }
+
+// SECURITY
+    elseif($_POST['account_type'] === "security"){
+        $security_id = $_POST['security_id'];
+        $first_name = $_POST['first_name'];
+        $last_name = $_POST['last_name'];
+        $mobile = $_POST['mobile'];
+        $email = $_POST['email'];
+        $password = $_POST['password'];
+        $photo = "";
+
+         if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+            $photo = $_FILES["photo"]["name"];
+        }
+
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $account_type = "security";
+
+         $sql_security = "INSERT INTO security_account (security_id, first_name, last_name, mobile, email, photo) VALUES ('$security_id', '$first_name', '$last_name', '$mobile', '$email', '$photo')";
+
+        if ($conn->query($sql_security) === TRUE){
+            $sql_account = "INSERT INTO accounts (id_number, email, password, account_type) VALUES ('$security_id', '$email', '$hashedPassword', '$account_type')";
+
+            if ($conn->query($sql_account) === TRUE){
+                echo "Account Added Succesfully";
+            } else {
+                echo "Error registering account";
+            }
+        } else {
+            echo "Error inserting";
+        }
+
+         $conn->close();
+        
+    }
 
 }
         
@@ -118,6 +187,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
             <option value="faculty">Faculty</option>
             <option value="student">Student</option>
             <option value="ccdu">CCDU Staff</option>
+             <option value="security">Security Personnel</option>
         </select><br><br>
 
 <!--STUDENT FORM-->
@@ -248,7 +318,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <input type="hidden" name="account_type" value="ccdu">
 
                 <label>ID Number:</label>
-                <input type="number" name="faculty_id" id="faculty_id" pattern="^\d{4}-\d{4}$" required><br>
+                <input type="number" name="ccdu_id" id="ccdu_id" pattern="^\d{4}-\d{4}$" required><br>
 
                 <label>First Name: </label>
                 <input type="text" name="first_name" id="first_name" required>
@@ -273,12 +343,48 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
             </form>
         </div>
 
+<!--SECURITY FORM-->
+        <div id="securityForm" class="form-container">
+            <h3>Register Security Personnel Account<h3>
+                
+            <form action="" method="POST"  enctype="multipart/form-data">
+
+                <input type="hidden" name="account_type" value="security">
+
+                <label>ID Number:</label>
+                <input type="number" name="security_id" id="security_id" pattern="^\d{4}-\d{4}$" required><br>
+
+                <label>First Name: </label>
+                <input type="text" name="first_name" id="first_name" required>
+
+                <label>Last Name: </label>
+                <input type="text" name="last_name" id="last_name" required>
+
+                <label>Contact Number: </label>
+                <input type="number" name="mobile" id="mobile" required>
+
+                <label>Email: </label>
+                <input type="email" name="email" id="email" required><br>
+
+                <label for = "photo">Profile Picture:</label><br>
+                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" required><br><br>
+
+                <label for = "password">Temporary Password:</label><br>
+                <input type = "text" id="security_password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
+                <button type="button" onclick ="generatePass('security_password')">Generate Password</button><br><br>
+
+                <button type="submit" class= "btn_submit">Register Account</button>
+            </form>
+        </div>
+
+
 <script>
 
     window.onload = function() {
       document.getElementById("studentForm").style.display = "none";
       document.getElementById("facultyForm").style.display = "none";
       document.getElementById("ccduForm").style.display = "none";
+      document.getElementById("securityForm").style.display = "none";
     };
 
     function toggleForms(){
@@ -287,6 +393,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         document.getElementById("studentForm").style.display ="none";
         document.getElementById("facultyForm").style.display ="none";
         document.getElementById("ccduForm").style.display ="none";
+        document.getElementById("securityForm").style.display = "none";
 
         if (selected === "student"){
             document.getElementById("studentForm").style.display = "block";
@@ -294,6 +401,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
             document.getElementById("facultyForm").style.display = "block";
         } else if (selected === "ccdu"){
             document.getElementById("ccduForm").style.display = "block";
+        }   else if (selected === "security"){
+            document.getElementById("securityForm").style.display = "block";
         }
     }
 
