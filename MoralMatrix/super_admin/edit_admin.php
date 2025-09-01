@@ -1,3 +1,33 @@
+<?php
+
+include '../config.php';
+
+$servername = $database_settings['servername'];
+$username   = $database_settings['username'];
+$password   = $database_settings['password'];
+$dbname     = $database_settings['dbname'];
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+if(!isset($_GET['id']) || empty($_GET['id'])){
+    die("No admin selected.");
+}
+
+$id = intval($_GET['id']);
+$result = $conn->query("SELECT * FROM admin_account WHERE record_id = $id");
+
+if($result->num_rows === 0){
+    die("Admin not found.");
+}
+
+$admin = $result->fetch_assoc();
+$conn->close();
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,7 +41,7 @@
 
     <form action="update_admin.php" method="post" enctype="multipart/form-data">
         
-        <input type="hidden" name="record_id" value="<?php echo $admin['record_id']; ?>">
+        <input type="hidden" name="record_id" value="<?php echo $id; ?>">
 
         <label for = "admin_id">ID Number:</label><br>
         <input type ="number" id="admin_id" name="admin_id" value="<?php echo $admin['admin_id']; ?>" ><br><br>
@@ -32,7 +62,9 @@
         <input type ="email" id="email" name="email" value="<?php echo $admin['email']; ?>"><br><br>
 
         <label for = "photo">Profile Picture:</label><br>
-        <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" value="<?php echo $admin['record_id']; ?>"><br><br>
+        <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" value="<?php echo $admin['photo']; ?>"><br><br>
+
+        <button type="submit">Update</button>
 
     </form>
 </body>

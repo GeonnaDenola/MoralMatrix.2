@@ -59,8 +59,8 @@
                             </div>
                         </div>
                         <div class="actions">
-                            <button onclick="editAdmin(${admin.admin_id})">Edit</button>
-                            <button onclick="deleteAdmin(${admin.admin_id})">Delete</button>
+                            <button onclick="editAdmin(${admin.record_id})">Edit</button>
+                            <button onclick="deleteAdmin(${admin.record_id})">Delete</button>
                         </div>
                         `;
                         container.appendChild(card);
@@ -73,8 +73,7 @@
     }
 
             function editAdmin(id){
-                //redirect to page with ID
-                window.location.href = "edit_admin.php?id" + id;
+                window.location.href = "edit_admin.php?id=" + id;
             }
 
             function deleteAdmin(id){
