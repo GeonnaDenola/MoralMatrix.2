@@ -14,7 +14,7 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 
 //Fetch all admins
 
-$sql = "SELECT admin_id, first_name, last_name, middle_name, mobile, email, photo FROM admin_account ORDER BY admin_id ASC";
+$sql = "SELECT record_id, admin_id, first_name, last_name, middle_name, mobile, email, photo FROM admin_account ORDER BY admin_id ASC";
 $result = $conn->query($sql);
 
 $admins = [];

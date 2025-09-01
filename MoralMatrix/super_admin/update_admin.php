@@ -13,7 +13,8 @@ if ($conn->connect_error) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST"){
-    $id = intval($_POST['admin_id']);
+    $id = intval($_POST['record_id']);
+    $admin_id = $_POST['admin_id'];
     $first_name = $_POST['first_name'];
     $middle_name = $_POST['middle_name'];
     $last_name = $_POST['last_name'];
@@ -23,26 +24,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
     $photo = null;
     if(!empty($_FILES['photo']['name'])){
         $photo = time() . "_" . basename($_FILES['photo']['name']);
-        move_uploaded_files($_FILES['photo']['tmp_name'], "uploads/" .$photo);
+        move_uploaded_file($_FILES['photo']['tmp_name'], "uploads/" .$photo);
     }
 
     $conn->begin_transaction();
 
     try {
         if ($photo){
-            $stmt1 = $conn->prepare("UPDATE admin_account SET first_name=?, middle_name=?, last_name=? email=?. mobile=?, photo=? WHERE admin_id=?");
-            $stmt1->bind_param("ssssssi", $first_name, $middle_name, $last_name, $email, $mobile, $photo, $id);
-        } else {
-            $stmt1 = $conn->prepare("UPDATE admin_account SET first_name=?, middle_name=?, last_name=? email=?. mobile=? WHERE admin_id=?");
-            $stmt1->bind_param("ssssssi", $first_name, $middle_name, $last_name, $email, $mobile, $id);
-        }
+    $stmt1 = $conn->prepare("UPDATE admin_account 
+        SET first_name=?, middle_name=?, last_name=?, email=?, mobile=?, photo=? 
+        WHERE record_id=?");
+    $stmt1->bind_param("ssssssi", $first_name, $middle_name, $last_name, $email, $mobile, $photo, $id);
+} else {
+    $stmt1 = $conn->prepare("UPDATE admin_account 
+        SET first_name=?, middle_name=?, last_name=?, email=?, mobile=? 
+        WHERE record_id=?");
+    $stmt1->bind_param("sssssi", $first_name, $middle_name, $last_name, $email, $mobile, $id);
+}
         $stmt1->execute();
         $stmt1->close();
 
-        $stmt2 = $conn->prepare("UPDATE accounts SET first_name=?, middle_name=?, last_name=?, email=?, mobile=? WHERE record_id=?");
-        $stms2->bind_param("sssssi", $first_name, $middle_name, $last_name, $email, $mobile, $id);
+        $stmt2 = $conn->prepare("UPDATE accounts SET id_number=?, email=? WHERE record_id=?");
+        $stmt2->bind_param("ssi", $admin_id, $email, $id);
         $stmt2->execute();
-        $stms2->close();
+        $stmt2->close();
 
         $conn->commit();
 
@@ -51,6 +56,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
 
     }catch(Exception $e){
         $conn->rollback();
+        echo "Error: " .$e->getMessage();
     }
 }
+
+$conn->close();
 ?>
