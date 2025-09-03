@@ -44,10 +44,16 @@ if ($result->num_rows > 0) {
                 header("Location: /MoralMatrix/admin/index.php");
                 break;
             case 'faculty':
-                header("Location: /faculty");
+                header("Location: /MoralMatrix/faculty/index.php");
                 break;
             case 'student':
-                header("Location: /student");
+                header("Location: /MoralMatrix/student/index.php");
+                break;
+            case 'ccdu':
+                header("Location: /MoralMatrix/ccdu/index.php");
+                break;
+            case 'security':
+                header("Location: /MoralMatrix/security/index.php");
                 break;
             default:
                 header("Location: /login.php");
