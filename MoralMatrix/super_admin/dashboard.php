@@ -1,3 +1,6 @@
+<?php
+include '../includes/header.php';
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -7,7 +10,7 @@
     <title>Document</title>
 </head>
 <body>
-    <header>
+<!--    <header>
         <nav>
             <ul class="nav-left">
                 <li><a href="#">MORAL MATRIX</a></li>
@@ -17,7 +20,8 @@
                 <button type="submit" name="logout">Logout</button>
             </form>
         </nav>
-    </header>
+    </header> 
+-->
 
     <h2>Super Admin Dashboard - Admin Accounts</h2>
 

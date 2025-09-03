@@ -1,5 +1,7 @@
 <?php
-session_start();
+
+include '../includes/header.php';
+
 ?>
 
 <!DOCTYPE html>
@@ -10,7 +12,7 @@ session_start();
     <title>Document</title>
 </head>
 <body>
-    <header>
+<!--    <header>
         <div class="nav-left">
             <a href="">moral matrix</a>
         </div>
@@ -21,104 +23,112 @@ session_start();
             </form>
         </div>
     </header>
-
-    <p>WELCOME ADMIN</p>
+-->
+    <h2>WELCOME ADMIN</h2>
 
     <a href="add_users.php">
         <button>Add Users</button>
     </a>
 
-    <div class="btn-group" id="buttons"></div>
+    <h3>Accounts List</h3>
 
-    <div id="cardsContainer"></div>
+    <!-- Dropdown to select account type -->
+<div>
+    <label for="accountType">Filter by Account Type: </label>
+    <select id="accountType" onchange="loadAccounts()">
+        <option value="">-- Select Account Type --</option>
+        <option value="student">Student</option>
+        <option value="faculty">Faculty</option>
+        <option value="security">Security</option>
+        <option value="ccdu">CCDU</option>
+    </select>
+</div>
 
-    <div id="details"></div>
+<h3 id="sectionTitle">Accounts</h3>
+<div class="container" id="accountContainer">Please select an account type.</div>
 
-    <script>
-        let accountsData = [];
+<script>
+function loadAccounts(){
+    const selectedType = document.getElementById("accountType").value;
+    const container = document.getElementById("accountContainer");
+    const title = document.getElementById("sectionTitle");
 
-        function loadAccounts(){
-            fetch("get_accounts.php")
-            .then(res => res.json())
-            .then(data => {
-                accountsData();
-                renderSections("all");
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById("cardsContainer").innerHTML = "Error loading accounts";
-            });
-        }
-       
-        function renderButtons(){
-            const types =  ["all", ...new Set(accountsData.map(acc => acc.account_type))];
-            const btnContainer = document.getElementById("buttons");
-            btnContainer.innerHTML = "";
+    if(!selectedType){
+        container.innerHTML = "<p>Please select an account type.</p>";
+        title.textContent = "Accounts";
+        return;
+    }
 
-            types.forEach(type => {
-                const btn = document.createElement("button");
-                btn.classList.add("btn");
-                if (type === "all") btn.classList.add("active");
-                btn.innerText = type.toUpperCase();
-                btn.onclick = () => {
-                    document.querySelectorAll(".btn").forEach(b => b.classList.remove("active"));
-                    btn.classList.add("active");
-                    renderSections(type);
-                };
-                btnContainer.appendChild(btn);
-            });
-        }
+    title.textContent = selectedType.charAt(0).toUpperCase() + selectedType.slice(1) + " Accounts";
+    container.innerHTML = "Loading...";
 
-        function renderSections(filterType){
-            const container = document.getElementById("cardsContainer");
+    fetch("get_accounts.php")
+        .then(response => response.json())
+        .then(data=>{
             container.innerHTML = "";
 
-            const types = filterType === "all" ? [...new Set(accountsData.map(acc => acc.account_type))] : [filterType];
+            const filtered = data.filter(acc => acc.account_type === selectedType);
 
-            types.forEach(type => {
-                const filtered = accountsData.filter(acc => acc.account_type === type);
-
-                if (filtered.length === 0) return;
-
-                const section = document.createElement("div");
-                section.classList.add("section");
-                section.innerHTML = `<h2>${type.toUpperCase()} Accounts</h2>`;
-
-                const cards = document.createElement("div");
-                cards.classList.add("cards");
-
-                filtered.forEach(acc => {
-                    const card = document.createElement("div");
-                    card.classList.add("card");
-                    card.innerHTML = `
-                        <strong>${acc.id_number}</strong><br>
-                        ${acc.details.first_name ?? ""} ${acc.details.middle_name ?? ""} ${acc.details.last_name ?? ""}<br>
-                        ${acc.email}
-                    `;
-                    card.onclick = () => showDetails(acc);
-                    cards.appendChild(card);
-                });
-
-                section.appendChild(cards);
-                container.appendChild(section);
-            });
-        }
-
-        function showDetails(acc){
-            const box = document.getElementById("details");
-            box.style.display = "block";
-
-            let html = `<h3>${acc.account_type.toUpperCase()} Account</h3>`;
-            for (let key in acc.details) {
-                html += `<strong>${key}</strong>: ${acc.details[key]}<br>`;
+            if (filtered.length === 0){
+                container.innerHTML = "<p>No records found.</p>";
+                return;
             }
 
-            box.innerHTML = html;
+            filtered.forEach(acc => {
+                const card = document.createElement("div");
+                card.classList.add("card");
+
+                card.innerHTML = `
+                    <div class="left" onclick="viewAccount(${acc.record_id}, '${acc.account_type}')" style="cursor:pointer;">
+                        <img src="${acc.photo ? 'uploads/' + acc.photo : 'placeholder.png'}" alt="Photo">
+                        <div class="info">
+                            <strong>ID:</strong> ${acc.user_id}<br>
+                            <strong>Name:</strong> ${acc.first_name} ${acc.last_name}<br>
+                            <strong>Email:</strong> ${acc.email}<br>
+                            <strong>Mobile:</strong> ${acc.mobile}
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button onclick="editAccount(${acc.record_id}, '${acc.account_type}'); event.stopPropagation();">✏️ Edit</button>
+                        <button onclick="deleteAccount(${acc.record_id}, '${acc.account_type}'); event.stopPropagation();">🗑 Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        })
+        .catch(error => {
+            container.innerHTML = "<p>Error loading data.</p>";
+            console.error("Error fetching accounts: ", error);
+        });
+}
+
+function editAccount(id, type){
+    window.location.href = "edit_account.php?id=" + id + "&type=" + type;
+}
+
+function deleteAccount(id, type){
+    if(!confirm("Are you sure you want to delete this account?")) return;
+
+    fetch("/MoralMatrix/super_admin/delete_account.php", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: "id=" + id + "&type=" + type
+    })
+    .then(response => response.json())
+    .then(result => {
+        if(result.success){
+            alert("Account deleted successfully.");
+            loadAccounts();
+        }else{
+            alert("Error: " + result.error);
         }
+    })
+    .catch(err => console.error("Delete error: ", err));
+}
+function viewAccount(id, type){
+    window.location.href = "view_account.php?id=" + id + "&type=" + type;
+}
 
-        loadAccounts();
-        
-
-    </script>
+</script>
 </body>
 </html>
