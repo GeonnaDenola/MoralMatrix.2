@@ -1,68 +1,41 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-header("Content-Type: application/json");
 include '../config.php';
 
-$conn = new mysqli(
-    $database_settings['servername'],
-    $database_settings['username'],
-    $database_settings['password'],
-    $database_settings['dbname']
-);
+$servername = $database_settings['servername'];
+$username   = $database_settings['username'];
+$password   = $database_settings['password'];
+$dbname     = $database_settings['dbname'];
 
-if ($conn->connect_error) {
-    echo json_encode(["error" => $conn->connect_error]);
-    exit;
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error){
+    die(json_encode(["error" => "Connection failed: " .$conn->connect_error]));
 }
 
 $accounts = [];
 
-// Fetch base accounts
-$sql = "SELECT * FROM accounts";
-$result = $conn->query($sql);
-
-while ($row = $result->fetch_assoc()) {
-    $type = $row['account_type'];
-    $record_id = (int)$row['record_id']; // force integer
-    $details = [];
-
-    switch ($type) {
-        case 'faculty':
-            $table = "faculty_account";
-            break;
-        case 'student':
-            $table = "student_account";
-            break;
-        case 'ccdu':
-            $table = "ccdu_account";
-            break;
-        case 'security':
-            $table = "security_account";
-            break;
-        default:
-            $table = null;
-    }
-
-    if ($table) {
-        $stmt = $conn->prepare("SELECT * FROM $table WHERE record_id = ?");
-        $stmt->bind_param("i", $record_id);
-        $stmt->execute();
-        $res2 = $stmt->get_result();
-        if ($res2 && $res2->num_rows > 0) {
-            $details = $res2->fetch_assoc();
+function fetchAccounts($conn, $sql, $type) {
+    $rows = [];
+    if($result = $conn->query($sql)) {
+        while($row = $result->fetch_assoc()) {
+            $row['account_type'] = $type;
+            $rows[] = $row;
         }
-        $stmt->close();
+    } else {
+        error_log("SQL error ($type): " . $conn->error);
     }
-
-    $accounts[] = [
-        "record_id" => $record_id,
-        "id_number" => $row['id_number'],
-        "email" => $row['email'],
-        "account_type" => $row['account_type'],
-        "details" => $details
-    ];
+    return $rows;
 }
 
-echo json_encode($accounts, JSON_PRETTY_PRINT);
+// Adjusted: removed middle_name
+$accounts = array_merge($accounts,
+    fetchAccounts($conn, "SELECT record_id, student_id AS user_id, first_name, last_name, mobile, email, photo FROM student_account", "student"),
+    fetchAccounts($conn, "SELECT record_id, faculty_id AS user_id, first_name, last_name, mobile, email, photo FROM faculty_account", "faculty"),
+    fetchAccounts($conn, "SELECT record_id, security_id AS user_id, first_name, last_name, mobile, email, photo FROM security_account", "security"),
+    fetchAccounts($conn, "SELECT record_id, ccdu_id AS user_id, first_name, last_name, mobile, email, photo FROM ccdu_account", "ccdu")
+);
+
+header('Content-Type: application/json');
+echo json_encode($accounts);
+
 $conn->close();
+?>
