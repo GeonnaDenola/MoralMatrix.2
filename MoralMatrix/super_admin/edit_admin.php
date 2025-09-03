@@ -23,6 +23,8 @@ if($result->num_rows === 0){
     die("Admin not found.");
 }
 
+
+
 $admin = $result->fetch_assoc();
 $conn->close();
 ?>
@@ -61,11 +63,33 @@ $conn->close();
         <label for = "email">Email:</label><br>
         <input type ="email" id="email" name="email" value="<?php echo $admin['email']; ?>"><br><br>
 
-        <label for = "photo">Profile Picture:</label><br>
-        <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" value="<?php echo $admin['photo']; ?>"><br><br>
+        <label for="photo">Profile Picture:</label><br>
+        <?php if (!empty($admin['photo'])): ?>
+            <img id="photoPreview" src="../uploads/<?php echo htmlspecialchars($admin['photo']); ?>" alt="Profile Picture" width="100"><br>
+        <?php else: ?>
+            <img id="photoPreview" src="" alt="No photo" width="100" style="display:none;"><br>
+        <?php endif; ?>
+
+        <input type="file" id="photo" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)"><br><br>
+
 
         <button type="submit">Update</button>
 
     </form>
+
+        <script>
+    function previewPhoto(input) {
+        const preview = document.getElementById('photoPreview');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    </script>
+
 </body>
 </html>

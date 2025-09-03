@@ -53,7 +53,7 @@ include '../includes/header.php';
 
                     card.innerHTML = `
                         <div class ="left">
-                            <img src="${admin.photo ? 'uploads/' + admin.photo : 'placeholder.png'}" alt= "Photo">
+                            <img src="${admin.photo ? '../uploads/' + admin.photo : 'placeholder.png'}" alt= "Photo">
 
                             <div class="info">
                                 <strong>${admin.admin_id}</strong><br>

@@ -125,8 +125,15 @@ $tempPassword = generateTempPassword();
         <label for = "email">Email:</label><br>
         <input type ="email" id="email" name="email" required><br><br>
 
-        <label for = "photo">Profile Picture:</label><br>
-        <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" required><br><br>
+        <label for="photo">Profile Picture:</label><br>
+        <?php if (!empty($admin['photo'])): ?>
+            <img id="photoPreview" src="../uploads/<?php echo htmlspecialchars($admin['photo']); ?>" alt="Profile Picture" width="100"><br>
+        <?php else: ?>
+            <img id="photoPreview" src="" alt="No photo" width="100" style="display:none;"><br>
+        <?php endif; ?>
+
+        <input type="file" id="photo" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)"><br><br>
+
 
         <label for = "password">Temporary Password:</label><br>
         <input type = "text" id="password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
@@ -144,6 +151,19 @@ function generatePass() {
     }
     document.getElementById("password").value = pass;
 }
+
+function previewPhoto(input) {
+    const preview = document.getElementById('photoPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
 </script>
 
         <div>

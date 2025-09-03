@@ -21,10 +21,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
     $email = $_POST['email'];
     $mobile = $_POST['mobile'];
 
-    $photo = null;
-    if(!empty($_FILES['photo']['name'])){
-        $photo = time() . "_" . basename($_FILES['photo']['name']);
-        move_uploaded_file($_FILES['photo']['tmp_name'], "uploads/" .$photo);
+    // --- Insert file upload code here ---
+    if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!in_array($_FILES["photo"]["type"], $allowedTypes)) {
+            die("⚠️ Only JPG, PNG, GIF files are allowed.");
+        }
+
+        $targetDir = "../uploads/";
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0777, true);
+        }
+
+        $photo = time() . "_" . basename($_FILES["photo"]["name"]);
+        $targetFile = $targetDir . $photo;
+
+        if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetFile)) {
+            die("⚠️ Error uploading photo.");
+        }
+    } else {
+        $photo = null; // No new photo uploaded
     }
 
     $conn->begin_transaction();
