@@ -80,7 +80,7 @@ function loadAccounts(){
 
                 card.innerHTML = `
                     <div class="left" onclick="viewAccount(${acc.record_id}, '${acc.account_type}')" style="cursor:pointer;">
-                        <img src="${acc.photo ? 'uploads/' + acc.photo : 'placeholder.png'}" alt="Photo">
+                        <img src="${acc.photo}" alt="Photo">
                         <div class="info">
                             <strong>ID:</strong> ${acc.user_id}<br>
                             <strong>Name:</strong> ${acc.first_name} ${acc.last_name}<br>
