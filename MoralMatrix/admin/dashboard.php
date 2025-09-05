@@ -137,7 +137,7 @@ function editAccount(id, type){
             editPage = "student/edit_student.php";
             break;
         case "faculty":
-            editPage = "edit_faculty.php";
+            editPage = "faculty/edit_faculty.php";
             break;
         case "security":
             editPage = "edit_security.php";
