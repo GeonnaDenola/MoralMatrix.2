@@ -1,5 +1,6 @@
 <?php
-session_start();
+
+include '../includes/header.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST"){
 
@@ -66,8 +67,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         }
         
         $conn->close();
-        
-
     }
 
 // FACULTY
@@ -262,8 +261,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <label>Last Name: </label>
                 <input type="text" name="last_name" id="last_name" required>
 
-                <label>Contact Number: </label>
-                <input type="number" name="mobile" id="mobile" required>
+                <label for="mobile">Contact Number:</label><br>
+                <input type="text" id="mobile" name="mobile" maxlength="11"
+                    placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    required><br><br>
 
                 <label>Email: </label>
                 <input type="email" name="email" id="email" required><br>
@@ -300,7 +303,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 </select><br><br>
 
                 <label for = "photo">Profile Picture:</label><br>
-                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" required><br><br>
+                <img id="studentPreview" src="" width="100">
+                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg"  onchange="previewPhoto(this, 'studentPreview')" required><br><br>
 
                 <h3>Emergency Contact</h3>
 
@@ -309,7 +313,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
 
 
                 <label>Guardian's Contact Number: </label>
-                <input type="number" name="guardian_mobile" id="guardian_mobile" required><br><br>
+                <input type="text" id="mobile" name="mobile" maxlength="11"
+                    placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    required><br><br>
 
                 <label for = "password">Temporary Password:</label><br>
                 <input type = "text" id="student_password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
@@ -318,6 +326,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <button type="submit" class= "btn_submit">Register Account</button>
             </form><br><br>
         </div>
+
 <!--FACULTY FORM-->
         <div id="facultyForm" class="form-container">
             <h3>Register Faculty Account<h3>
@@ -335,8 +344,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <label>Last Name: </label>
                 <input type="text" name="last_name" id="last_name" required>
 
-                <label>Contact Number: </label>
-                <input type="number" name="mobile" id="mobile" required>
+                <label for="mobile">Contact Number:</label><br>
+                <input type="text" id="mobile" name="mobile" maxlength="11"
+                    placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    required><br><br>
 
                 <label>Email: </label>
                 <input type="email" name="email" id="email" required><br>
@@ -351,7 +364,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 </select><br>
 
                 <label for = "photo">Profile Picture:</label><br>
-                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" required><br><br>
+                <img id="facultyPreview" src="" width="100">
+                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg"  onchange="previewPhoto(this, 'facultyPreview')" required><br><br>
 
                 <label for = "password">Temporary Password:</label><br>
                 <input type = "text" id="faculty_password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
@@ -378,14 +392,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <label>Last Name: </label>
                 <input type="text" name="last_name" id="last_name" required>
 
-                <label>Contact Number: </label>
-                <input type="number" name="mobile" id="mobile" required>
+                <label for="mobile">Contact Number:</label><br>
+                <input type="text" id="mobile" name="mobile" maxlength="11"
+                    placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    required><br><br>
 
                 <label>Email: </label>
                 <input type="email" name="email" id="email" required><br>
 
                 <label for = "photo">Profile Picture:</label><br>
-                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" onchange="previewImage(event)" required><br><br>
+                <img id="ccduPreview" src="" width="100">
+                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this, 'ccduPreview')" required><br><br>
 
                 <label for = "password">Temporary Password:</label><br>
                 <input type = "text" id="ccdu_password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
@@ -412,14 +431,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <label>Last Name: </label>
                 <input type="text" name="last_name" id="last_name" required>
 
-                <label>Contact Number: </label>
-                <input type="number" name="mobile" id="mobile" required>
+                <label for="mobile">Contact Number:</label><br>
+                <input type="text" id="mobile" name="mobile" maxlength="11"
+                    placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                    required><br><br>
 
                 <label>Email: </label>
                 <input type="email" name="email" id="email" required><br>
 
                 <label for = "photo">Profile Picture:</label><br>
-                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" required><br><br>
+                <img id="securityPreview" src="" width="100">
+                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg"  onchange="previewPhoto(this, 'securityPreview')" required><br><br>
 
                 <label for = "password">Temporary Password:</label><br>
                 <input type = "text" id="security_password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
@@ -491,22 +515,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         document.getElementById(inputId).value = pass;
     }
 
-    function previewImage(event) {
-    const file = event.target.files[0];
-    const preview = document.getElementById("preview");
-
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = "block";
+    function previewPhoto(input, previewId) {
+        const preview = document.getElementById(previewId);
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
         }
-        reader.readAsDataURL(file);
-    } else {
-        preview.src = "#";
-        preview.style.display = "none";
     }
-}
 </script>
 
 

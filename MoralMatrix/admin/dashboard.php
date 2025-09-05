@@ -109,7 +109,7 @@ function editAccount(id, type){
 function deleteAccount(id, type){
     if(!confirm("Are you sure you want to delete this account?")) return;
 
-    fetch("/MoralMatrix/super_admin/delete_account.php", {
+    fetch("delete_accounts.php", {
         method: "POST",
         headers: {"Content-Type": "application/x-www-form-urlencoded"},
         body: "id=" + id + "&type=" + type
@@ -128,6 +128,31 @@ function deleteAccount(id, type){
 function viewAccount(id, type){
     window.location.href = "view_account.php?id=" + id + "&type=" + type;
 }
+
+function editAccount(id, type){
+    let editPage = "";
+
+    switch(type){
+        case "student":
+            editPage = "student/edit_student.php";
+            break;
+        case "faculty":
+            editPage = "edit_faculty.php";
+            break;
+        case "security":
+            editPage = "edit_security.php";
+            break;
+        case "ccdu":
+            editPage = "edit_ccdu.php";
+            break;
+        default:
+            alert("Unknown account type.");
+            return;
+    }
+
+    window.location.href = `${editPage}?id=${id}`;
+}
+
 
 </script>
 </body>
