@@ -1,3 +1,43 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Redirect already logged-in users based on account type
+if (isset($_SESSION['email'])) {
+    switch ($_SESSION['account_type']) {
+        case 'super_admin':
+            header("Location: /MoralMatrix/super_admin/dashboard.php");
+            exit;
+        case 'administrator':
+            header("Location: /MoralMatrix/admin/index.php");
+            exit;
+        case 'faculty':
+            header("Location: /MoralMatrix/faculty/index.php");
+            exit;
+        case 'student':
+            header("Location: /MoralMatrix/student/index.php");
+            exit;
+        case 'ccdu':
+            header("Location: /MoralMatrix/ccdu/index.php");
+            exit;
+        case 'security':
+            header("Location: /MoralMatrix/security/index.php");
+            exit;
+        default:
+            header("Location: /MoralMatrix/dashboard.php");
+            exit;
+    }
+}
+
+$errorMsg='';
+if (isset($_SESSION['error'])){
+  $errorMsg = $_SESSION['error'];
+  unset($_SESSION['error']);
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,13 +89,9 @@
   <button type="submit" class="btn_login">LOGIN</button>
 </form>
 
-   <?php
-      session_start();
-      if (isset($_SESSION['error'])) {
-          echo "<p style='color:red; margin-top:10px;'>" . $_SESSION['error'] . "</p>";
-          unset($_SESSION['error']); // clear error after showing
-      }
-      ?>
+<?php if (!empty($errorMsg)) : ?>
+  <p><?= htmlspecialchars($errorMsg) ?></p>
+<?php endif; ?>
 
     </div>
   </main>

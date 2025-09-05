@@ -18,6 +18,13 @@ function fetchAccounts($conn, $sql, $type) {
     if($result = $conn->query($sql)) {
         while($row = $result->fetch_assoc()) {
             $row['account_type'] = $type;
+
+            if(!empty($row['photo'])){
+                $row['photo'] = 'uploads/' .$row['photo'];
+            }else{
+                $row['photo'] = 'uploads/placeholder.png';
+            }
+
             $rows[] = $row;
         }
     } else {
