@@ -22,12 +22,17 @@ include '../includes/header.php';
         </nav>
     </header> 
 -->
+    <div class="top-container">
+        <h2>Super Admin Dashboard - Admin Accounts</h2>
 
-    <h2>Super Admin Dashboard - Admin Accounts</h2>
-
-    <a href="add_users.php" class="btn">Add Administrator</a>
+        <a href="add_users.php" class="btn">Add Administrator</a>
+    </div>
 
     <h3>Account List</h3>
+
+    <div class="searchBar">
+        <input type="text" id="searchInput" placeholder="Search...">
+    </div>
     
     <div class="container" id="adminContainer">
         Loading...
@@ -86,7 +91,7 @@ include '../includes/header.php';
                 fetch("/MoralMatrix/super_admin/delete_admin.php", {
                     method: "POST",
                     headers: {"Content-Type": "application/x-www-form-urlencoded"},
-                    body: "id=" + id
+                    body: "id=" + encodeURIComponent(id)
                 })
                 .then(response => response.json())
                 .then(result => {

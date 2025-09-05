@@ -31,6 +31,8 @@ if ($result->num_rows > 0) {
     $row = $result->fetch_assoc();
     
     if (password_verify($inputPassword, $row['password'])) {
+        session_regenerate_id(true);
+
         $_SESSION['email'] = $row['email'];
         $_SESSION['account_type'] = $row['account_type'];
         $_SESSION['first_name'] = $row['first_name'];
@@ -60,14 +62,16 @@ if ($result->num_rows > 0) {
                 break;
         }
     } else {
-        echo "❌ Wrong password!";
+        $_SESSION['error'] = "❌ Wrong password!";
+        header("Location: /login.php");
         exit;
-        //header("Location: /login.php");
+        
     }
 } else {
-    echo "❌ No account found with that email.";
+    $_SESSION['error'] = "❌ No account found with that email.";
+    header("Location: /login.php");
     exit;
-    //header("Location: /login.php");
+    
 }
 
 $conn->close();

@@ -43,9 +43,9 @@ function handleQueryError($sql, $conn) {
 // Accounts Table
 $sqlCreateLoginSchema = "CREATE TABLE IF NOT EXISTS accounts (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
-    id_number VARCHAR(50) NOT NULL,
-    email VARCHAR(50) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    id_number VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL UNIQUE,
     account_type ENUM('super_admin', 'administrator', 'ccdu', 'faculty', 'student', 'security') NOT NULL
 )";
 if ($conn->query($sqlCreateLoginSchema) === FALSE) {
@@ -59,8 +59,8 @@ $sqlCreateSuperAdminSchema = "CREATE TABLE IF NOT EXISTS super_admin (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
-    email VARCHAR(50) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    email VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP    
 )";
@@ -75,8 +75,8 @@ $sqlCreateFacultyAccountSchema = "CREATE TABLE IF NOT EXISTS faculty_account (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
-    email VARCHAR(50) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    email VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL UNIQUE,
     photo BLOB,
     institute VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -94,8 +94,8 @@ $sqlCreateCcduAccountSchema = "CREATE TABLE IF NOT EXISTS ccdu_account (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
-    email VARCHAR(50) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    email VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL UNIQUE, 
     photo BLOB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -112,8 +112,8 @@ $sqlCreateSecurityAccountSchema = "CREATE TABLE IF NOT EXISTS security_account (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
-    email VARCHAR(50) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    email VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL UNIQUE,
     photo BLOB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -131,7 +131,7 @@ $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     middle_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
-    email VARCHAR(50) NOT NULL,
+    email VARCHAR(50) NOT NULL UNIQUE,
     photo BLOB,
     institute VARCHAR(255),
     course VARCHAR(255),
@@ -139,7 +139,7 @@ $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     section VARCHAR(50),
     guardian VARCHAR(50),
     guardian_mobile VARCHAR(15),
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )";
@@ -155,7 +155,7 @@ $sqlCreateAdminAccountSchema = "CREATE TABLE IF NOT EXISTS admin_account (
     last_name VARCHAR(50) NOT NULL,
     middle_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
-    email VARCHAR(50) NOT NULL,
+    email VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     photo BLOB,
     f_create VARCHAR(2),

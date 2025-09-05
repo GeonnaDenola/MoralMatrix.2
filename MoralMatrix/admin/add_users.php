@@ -33,7 +33,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $photo = "";
 
         if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-            $photo = $_FILES["photo"]["name"];
+            $uploadDir = __DIR__ . "/uploads/"; // Make sure this folder exists
+            if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+            }
+
+            $photo = time() . "_" . basename($_FILES["photo"]["name"]); // unique filename
+            $targetPath = $uploadDir . $photo;
+
+            if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+                // success, $photo now contains the stored filename
+            } else {
+                $photo = ""; // fallback if move fails
+            }
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -69,8 +81,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $password = $_POST['password'];
         $photo = "";
 
-         if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-            $photo = $_FILES["photo"]["name"];
+          if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . "/uploads/"; // Make sure this folder exists
+            if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+            }
+
+            $photo = time() . "_" . basename($_FILES["photo"]["name"]); // unique filename
+            $targetPath = $uploadDir . $photo;
+
+            if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+                // success, $photo now contains the stored filename
+            } else {
+                $photo = ""; // fallback if move fails
+            }
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -104,8 +128,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $password = $_POST['password'];
         $photo = "";
 
-         if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-            $photo = $_FILES["photo"]["name"];
+          if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . "/uploads/"; // Make sure this folder exists
+            if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+            }
+
+            $photo = time() . "_" . basename($_FILES["photo"]["name"]); // unique filename
+            $targetPath = $uploadDir . $photo;
+
+            if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+                // success, $photo now contains the stored filename
+            } else {
+                $photo = ""; // fallback if move fails
+            }
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -140,7 +176,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         $photo = "";
 
          if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-            $photo = $_FILES["photo"]["name"];
+            $uploadDir = __DIR__ . "/uploads/"; // Make sure this folder exists
+            if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+            }
+
+            $photo = time() . "_" . basename($_FILES["photo"]["name"]); // unique filename
+            $targetPath = $uploadDir . $photo;
+
+            if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+                // success, $photo now contains the stored filename
+            } else {
+                $photo = ""; // fallback if move fails
+            }
         }
 
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -179,6 +227,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
     <title>Document</title>
 </head>
 <body>
+    <a href="dashboard.php">
+        <button type="button">Return to Dashboard</button>
+    </a>
+
     <h1>Add New User Accounts</h1>
 
         <label for="account_type">Account Type:</label><br>
@@ -199,7 +251,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <input type="hidden" name="account_type" value="student">
 
                 <label>Student Id:</label>
-                <input type="number" name="student_id" id="student_id" pattern="^\d{4}-\d{4}$" required><br>
+                <input type="text" name="student_id" id="student_id" maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)" pattern="^[0-9]{4}-[0-9]{4}$" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required><br>
 
                 <label>First Name: </label>
                 <input type="text" name="first_name" id="first_name" required>
@@ -275,7 +327,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <input type="hidden" name="account_type" value="faculty">
 
                 <label>ID Number:</label>
-                <input type="number" name="faculty_id" id="faculty_id" pattern="^\d{4}-\d{4}$" required><br>
+                <input type="text" name="faculty_id" id="faculty_id" maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)" pattern="^[0-9]{4}-[0-9]{4}$" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required><br>
 
                 <label>First Name: </label>
                 <input type="text" name="first_name" id="first_name" required>
@@ -318,7 +370,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <input type="hidden" name="account_type" value="ccdu">
 
                 <label>ID Number:</label>
-                <input type="number" name="ccdu_id" id="ccdu_id" pattern="^\d{4}-\d{4}$" required><br>
+                <input type="text" name="ccdu_id" id="ccdu_id" maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)" pattern="^[0-9]{4}-[0-9]{4}$" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required><br>
 
                 <label>First Name: </label>
                 <input type="text" name="first_name" id="first_name" required>
@@ -333,7 +385,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <input type="email" name="email" id="email" required><br>
 
                 <label for = "photo">Profile Picture:</label><br>
-                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" required><br><br>
+                <input type ="file" id="photo" name="photo" accept="image/png, image/jpeg" onchange="previewImage(event)" required><br><br>
 
                 <label for = "password">Temporary Password:</label><br>
                 <input type = "text" id="ccdu_password" name="password" value="<?php echo isset ($tempPassword) ? $tempPassword : ''; ?>" required><br><br>
@@ -352,7 +404,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
                 <input type="hidden" name="account_type" value="security">
 
                 <label>ID Number:</label>
-                <input type="number" name="security_id" id="security_id" pattern="^\d{4}-\d{4}$" required><br>
+                <input type="text" name="security_id" id="security_id" maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)" pattern="^[0-9]{4}-[0-9]{4}$" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required><br>
 
                 <label>First Name: </label>
                 <input type="text" name="first_name" id="first_name" required>
@@ -438,6 +490,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST"){
         }
         document.getElementById(inputId).value = pass;
     }
+
+    function previewImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById("preview");
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = "#";
+        preview.style.display = "none";
+    }
+}
 </script>
 
 
