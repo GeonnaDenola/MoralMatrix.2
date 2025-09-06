@@ -140,10 +140,10 @@ function editAccount(id, type){
             editPage = "faculty/edit_faculty.php";
             break;
         case "security":
-            editPage = "edit_security.php";
+            editPage = "security/edit_security.php";
             break;
         case "ccdu":
-            editPage = "edit_ccdu.php";
+            editPage = "ccdu/edit_ccdu.php";
             break;
         default:
             alert("Unknown account type.");
