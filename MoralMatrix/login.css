@@ -1,0 +1,178 @@
+/* Reset + base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: url('https://mcc.edu.ph/mcc_website_revamp_2021/img/pages/about-mcc/history/athttps://mma.prnewswire.com/media/2249184/image_1.jpg?p=twitter-present.jpg') no-repeat center center fixed;
+  background-size: cover;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+
+header {
+  background: #990e01;
+  padding: 20px 40px;  /* Increased padding (was 15px 30px) */
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  min-height: 70px;    /* Give the header bar a minimum height */
+}
+
+nav ul {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+nav ul li {
+  margin: 0 10px;
+}
+
+nav ul li a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 1.1rem;   /* Slightly bigger nav link text */
+}
+
+nav ul li a:hover {
+  color: #fffffd;
+}
+
+.nav-left {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.nav-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-right {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Login form container */
+.login-page {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 50px;
+  min-height: calc(100vh - 60px);
+}
+
+.login-box {
+  background: #fff;
+  padding: 10px 10px;  /* Increase padding */
+  border: 2px solid #ccc;
+  border-radius: 30px;
+  width: 600px;        /* Increase width */
+}
+
+.login-box form {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-box label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.login-box input {
+  padding: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #aaa;
+  border-radius: 5px;
+}
+
+.btn-login {
+  background: #c20000;
+  color: #ffffff;
+  padding: 8px 0;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-login:hover {
+  background: #e6b800;
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.forgot-password {
+  text-decoration: none;
+  color: #004466;
+  font-weight: bold;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+.login-welcome {
+  text-align: center;
+  color: #004466;
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.login-page {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 50px;
+  min-height: calc(100vh - 60px);
+  gap: 30px;
+}
+
+
+.violation-message {
+  width: 60%;           /* Make it take up more horizontal space */
+  padding-right: 40px;  /* Add a bit more spacing from the login box */
+}
+
+.violation-message h3 {
+  color: #c81400;
+  margin-bottom: 15px;
+  font-size: 2.2rem;    /* Make the title bigger */
+  font-weight: bold;
+}
+
+.violation-message p {
+  color: #ffffff;
+  font-size: 2rem;    /* Make the paragraph text bigger */
+  line-height: 1.8;     /* Improve readability with taller lines */
+}
+
+
