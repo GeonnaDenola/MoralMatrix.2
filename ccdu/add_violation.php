@@ -19,13 +19,6 @@
         </select>
 
         <div id="formContainer">
-            <?php
-                switch($student['classification']){
-                    case '1':
-                        include 'violationForms/';
-                        break;
-                }
-            ?>
         </div>
     </div>
 </body>
