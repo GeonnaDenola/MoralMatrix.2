@@ -421,10 +421,10 @@ if (empty($formValues['password'])) {
                     const institute = document.getElementById(type+'_institute').value;
                     const courseSelect = document.getElementById(type+'_course');
                     const courses = {
-                        'IBCE': ['BSIT','BSCS'],
-                        'IHTM': ['BSHM','BSCT'],
-                        'IAS': ['BEED','BSED'],
-                        'ITE': ['BTVTE','BSMT']
+                        'IBCE': ['BSIT','BSCA','BSA', 'BSOA', 'BSE', 'BSMA'],
+                        'IHTM': ['BSTM','BSHM'],
+                        'IAS': ['BSBIO', 'ABH', 'BSLM'],
+                        'ITE': ['BSED-ENG', 'BSED-FIL', 'BSED-MATH', 'BEED', 'BSED-SS,BTVTE', 'BSED-SCI', 'BPED']
                     };
                     courseSelect.innerHTML = '';
                     if(courses[institute]){
