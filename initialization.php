@@ -126,7 +126,7 @@ if ($conn->query($sqlCreateSecurityAccountSchema) === FALSE) {
 // Student table
 $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR(50) NOT NULL,
+    student_id VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(50) NOT NULL,
     middle_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
@@ -176,6 +176,35 @@ $sqlCreateAdminAccountSchema = "CREATE TABLE IF NOT EXISTS admin_account (
 if ($conn->query($sqlCreateAdminAccountSchema) === FALSE) {
     handleQueryError($sqlCreateAdminAccountSchema, $conn);
 }
+
+$sqlCreateStudentViolationSchema = "CREATE TABLE IF NOT EXISTS student_violation (
+    violation_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR(50) NOT NULL,
+    offense_category ENUM ('light', 'moderate', 'grave') NOT NULL,
+    offense_type VARCHAR(50) NOT NULL,
+    offense_details TEXT NOT NULL,
+    description TEXT NOT NULL,
+    photo BLOB,
+    reported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES student_account (student_id)
+)";
+if($conn->query($sqlCreateViolationTableSchema) === FALSE ){
+    handleQueryError($sqlCreateViolationTableSchema, $conn);
+}
+
+$sqlCreateViolationDetailsSchema = "CREATE TABLE IF NOT EXISTS violation_details (
+    detail_id INT AUTO_INCREMENT PRIMARY KEY,
+    violation_id INT NOT NULL,
+    offense_code VARCHAR(100) NOT NULL,   
+    offense_label VARCHAR(255) NOT NULL, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (violation_id) REFERENCES violation_table(violation_id)
+    ON DELETE CASCADE
+)";
+if($conn->query($sqlCreateViolationDetailsSchema) === FALSE ){
+    handleQueryError($sqlCreateViolationDetailsSchema, $conn);
+}
+
 
 // Redirect to admin creation page
 header("Location: create_admin_account.php");
