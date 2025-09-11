@@ -125,9 +125,34 @@ function deleteAccount(id, type){
     })
     .catch(err => console.error("Delete error: ", err));
 }
-function viewAccount(id){
+function viewAccount(id, type){
     window.location.href = "view_account.php?id=" + id + "&type=" + type;
 }
+
+function editAccount(id, type){
+    let editPage = "";
+
+    switch(type){
+        case "student":
+            editPage = "student/edit_student.php";
+            break;
+        case "faculty":
+            editPage = "faculty/edit_faculty.php";
+            break;
+        case "security":
+            editPage = "security/edit_security.php";
+            break;
+        case "ccdu":
+            editPage = "ccdu/edit_ccdu.php";
+            break;
+        default:
+            alert("Unknown account type.");
+            return;
+    }
+
+    window.location.href = `${editPage}?id=${id}`;
+}
+
 
 </script>
 </body>
