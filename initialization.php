@@ -205,6 +205,25 @@ if($conn->query($sqlCreateViolationDetailsSchema) === FALSE ){
     handleQueryError($sqlCreateViolationDetailsSchema, $conn);
 }
 
+$sqlCreateStudentQrKeysSchema = "CREATE TABLE IF NOT EXISTS student_qr_keys (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id VARCHAR (50) NOT NULL,
+    qr_key CHAR(64) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    revoked TINYINT(1) DEFAULT 0,
+    CONSTRAINT fk_qr-student
+        FOREIGN KEY (student_id)
+        REFERENCES student_account(student_id)
+        ON DELETE CASCADE
+) ENGINE=InnDB DEFAULT CHARSET=utf8mb4";
+if($conn->query($sqlCreateStudentQrKeysSchema) === FALSE ){
+    handleQueryError($sqlCreateStudentQrKeysSchema, $conn);
+}
+
+$sqlIdx = "CREATE INDEX idx_qr_student_id ON student_qr_keys (student_id)";
+if ($conn->query($sqlIdx) === FALSE && $conn->errno != 1061) { // 1061 = duplicate key name
+    handleQueryError($sqlIdx, $conn);
+}
 
 // Redirect to admin creation page
 header("Location: create_admin_account.php");

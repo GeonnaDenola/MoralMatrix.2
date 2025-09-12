@@ -20,7 +20,7 @@ if ($conn->connect_error) {
 /* Detect optional columns so we can show them if present */
 $hasReportedBy = false;
 $hasStatus     = false;
-/* FIX: table name -> student_violations */
+/* ✅ FIX: table name -> student_violations */
 if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'reported_by'")) {
   $hasReportedBy = (bool)$res->num_rows;
   $res->close();
@@ -39,13 +39,44 @@ if ($violationId > 0) {
   if ($hasReportedBy) $cols .= ", reported_by";
   if ($hasStatus)     $cols .= ", status";
 
-  /* FIX: table name -> student_violations */
+  /* ✅ FIX: table name -> student_violations */
   $sql = "SELECT $cols FROM student_violation WHERE violation_id = ?";
   $stmt = $conn->prepare($sql);
   $stmt->bind_param("i", $violationId);
   $stmt->execute();
   $r = $stmt->get_result()->fetch_assoc();
   $stmt->close();
+}
+
+/* 👇 INSERT HERE: compute per-student violation number + hasPhoto */
+$studentNo   = 1;                     // the per-student ordinal (1-based)
+$violationNo = $r['violation_id'] ?? 0; // keep global id for links
+$hasPhoto    = false;
+
+if ($r) {
+  // per-student ordinal: count earlier violations for this student by timestamp, tie-breaker on id
+  $stmtN = $conn->prepare(
+    "SELECT COUNT(*) AS earlier
+       FROM student_violation
+      WHERE student_id = ?
+        AND (reported_at < ?
+             OR (reported_at = ? AND violation_id < ?))"
+  );
+  $stmtN->bind_param("sssi",
+    $r['student_id'],
+    $r['reported_at'],
+    $r['reported_at'],
+    $r['violation_id']
+  );
+  $stmtN->execute();
+  $rowN = $stmtN->get_result()->fetch_assoc();
+  $stmtN->close();
+  $studentNo = (int)($rowN['earlier'] ?? 0) + 1;
+
+  // cast the SELECT alias to a boolean
+  if (array_key_exists('has_photo', $r)) {
+    $hasPhoto = (int)$r['has_photo'] === 1;
+  }
 }
 
 /* Guardian info from student_account */
@@ -107,7 +138,7 @@ if (!empty($r['offense_details'])) {
 /* Build inner content (used by modal and full page) */
 ob_start(); ?>
 <div class="violation-view">
-  <p><strong>violation #</strong> <?= $violationNo ?></p>
+  <p><strong>violation #</strong> <?= $studentNo ?></p>
   <p><strong>Category:</strong> <?= ucfirst($cat) ?></p>
   <p><strong>Type:</strong> <?= $type ?></p>
   <p><strong>Details:</strong> <?= $detailsText ?></p>
@@ -149,7 +180,7 @@ ob_start(); ?>
              style="max-width:100%;border-radius:10px;display:block">
         <div class="photo-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
           <a class="btn" href="violation_photo.php?id=<?= $violationNo ?>" target="_blank" rel="noopener">🔎 View full size</a>
-          <a class="btn" href="violation_photo.php?id=<?= $violationNo ?>&download=1" download="violation_<?= $violationNo ?>.jpg">⬇️ Download</a>
+          
         </div>
       </div>
     <?php endif; ?>

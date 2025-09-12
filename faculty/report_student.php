@@ -1,10 +1,11 @@
 <?php
-include '../includes/header.php';
+
 include '../config.php';
+include '../includes/header.php';
 
-include 'page_buttons.php';
+include 'side_buttons.php';
+
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,6 +14,7 @@ include 'page_buttons.php';
     <title>Dashboard</title>
 </head>
 <body>
+
     <div class="right-container">
         <h2>Dashboard</h2>
         <input type="text" id="search" placeholder="Search...">

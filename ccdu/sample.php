@@ -21,7 +21,7 @@ if ($conn->connect_error) {
     <title>Document</title>
 </head>
 <body>
-       <div class="left-container">
+    <div class="left-container">
         <div id="pageButtons">
             <?php include 'page_buttons.php' ?>
         </div>
