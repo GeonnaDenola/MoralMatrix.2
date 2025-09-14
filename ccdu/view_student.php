@@ -1,6 +1,11 @@
 <?php
-include '../config.php';
-include '../includes/header.php';
+require '../config.php';
+
+require __DIR__.'/_scanner.php';
+
+require 'violation_hrs.php';
+
+$hours = 0;
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -8,20 +13,79 @@ $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+
+/* Accept either student_id (####-####) or k=qr_key, and be tolerant of legacy hex in student_id */
+$origStudent = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
+$kParam      = isset($_GET['k']) ? trim($_GET['k']) : '';
+
+$ID_PATTERN    = '/^\d{4}-\d{4}$/';
+$KEY64_PATTERN = '/^[a-f0-9]{64}$/i';
+$HEX_FLEX      = '/^[a-f0-9]{10,64}$/i'; // legacy shorter hex from old cards
+
+$student_id = $origStudent;
+
+/* 1) If k= is present and valid, resolve it */
+if ($student_id === '' && $kParam !== '' && preg_match($KEY64_PATTERN, $kParam)) {
+    $stmtK = $conn->prepare('SELECT student_id FROM student_qr_keys WHERE qr_key = ? LIMIT 1');
+    $stmtK->bind_param('s', $kParam);
+    $stmtK->execute();
+    $rowK = $stmtK->get_result()->fetch_assoc();
+    $stmtK->close();
+    if (!empty($rowK['student_id'])) {
+        $student_id = $rowK['student_id'];
+    }
 }
 
-if (!isset($_GET['student_id'])) {
+/* 2) If student_id looks hex-y (old behavior), try resolving as qr_key too */
+if ($student_id !== '' && !preg_match($ID_PATTERN, $student_id) && preg_match($HEX_FLEX, $student_id)) {
+    $legacyKey = $student_id;
+    $stmtL = $conn->prepare('SELECT student_id FROM student_qr_keys WHERE qr_key = ? LIMIT 1');
+    $stmtL->bind_param('s', $legacyKey);
+    $stmtL->execute();
+    $rowL = $stmtL->get_result()->fetch_assoc();
+    $stmtL->close();
+    if (!empty($rowL['student_id'])) {
+        $student_id = $rowL['student_id'];
+    }
+}
+
+/* 3) Guard */
+if ($student_id === '') {
+    http_response_code(400);
     die("No student selected.");
 }
 
-$student_id = $_GET['student_id'];
-$sql = "SELECT * FROM student_account WHERE student_id=?";
+$hours = communityServiceHours($conn, $student_id);
+
+/* 4) Canonicalize URL only if current URL is NOT already canonical */
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST'];
+$base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'); // e.g. /MoralMatrix/ccdu
+
+$canonicalPath = $base . '/view_student.php';
+$canonicalQS   = 'student_id=' . rawurlencode($student_id);
+$currentPath   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$currentQS     = (string)($_SERVER['QUERY_STRING'] ?? '');
+
+/* Decide if we need to redirect: we used k=... or hex, OR the qs isn’t exactly student_id=... */
+$triggeredByKey = ($kParam !== '') || ($origStudent !== '' && !preg_match($ID_PATTERN, $origStudent)) || ($origStudent !== '' && $origStudent !== $student_id);
+
+/* Are we already at the canonical path+query? */
+$alreadyCanonical = ($currentPath === $canonicalPath) && ($currentQS === $canonicalQS);
+
+if ($triggeredByKey && !$alreadyCanonical) {
+    header('Location: '.$scheme.'://'.$host.$canonicalPath.'?'.$canonicalQS, true, 302);
+    $conn->close();
+    exit;
+}
+
+/* === FETCH STUDENT === */
+$sql = "SELECT * FROM student_account WHERE student_id = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $student_id);
 $stmt->execute();
-$result = $stmt->get_result();
+$result  = $stmt->get_result();
 $student = $result->fetch_assoc();
 $stmt->close();
 
@@ -31,21 +95,29 @@ $sqlv = "SELECT violation_id, offense_category, offense_type, offense_details, d
          FROM student_violation
          WHERE student_id = ?
          ORDER BY reported_at DESC, violation_id DESC";
-
 $stmtv = $conn->prepare($sqlv);
 $stmtv->bind_param("s", $student_id);
 $stmtv->execute();
 $resv = $stmtv->get_result();
-while ($row = $resv->fetch_assoc()) {
-    $violations[] = $row;
-}
+while ($row = $resv->fetch_assoc()) { $violations[] = $row; }
 $stmtv->close();
 
-$conn->close();
+/* --- Robust photo path (fallback if file is missing) --- */
+$photoRel = 'placeholder.png';
+if ($student && !empty($student['photo'])) {
+    $tryRel = '../admin/uploads/' . $student['photo'];            // web path from /ccdu
+    $tryAbs = __DIR__ . '/../admin/uploads/' . $student['photo']; // filesystem check
+    if (is_file($tryAbs)) { $photoRel = $tryRel; }
+}
 
 /* Build a root-absolute directory path for this folder (e.g., /MoralMatrix/ccdu) */
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
+
+
+/* Now it’s safe to include files that output HTML */
+include '../includes/header.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -77,7 +149,7 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 <div class="right-container">
   <?php if($student): ?>
       <div class="profile">
-          <img src="<?= !empty($student['photo']) ? '../admin/uploads/'.$student['photo'] : 'placeholder.png' ?>" alt="Profile">
+          <img src="<?= htmlspecialchars($photoRel) ?>" alt="Profile">
           <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
           <h2><?= htmlspecialchars($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name']) ?></h2>
           <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
@@ -87,6 +159,10 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
           <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?> (<?= htmlspecialchars($student['guardian_mobile']) ?>)</p>
           <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
           <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+      </div>
+      <div class="violations">
+        <strong>Community Service:</strong>
+            <?= htmlspecialchars((string)$hours) . ' ' . ($hours === 1 ? 'hour' : 'hours') ?>
       </div>
   <?php else: ?>
       <p>Student not found.</p>

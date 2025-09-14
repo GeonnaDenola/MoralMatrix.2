@@ -2,6 +2,8 @@
 include '../includes/header.php';
 include '../config.php';
 
+include __DIR__ . '/_scanner.php';
+
 include 'page_buttons.php';
 ?>
 
