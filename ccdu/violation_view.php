@@ -2,6 +2,8 @@
 // violation_view.php
 include '../config.php';
 
+require __DIR__.'/_scanner.php';
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];

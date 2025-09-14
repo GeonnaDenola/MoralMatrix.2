@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +14,7 @@
         <a href="">
             <button>Pending Reports</button>
         </a>
-        <a href="">
+        <a href="community_validators.php">
             <button>Community Service Validators</button>
         </a>
         <a href="">

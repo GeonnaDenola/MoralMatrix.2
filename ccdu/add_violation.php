@@ -52,6 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photo = file_get_contents($_FILES['photo']['tmp_name']);
     }
 
+    $ccdu_id = $_SESSION['id_number']
+            ?? $_SESSION['admin_id']
+            ?? $_SESSION['email']
+            ?? 'ccdu:unknown';
+
     $sql = "INSERT INTO student_violation
             (student_id, offense_category, offense_type, offense_details, description, photo)
             VALUES (?, ?, ?, ?, ?, ?)";
@@ -119,7 +124,7 @@ $stmt->close();
 
   <!--LIGHT-->   
     <div id="lightForm" class="form-container">
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" action="/ccdu/add_violation.php">
 
             <p>Light Offenses</p>
 

@@ -46,7 +46,7 @@ $conn->close();
         <input type="hidden" name="record_id" value="<?php echo $id; ?>">
 
         <label for = "admin_id">ID Number:</label><br>
-        <input type ="number" id="admin_id" name="admin_id" value="<?php echo $admin['admin_id']; ?>" ><br><br>
+        <input type ="text" id="admin_id" name="admin_id" value="<?php echo $admin['admin_id']; ?>" ><br><br>
 
         <label for = "first_name">First Name:</label><br>
         <input type = "text" id="first_name" name="first_name"  value="<?php echo $admin['first_name']; ?>"><br><br>
