@@ -52,6 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photo = file_get_contents($_FILES['photo']['tmp_name']);
     }
 
+    $submitted_by = $_SESSION['id_number']
+                    ?? $_SESSION['faculty_id']
+                    ?? $_SESSION['email']
+                    ?? 'faculty:unknown';
+    
+    $submitted_role = 'faculty';
+
     $sql = "INSERT INTO student_violation
             (student_id, offense_category, offense_type, offense_details, description, photo)
             VALUES (?, ?, ?, ?, ?, ?)";
@@ -61,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $null = NULL;
     $stmtIns->bind_param("sssssb",
         $student_id, $offense_category, $offense_type,
-        $offense_details, $description, $null
+        $offense_details, $description, $null, $submitted_by, $submitted_role
     );
     if ($photo !== null) {
         $stmtIns->send_long_data(5, $photo);

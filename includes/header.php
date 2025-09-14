@@ -1,5 +1,4 @@
 <?php
-// header.php
 session_start(); // keep session active for logout handling
 ?>
 <!DOCTYPE html>

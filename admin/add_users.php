@@ -3,6 +3,11 @@ include '../includes/header.php';
 
 require '../config.php';
 
+require_once __DIR__.'/../vendor/autoload.php';
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+
+
 $servername = $database_settings['servername'];
 $username = $database_settings['username'];
 $password = $database_settings['password'];
@@ -109,19 +114,86 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             if (empty($errorMsg)) {
-                if ($stmt->execute()) {
-                    $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
-                    $stmtAcc->bind_param("ssss", $idNumber, $formValues['email'], $hashedPassword, $account_type);
-                    if ($stmtAcc->execute()) {
-                        $flashMsg = "✅ Account added successfully!";
-                        $formValues = array_map(fn($v) => '', $formValues);
-                    } else {
-                        $errorMsg = "⚠️ Error inserting into accounts table.";
+               if ($stmt->execute()) {
+                $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
+                $stmtAcc->bind_param("ssss", $idNumber, $formValues['email'], $hashedPassword, $account_type);
+
+                if ($stmtAcc->execute()) {
+
+                    /* =======================
+                    QR: insert + generate (students only)
+                    ======================= */
+                    if ($account_type === 'student') {
+                        // use $idNumber (already set to the student's ID) so we never depend on $formValues after reset
+                        $studentIdForQR = $idNumber;
+
+                        // 1) insert or reuse qr_key
+                        $qrKey = bin2hex(random_bytes(32)); // 64 hex
+                        $insQR = $conn->prepare("INSERT INTO student_qr_keys (student_id, qr_key) VALUES (?, ?)");
+                        $insQR->bind_param("ss", $studentIdForQR, $qrKey);
+                        if(!$insQR->execute()){
+                            // fetch existing if duplicate or other constraint
+                            $sel = $conn->prepare("SELECT qr_key FROM student_qr_keys WHERE student_id = ? LIMIT 1");
+                            $sel->bind_param("s", $studentIdForQR);
+                            $sel->execute();
+                            $row = $sel->get_result()->fetch_assoc();
+                            if (!empty($row['qr_key'])) {
+                                $qrKey = $row['qr_key'];
+                            } else {
+                                error_log('QR insert failed for '.$studentIdForQR.' : '.$insQR->error);
+                            }
+                            $sel->close();
+                        }
+                        $insQR->close();
+
+                        // 2) Build resolver URL (absolute)
+                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                        $host   = $_SERVER['HTTP_HOST'];
+                        $base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'); // e.g. /admin
+                        
+                       $qrURL  = $scheme.'://'.$host.$base.'/../qr.php?k='.urlencode($qrKey);
+
+
+                        // 3) Generate SVG (no GD required)
+                        $options = new \chillerlan\QRCode\QROptions([
+                            'outputType' => \chillerlan\QRCode\QRCode::OUTPUT_MARKUP_SVG,
+                            'scale'      => 6,
+                            'eccLevel'   => \chillerlan\QRCode\QRCode::ECC_L,
+                        ]);
+                        $svg = (new \chillerlan\QRCode\QRCode($options))->render($qrURL);
+
+                        // 4) Save to /uploads/qrcodes/{student_id}.svg (project root uploads)
+                        $qrDir  = dirname(__DIR__) . '/uploads/qrcodes'; // from /admin to project root
+                        if (!is_dir($qrDir)){
+                            if(!mkdir($qrDir, 0777, true)){
+                                error_log('Failed to mkdir: '.$qrDir);
+                            }
+                        }
+
+                        $qrFile = $qrDir . DIRECTORY_SEPARATOR . $studentIdForQR . '.svg';
+                        $bytes  = @file_put_contents($qrFile, $svg);
+
+                        if($bytes === false){
+                            // log helpful diagnostics
+                            error_log('QR save failed: file='.$qrFile
+                                .' dir_exists='.(is_dir($qrDir)?'1':'0')
+                                .' dir_writable='.(is_writable($qrDir)?'1':'0')
+                                .' parent='.dirname($qrDir));
+                        }
                     }
-                    $stmtAcc->close();
+                    /* ========= end QR block ========= */
+
+                    $flashMsg = "✅ Account added successfully!";
+                    $formValues = array_map(fn($v) => '', $formValues);
+
                 } else {
-                    $errorMsg = "⚠️ Error inserting into {$account_type}_account table.";
+                    $errorMsg = "⚠️ Error inserting into accounts table: ".$conn->error;
                 }
+                $stmtAcc->close();
+            } else {
+                $errorMsg = "⚠️ Error inserting into {$account_type}_account table: ".$conn->error;
+            }
+
                 $stmt->close();
             }
         }
