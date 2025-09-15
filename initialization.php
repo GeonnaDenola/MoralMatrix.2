@@ -1,6 +1,11 @@
 <?php
 include __DIR__ . '/config.php';
 
+// Keep mysqli in non-exception mode so our `=== FALSE` checks work consistently.
+if (function_exists('mysqli_report')) {
+    mysqli_report(MYSQLI_REPORT_OFF);
+}
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
@@ -22,6 +27,7 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection Failed: " . $conn->connect_error);
 }
+$conn->set_charset('utf8mb4');
 
 function handleQueryError($sql, $conn) {
     die("Error executing query: " . $sql . "<br>" . $conn->error);
@@ -236,11 +242,13 @@ $sqlCreateStudentQrKeysSchema = "CREATE TABLE IF NOT EXISTS student_qr_keys (
 if ($conn->query($sqlCreateStudentQrKeysSchema) === FALSE) {
     handleQueryError($sqlCreateStudentQrKeysSchema, $conn);
 }
-// Extra index on student_id (ignore duplicate key error if it already exists)
-$sqlIdx = "CREATE INDEX idx_qr_student_id ON student_qr_keys (student_id)";
-if ($conn->query($sqlIdx) === FALSE && $conn->errno != 1061) { // 1061 = duplicate key name
-    handleQueryError($sqlIdx, $conn);
-}
+
+/*
+NOTE:
+No extra index is needed on student_qr_keys(student_id).
+InnoDB automatically creates the required index for the foreign key above.
+Removing the redundant CREATE INDEX avoids duplicate-key-name errors.
+*/
 
 /* =========================
    Validator Accounts
@@ -298,9 +306,50 @@ if ($conn->query($sqlCreateCommunityServiceEvidenceSchema) === FALSE) {
     handleQueryError($sqlCreateCommunityServiceEvidenceSchema, $conn);
 }
 
-// 3) Redirect only AFTER ensuring all tables exist
-header("Location: create_admin_account.php");
-exit();
+/* =========================
+   Decide where to go next:
+   - If ANY account already exists, go to login.php
+   - Otherwise, go to create_admin_account.php
+   ========================= */
+$existingAccounts = 0;
+
+// Check the main accounts table (primary signal)
+$res = $conn->query("SELECT COUNT(*) AS c FROM accounts");
+if ($res !== FALSE) {
+    $row = $res->fetch_assoc();
+    $existingAccounts = isset($row['c']) ? (int)$row['c'] : 0;
+    $res->free();
+}
+
+// Optional safety: if somehow accounts is empty but admin records exist,
+// treat that as "setup completed" too.
+if ($existingAccounts === 0) {
+    $resAdmin = $conn->query("SELECT COUNT(*) AS c FROM admin_account");
+    if ($resAdmin !== FALSE) {
+        $rowA = $resAdmin->fetch_assoc();
+        if (isset($rowA['c']) && (int)$rowA['c'] > 0) {
+            $existingAccounts = (int)$rowA['c'];
+        }
+        $resAdmin->free();
+    }
+    if ($existingAccounts === 0) {
+        $resSuper = $conn->query("SELECT COUNT(*) AS c FROM super_admin");
+        if ($resSuper !== FALSE) {
+            $rowS = $resSuper->fetch_assoc();
+            if (isset($rowS['c']) && (int)$rowS['c'] > 0) {
+                $existingAccounts = (int)$rowS['c'];
+            }
+            $resSuper->free();
+        }
+    }
+}
 
 $conn->close();
-?>
+
+if ($existingAccounts > 0) {
+    header("Location: login.php");
+    exit();
+} else {
+    header("Location: create_admin_account.php");
+    exit();
+}
