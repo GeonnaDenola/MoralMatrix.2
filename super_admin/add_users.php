@@ -115,6 +115,7 @@ if (empty($formValues['password'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Admin Account</title>
+    <link rel="stylesheet" href="/MoralMatrix/css/global.css">
 </head>
 <body>
 <h1>Add New Admin Account</h1>

@@ -4,8 +4,8 @@ include '../config.php';
 
 include __DIR__ . '/_scanner.php';
 
-include 'page_buttons.php';
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -13,10 +13,30 @@ include 'page_buttons.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link rel="stylesheet" href="/MoralMatrix/css/global.css">
 </head>
 <body>
+
+<!-- Sidebar toggle (hamburger) -->
+<button id="sidebarToggle" class="sidebar-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">☰</button>
+
+<!-- Off-canvas sidebar -->
+<aside id="sidebar" class="sidebar" aria-hidden="true">
+  <div class="sidebar-header">
+    <span>Menu</span>
+    <button id="sidebarClose" class="sidebar-close" aria-label="Close">✕</button>
+  </div>
+
+  <div id="pageButtons" class="sidebar-links">
+    <?php include 'page_buttons.php' ?>
+  </div>
+</aside>
+
+<!-- Backdrop for the sidebar -->
+<div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
+
     <div class="right-container">
-        <h2>Dashboard</h2>
+     <h2 class="page-title">Dashboard</h2>
         <input type="text" id="search" placeholder="Search...">
 
         <div class="sort">
@@ -181,6 +201,33 @@ include 'page_buttons.php';
 
     // Load all students on page load
     loadStudents();
+
+(function(){
+  const sidebar   = document.getElementById('sidebar');
+  const openBtn   = document.getElementById('sidebarToggle');
+  const closeBtn  = document.getElementById('sidebarClose');
+  const backdrop  = document.getElementById('sidebarBackdrop');
+
+  function openSidebar(){
+    sidebar.classList.add('open');
+    sidebar.setAttribute('aria-hidden','false');
+    openBtn.setAttribute('aria-expanded','true');
+    backdrop.classList.remove('hidden');
+    document.body.classList.add('modal-open'); // reuse scroll lock
+  }
+  function closeSidebar(){
+    sidebar.classList.remove('open');
+    sidebar.setAttribute('aria-hidden','true');
+    openBtn.setAttribute('aria-expanded','false');
+    backdrop.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+  }
+
+  openBtn.addEventListener('click', openSidebar);
+  closeBtn.addEventListener('click', closeSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSidebar(); });
+})();
 </script> 
 </body>
 </html>

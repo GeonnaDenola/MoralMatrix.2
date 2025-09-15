@@ -217,6 +217,7 @@ if (empty($formValues['password'])) {
     <style>
     .form-container { display:none; margin-bottom:20px; }
     </style>
+    <link rel="stylesheet" href="/MoralMatrix/css/global.css">
 </head>
 <body>
     <a href="dashboard.php"><button>Return to Dashboard</button></a>
