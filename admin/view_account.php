@@ -1,6 +1,4 @@
 <?php
-// admin/account_view.php
-// Standalone account viewer with "Print ID" for students
 
 require_once __DIR__ . '/../config.php';
 
@@ -79,7 +77,7 @@ $hide = ['password','photo']; // never show password / raw filename
   <title><?= htmlspecialchars(ucfirst($type)) ?> Account</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f7f9fc;margin:0;padding:24px;}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#f7f9fc;margin:0;}
     .card{max-width:680px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:24px;}
     .avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 14px;}
     .title{margin:0 0 6px;font-size:20px;font-weight:700;text-align:center;}
@@ -105,9 +103,6 @@ $hide = ['password','photo']; // never show password / raw filename
         <div class="value"><?= htmlspecialchars((string)$v) ?></div>
       <?php endforeach; ?>
     </div>
-
-    <div class="actions">
-      <a class="btn back" href="javascript:history.back()">← Back</a>
 
       <?php if($type === 'student' && !empty($data['student_id'])): ?>
         <!-- Opens your printable ID (front/back with QR) in a new tab -->
