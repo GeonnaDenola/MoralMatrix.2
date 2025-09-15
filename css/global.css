@@ -146,33 +146,56 @@
 }
     
 /*=====ADD ADMIN=======*/
+/* ===== Page bits (demo only) ===== */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  background: #f6f7fb;
+  color: #121212;
+}
+header button,
+button {
+  padding: 10px 14px;
+  background-color: #a80000;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+button:hover { background-color: #c70000; }
+button.secondary { background: #0b5ed7; }
+button.secondary:hover { background: #0a53be; }
+
+/* ===== Modal ===== */
 .modal {
-  display: none; /* Hidden by default */
+  display: none;             /* Hidden by default */
   position: fixed;
   z-index: 1000;
-  left: 0;
-  top: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: rgba(0,0,0,0.6); /* semi-transparent background */
+  background-color: rgba(0,0,0,0.6);
   justify-content: center;
   align-items: center;
 }
+.modal.show { display: flex; }
 
 /* ===== Modal Content ===== */
 .modal-content {
   background-color: #fff;
   padding: 30px;
   border-radius: 12px;
-  width: 450px;
-  max-width: 90%;
+  width: 520px;
+  max-width: 92%;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.25s ease;
 }
 
 /* ===== Close Button ===== */
@@ -183,41 +206,44 @@
   font-size: 24px;
   cursor: pointer;
   color: #a80000;
+  line-height: 1;
 }
 
-/* ===== Form Inputs ===== */
-.modal-content input[type="text"],
-.modal-content input[type="email"],
-.modal-content input[type="file"] {
+/* ===== Form Layout ===== */
+.field { margin-top: 6px; }
+.field label {
+  font-weight: 700;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 6px;
+}
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="password"],
+.field input[type="file"] {
   width: 100%;
   padding: 10px;
-  margin-top: 4px;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
+  background: #fff;
+  color: #000;
+  box-sizing: border-box;
 }
-
-/* ===== Buttons ===== */
-.modal-content button {
-  padding: 10px 15px;
-  background-color: #a80000;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: 0.2s;
+.inline {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
 }
-
-.modal-content button:hover {
-  background-color: #c70000;
-}
+.actions { margin-top: 8px; display: flex; gap: 10px; } /* default */
+.muted { display:block; margin-top:6px; font-size:.9rem; opacity:.85; }
 
 /* ===== Image Preview ===== */
 #photoPreview {
-  display: block;
-  margin: 10px auto;
-  width: 150px; /* slightly bigger */
+  display: none; /* shown when a file is chosen */
+  margin: 10px 0 0;
+  width: 150px;
   height: 150px;
   object-fit: cover;
   border-radius: 8px;
@@ -226,16 +252,81 @@
 
 /* ===== Modal Animation ===== */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(4px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
 
-/* ===== Form Labels ===== */
-.modal-content label {
-  font-weight: bold;
-  margin-top: 10px;
-  display: block;
-  font-size: 14px;
+/* ===== HARD OVERRIDES: ensure file input is visible ===== */
+.modal-content input[type="file"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 2147483647 !important;
+  width: 100% !important;
+  height: 42px !important;
+  padding: 6px 8px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: #000 !important;
+  pointer-events: auto !important;
+  -webkit-appearance: auto !important;
+  appearance: auto !important;
+}
+
+/* Style the native “Choose file” button (modern browsers) */
+.modal-content input[type="file"]::file-selector-button {
+  padding: 8px 12px;
+  margin-right: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #0b5ed7;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modal-content input[type="file"]::-ms-browse { display:inline-block; } /* old Edge/IE */
+
+/* ===== OPTIONAL alt wrapper you may have used earlier ===== */
+.form-actions {
+  display: flex;
+  flex-direction: column; /* stack vertically */
+  gap: 10px;              /* space between buttons */
+}
+
+/* optional: make the Generate button blue to distinguish */
+.btn-secondary { background: #0b5ed7; }
+.btn-secondary:hover { background: #0a53be; }
+
+/* ===== FINAL OVERRIDES (NO HTML CHANGES NEEDED) =====
+   Force the two action buttons to stack vertically inside the modal.
+   Works whether you use .actions, .form-actions, or bare buttons. */
+.modal-content .actions{
+  display: flex !important;
+  flex-direction: column !important;  /* stack: Generate above Submit */
+  gap: 10px !important;
+  width: 100%;
+}
+.modal-content .actions button{
+  width: 100% !important;
+  float: none !important;
+  display: block !important;
+}
+
+/* Fallback in case there is no .actions wrapper */
+.modal-content form button[type="button"][onclick="generatePass()"]{
+  display:block !important;
+  width:100% !important;
+  margin:0 0 10px 0 !important;
+  float:none !important;
+  clear:both !important;
+}
+.modal-content form button[type="submit"]{
+  display:block !important;
+  width:100% !important;
+  float:none !important;
+  clear:both !important;
 }
 
 /*=====DASHBOARDS=======*/
@@ -505,6 +596,37 @@ h3 { text-align:center; margin:20px 0 10px; color: #000000;}
   .filter-bar{ flex-direction:column; align-items:stretch; }
   .filter-bar label{ text-align:center; }
   .filter-select{ width:100%; }
+}
+
+/* === Force exactly 2 cards per row in the admin dashboard === */
+#accountContainer{
+  display: grid !important;                         /* override old flex */
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+  align-items: stretch;
+  text-align: initial;                               /* don't center all children */
+}
+
+/* Make each card fill its grid cell */
+#accountContainer .card{
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  min-width: 0;                                      /* prevent overflow with long text */
+}
+
+/* Keep the empty/loading state centered and full-width */
+#accountContainer .empty{
+  grid-column: 1 / -1;
+  justify-self: center;
+  text-align: center;
+}
+
+/* Stack to one column on smaller screens */
+@media (max-width: 900px){
+  #accountContainer{
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /*=========Add Accounts========*/
@@ -2114,3 +2236,5 @@ button[type="submit"]:active {
   #ccduForm .photo-row{ grid-column: 1; }
   #ccduPreview{ width: 160px; height: 160px; }
 }
+
+/*==========View Accounts========*/

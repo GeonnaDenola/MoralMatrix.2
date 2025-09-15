@@ -116,6 +116,59 @@ if (empty($formValues['password'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Admin Account</title>
     <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+
+    <!-- ADDED: Hard overrides to force-show the native file input (even inside modals) -->
+    <style>
+      /* Apply both globally and when inside a .modal-content container */
+      input[type="file"],
+      .modal-content input[type="file"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 2147483647 !important;
+        width: 100% !important;
+        height: auto !important;
+        padding: 6px 8px !important;
+        border: 1px solid #ccc !important;
+        border-radius: 8px !important;
+        background: #fff !important;
+        color: #000 !important;
+        pointer-events: auto !important;
+        -webkit-appearance: auto !important;
+        appearance: auto !important;
+      }
+      /* Make the built-in button obvious */
+      input[type="file"]::file-selector-button {
+        padding: 8px 12px;
+        margin-right: 10px;
+        border: 0;
+        border-radius: 8px;
+        background: #0b5ed7;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      input[type="file"]::-ms-browse { display: inline-block; } /* old Edge/IE */
+
+      /* Optional: nicer preview without inline styles */
+      #photoPreview {
+        display: none;            /* shown after a file is picked */
+        margin: 10px auto;
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+      }
+      #fileName {
+        display: block;
+        margin-top: 6px;
+        font-size: .9rem;
+        opacity: .85;
+        text-align: center;
+      }
+    </style>
 </head>
 <body>
 <h1>Add New Admin Account</h1>
@@ -157,15 +210,21 @@ if (empty($formValues['password'])) {
     <label>Email:</label><br>
     <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required><br><br>
 
-    <label>Profile Picture:</label><br>
-    <img id="photoPreview" src="" alt="No photo" width="100" style="display:none;"><br>
-    <input type="file" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)"><br><br>
+    <label for="photo">Profile Picture:</label><br>
+    <!-- CHANGED: add id="photo" so CSS/JS can target; accept stays the same -->
+    <input type="file" id="photo" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)"><br>
+    <!-- ADDED: file name display -->
+    <small id="fileName"></small>
+    <!-- CHANGED: remove inline display:none; CSS above controls it -->
+    <img id="photoPreview" src="" alt="No photo"><br><br>
 
     <label>Temporary Password:</label><br>
     <input type="text" id="password" name="password" value="<?php echo htmlspecialchars($formValues['password']); ?>" required><br><br>
-    <button type="button" onclick="generatePass()">Generate Password</button><br><br>
+    <div class="form-actions">
+        <button type="button" class="btn-secondary" onclick="generatePass()">Generate Password</button>
+        <button type="submit">Add Admin Account</button>
+    </div>
 
-    <button type="submit">Add Admin Account</button>
 </form>
 
 <script>
@@ -178,16 +237,49 @@ function generatePass() {
     document.getElementById('password').value = pass;
 }
 
+// UPDATED: sturdier preview with filename + basic validations
 function previewPhoto(input) {
-    const preview = document.getElementById('photoPreview');
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-        };
-        reader.readAsDataURL(input.files[0]);
+    const preview  = document.getElementById('photoPreview');
+    const fileName = document.getElementById('fileName');
+
+    // Debug: confirm it's not hidden by CSS
+    const cs = getComputedStyle(input);
+    console.log('file input computed:', cs.display, cs.visibility, cs.opacity, cs.width, cs.height);
+
+    if (!input.files || !input.files[0]) {
+        preview.style.display = 'none';
+        preview.src = '';
+        fileName.textContent = '';
+        return;
     }
+    const file = input.files[0];
+
+    // Mirror typical server checks (optional)
+    if (!/^image\/(png|jpeg)$/.test(file.type)) {
+        alert('Please pick a PNG or JPEG.');
+        input.value = '';
+        preview.style.display = 'none';
+        preview.src = '';
+        fileName.textContent = '';
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Image too large (max 5MB).');
+        input.value = '';
+        preview.style.display = 'none';
+        preview.src = '';
+        fileName.textContent = '';
+        return;
+    }
+
+    fileName.textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
 }
 </script>
 
