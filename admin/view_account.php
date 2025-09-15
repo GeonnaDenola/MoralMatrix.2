@@ -89,6 +89,42 @@ $hide = ['password','photo']; // never show password / raw filename
     .btn{display:inline-block;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;color:#111}
     .btn:hover{background:#f3f4f6}
     .back{color:#2563eb;border-color:#bfdbfe}
+    .card > a.btn[href*="qr_id_card.php"]{
+      display: block;
+      width: max-content;
+      margin: 18px auto 0;     /* centers the button */
+      text-align: center;
+
+      background: #ef4444;     /* red */
+      border-color: #ef4444;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 8px;
+      box-shadow: 0 2px 0 #dc2626, 0 0 0 0 rgba(239,68,68,0); /* small depth */
+      transition: background .15s ease, box-shadow .15s ease, transform .05s ease;
+    }
+
+    .card > a.btn[href*="qr_id_card.php"]:hover{
+      background:#dc2626;
+      border-color:#dc2626;
+      box-shadow: 0 3px 0 #b91c1c, 0 0 0 4px rgba(239,68,68,.12);
+    }
+
+    .card > a.btn[href*="qr_id_card.php"]:active{
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #b91c1c, 0 0 0 4px rgba(239,68,68,.12);
+    }
+
+    .card > a.btn[href*="qr_id_card.php"]:focus-visible{
+      outline: none;
+      box-shadow: 0 2px 0 #dc2626, 0 0 0 4px rgba(239,68,68,.28); /* red focus ring */
+    }
+
+    /* Optional: full-width on very small screens */
+    @media (max-width: 480px){
+      .card > a.btn[href*="qr_id_card.php"]{ width:100%; }
+    }
   </style>
 </head>
 <body>
