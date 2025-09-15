@@ -130,12 +130,12 @@ body{
   display:flex; align-items:center; gap:10px;
   padding:8px 12px;
 
-  /* gradient + solid fallback */
-  background-color: var(--brand);
+  /* red gradient + solid fallback */
+  background-color:#ef4444; /* red-500 */
   background-image: linear-gradient(
     90deg,
-    color-mix(in oklab, var(--brand) 85%, white) 0%,
-    color-mix(in oklab, var(--brand) 65%, white) 100%
+    #ef4444 0%,
+    #dc2626 100%
   );
   color:#fff;
 
