@@ -1,58 +1,55 @@
 <?php
-
 include __DIR__ . '/config.php';
 
-$servername = $database_settings['servername'];
-$username = $database_settings['username'];
-$password = $database_settings['password'];
-$dbname = $database_settings['dbname'];
+// Keep mysqli in non-exception mode so our `=== FALSE` checks work consistently.
+if (function_exists('mysqli_report')) {
+    mysqli_report(MYSQLI_REPORT_OFF);
+}
 
-// First connect without database to create it
+$servername = $database_settings['servername'];
+$username   = $database_settings['username'];
+$password   = $database_settings['password'];
+$dbname     = $database_settings['dbname'];
+
+// 1) Connect without DB and ALWAYS ensure the DB exists
 $conn = new mysqli($servername, $username, $password);
 if ($conn->connect_error) {
     die("Connection Failed: " . $conn->connect_error);
 }
-
-// Check if database exists
-$result = $conn->query("SHOW DATABASES LIKE '$dbname'");
-if ($result && $result->num_rows > 0) {
-    header("Location: login.php");
-    exit();
-}
-
-// Create database if not existing
-$sqlCreateDatabase = "CREATE DATABASE IF NOT EXISTS $dbname";
-if ($conn->query($sqlCreateDatabase) === TRUE) {
-    // Database created
-} else {
+$sqlCreateDatabase = "CREATE DATABASE IF NOT EXISTS `$dbname`";
+if ($conn->query($sqlCreateDatabase) !== TRUE) {
     die("Error creating database: " . $conn->error);
 }
-
 $conn->close();
 
-// Now connect to the created database
+// 2) Connect to the DB (we will always run CREATE TABLE IF NOT EXISTS)
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection Failed: " . $conn->connect_error);
 }
+$conn->set_charset('utf8mb4');
 
 function handleQueryError($sql, $conn) {
     die("Error executing query: " . $sql . "<br>" . $conn->error);
 }
 
-// Accounts Table
+/* =========================
+   Accounts Table (logins)
+   ========================= */
 $sqlCreateLoginSchema = "CREATE TABLE IF NOT EXISTS accounts (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     id_number VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
     account_type ENUM('super_admin', 'administrator', 'ccdu', 'faculty', 'student', 'security') NOT NULL
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateLoginSchema) === FALSE) {
     handleQueryError($sqlCreateLoginSchema, $conn);
 }
 
-// Super Admin Table
+/* =========================
+   Super Admin Table
+   ========================= */
 $sqlCreateSuperAdminSchema = "CREATE TABLE IF NOT EXISTS super_admin (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     id_number VARCHAR(50) NOT NULL,
@@ -61,13 +58,15 @@ $sqlCreateSuperAdminSchema = "CREATE TABLE IF NOT EXISTS super_admin (
     mobile VARCHAR(15) NOT NULL,
     email VARCHAR(50) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP    
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateSuperAdminSchema) === FALSE) {
     handleQueryError($sqlCreateSuperAdminSchema, $conn);
 }
 
-// Faculty table
+/* =========================
+   Faculty Table
+   ========================= */
 $sqlCreateFacultyAccountSchema = "CREATE TABLE IF NOT EXISTS faculty_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     faculty_id VARCHAR(50) NOT NULL,
@@ -80,13 +79,14 @@ $sqlCreateFacultyAccountSchema = "CREATE TABLE IF NOT EXISTS faculty_account (
     status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateFacultyAccountSchema) === FALSE) {
     handleQueryError($sqlCreateFacultyAccountSchema, $conn);
-
 }
 
-// CCDU table
+/* =========================
+   CCDU Table
+   ========================= */
 $sqlCreateCcduAccountSchema = "CREATE TABLE IF NOT EXISTS ccdu_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     ccdu_id VARCHAR(50) NOT NULL,
@@ -94,18 +94,19 @@ $sqlCreateCcduAccountSchema = "CREATE TABLE IF NOT EXISTS ccdu_account (
     last_name VARCHAR(50) NOT NULL,
     mobile VARCHAR(15) NOT NULL,
     email VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL UNIQUE, 
+    password VARCHAR(255) NOT NULL,
     photo BLOB,
     status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateCcduAccountSchema) === FALSE) {
     handleQueryError($sqlCreateCcduAccountSchema, $conn);
-
 }
 
-// Security table
+/* =========================
+   Security Table
+   ========================= */
 $sqlCreateSecurityAccountSchema = "CREATE TABLE IF NOT EXISTS security_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     security_id VARCHAR(50) NOT NULL,
@@ -117,13 +118,14 @@ $sqlCreateSecurityAccountSchema = "CREATE TABLE IF NOT EXISTS security_account (
     status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateSecurityAccountSchema) === FALSE) {
     handleQueryError($sqlCreateSecurityAccountSchema, $conn);
-
 }
 
-// Student table
+/* =========================
+   Student Table
+   ========================= */
 $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(50) NOT NULL UNIQUE,
@@ -141,12 +143,14 @@ $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     guardian_mobile VARCHAR(15),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateStudentAccountSchema) === FALSE) {
     handleQueryError($sqlCreateStudentAccountSchema, $conn);
 }
 
-// Admin table
+/* =========================
+   Admin Table
+   ========================= */
 $sqlCreateAdminAccountSchema = "CREATE TABLE IF NOT EXISTS admin_account (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id VARCHAR(50) NOT NULL,
@@ -171,11 +175,14 @@ $sqlCreateAdminAccountSchema = "CREATE TABLE IF NOT EXISTS admin_account (
     c_delete VARCHAR(2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateAdminAccountSchema) === FALSE) {
     handleQueryError($sqlCreateAdminAccountSchema, $conn);
 }
 
+/* =========================
+   Student Violation Table
+   ========================= */
 $sqlCreateStudentViolationSchema = "CREATE TABLE IF NOT EXISTS student_violation (
     violation_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(50) NOT NULL,
@@ -184,27 +191,29 @@ $sqlCreateStudentViolationSchema = "CREATE TABLE IF NOT EXISTS student_violation
     offense_details TEXT NOT NULL,
     description TEXT NOT NULL,
     photo BLOB,
-    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
     submitted_by VARCHAR(50) NOT NULL,
-    submitter_role ENUM('faculty', 'ccdu', 'security') NOT NULL,
+    submitter_role ENUM('faculty','ccdu','security') NOT NULL,
     reviewed_by VARCHAR(50) NULL,
-    reviewd_at DATETIME NULL,
+    reviewed_at DATETIME NULL,
     review_notes TEXT NULL,
     reported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_violation_status             ON student_violation (status, reported_at);
-    INDEX idx_violation_student_status     ON student_violation (student_id, status);
-    INDEX idx_violation_submitter          ON student_violation (submitted_by, status);
+    INDEX idx_violation_status (status, reported_at),
+    INDEX idx_violation_student_status (student_id, status),
+    INDEX idx_violation_submitter (submitted_by, status),
     INDEX idx_violation_student (student_id),
     CONSTRAINT fk_violation_student
         FOREIGN KEY (student_id)
         REFERENCES student_account (student_id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-if($conn->query($sqlCreateStudentViolationSchema) === FALSE ){
+if ($conn->query($sqlCreateStudentViolationSchema) === FALSE) {
     handleQueryError($sqlCreateStudentViolationSchema, $conn);
 }
 
-
+/* =========================
+   Violation Details Table
+   ========================= */
 $sqlCreateViolationDetailsSchema = "CREATE TABLE IF NOT EXISTS violation_details (
     detail_id INT AUTO_INCREMENT PRIMARY KEY,
     violation_id INT NOT NULL,
@@ -216,14 +225,16 @@ $sqlCreateViolationDetailsSchema = "CREATE TABLE IF NOT EXISTS violation_details
         REFERENCES student_violation(violation_id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-if($conn->query($sqlCreateViolationDetailsSchema) === FALSE ){
+if ($conn->query($sqlCreateViolationDetailsSchema) === FALSE) {
     handleQueryError($sqlCreateViolationDetailsSchema, $conn);
 }
 
-
+/* =========================
+   Student QR Keys
+   ========================= */
 $sqlCreateStudentQrKeysSchema = "CREATE TABLE IF NOT EXISTS student_qr_keys (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR (50) NOT NULL,
+    student_id VARCHAR(50) NOT NULL,
     qr_key CHAR(64) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     revoked TINYINT(1) DEFAULT 0,
@@ -232,44 +243,57 @@ $sqlCreateStudentQrKeysSchema = "CREATE TABLE IF NOT EXISTS student_qr_keys (
         REFERENCES student_account(student_id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-if($conn->query($sqlCreateStudentQrKeysSchema) === FALSE ){
+if ($conn->query($sqlCreateStudentQrKeysSchema) === FALSE) {
     handleQueryError($sqlCreateStudentQrKeysSchema, $conn);
 }
 
-$sqlIdx = "CREATE INDEX idx_qr_student_id ON student_qr_keys (student_id)";
-if ($conn->query($sqlIdx) === FALSE && $conn->errno != 1061) { // 1061 = duplicate key name
-    handleQueryError($sqlIdx, $conn);
-}
+/*
+NOTE:
+No extra index is needed on student_qr_keys(student_id).
+InnoDB automatically creates the required index for the foreign key above.
+Removing the redundant CREATE INDEX avoids duplicate-key-name errors.
+*/
 
+/* =========================
+   Validator Accounts
+   ========================= */
 $sqlCreateValidatorAccountSchema = "CREATE TABLE IF NOT EXISTS validator_account (
     validator_id INT AUTO_INCREMENT PRIMARY KEY,
     v_username VARCHAR(50) NOT NULL UNIQUE,
     v_password VARCHAR(255) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL,
-    active TINYINT (1) DEFAULT 1  
+    active TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-if ($conn->query($sqlCreateValidatorAccountSchema) === FALSE){
+if ($conn->query($sqlCreateValidatorAccountSchema) === FALSE) {
     handleQueryError($sqlCreateValidatorAccountSchema, $conn);
 }
 
-$sqlCreateValidatorStudentAssignmentSchema = " CREATE TABLE IF NOT EXISTS validator_student_assignment(
+/* =========================
+   Validator-Student Assignment
+   ========================= */
+$sqlCreateValidatorStudentAssignmentSchema = "CREATE TABLE IF NOT EXISTS validator_student_assignment (
     assignment_id INT AUTO_INCREMENT PRIMARY KEY,
     validator_id INT NOT NULL,
     student_id VARCHAR(50) NOT NULL,
     starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ends_at DATETIME NULL,
-    notes VARCHAR(255) NULL
+    notes VARCHAR(255) NULL,
     UNIQUE KEY uniq_validator_student (validator_id, student_id),
     INDEX idx_validator (validator_id),
     INDEX idx_student (student_id),
-    FOREIGN KEY (validator_id) REFERENCES validator_account(validator_id) ON DELETE CASCADE,
-    FOREIGN KEY (student_id) REFERENCES student_account(student_id) ON DELETE CASCADE
+    CONSTRAINT fk_vsa_validator FOREIGN KEY (validator_id)
+        REFERENCES validator_account(validator_id) ON DELETE CASCADE,
+    CONSTRAINT fk_vsa_student FOREIGN KEY (student_id)
+        REFERENCES student_account(student_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-if ($conn->query($sqlCreateValidatorStudentAssignmentSchema) === FALSE){
+if ($conn->query($sqlCreateValidatorStudentAssignmentSchema) === FALSE) {
     handleQueryError($sqlCreateValidatorStudentAssignmentSchema, $conn);
 }
 
+/* =========================
+   Community Service Evidence
+   ========================= */
 $sqlCreateCommunityServiceEvidenceSchema = "CREATE TABLE IF NOT EXISTS community_service_evidence (
     evidence_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id VARCHAR(50) NOT NULL,
@@ -282,15 +306,54 @@ $sqlCreateCommunityServiceEvidenceSchema = "CREATE TABLE IF NOT EXISTS community
     FOREIGN KEY (student_id) REFERENCES student_account(student_id) ON DELETE CASCADE,
     FOREIGN KEY (validator_id) REFERENCES validator_account(validator_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-if ($conn->query($sqlCreateCommunityServiceEvidenceSchema) === FALSE ){
+if ($conn->query($sqlCreateCommunityServiceEvidenceSchema) === FALSE) {
     handleQueryError($sqlCreateCommunityServiceEvidenceSchema, $conn);
 }
 
+/* =========================
+   Decide where to go next:
+   - If ANY account already exists, go to login.php
+   - Otherwise, go to create_admin_account.php
+   ========================= */
+$existingAccounts = 0;
 
+// Check the main accounts table (primary signal)
+$res = $conn->query("SELECT COUNT(*) AS c FROM accounts");
+if ($res !== FALSE) {
+    $row = $res->fetch_assoc();
+    $existingAccounts = isset($row['c']) ? (int)$row['c'] : 0;
+    $res->free();
+}
 
-// Redirect to admin creation page
-header("Location: create_admin_account.php");
-exit();
+// Optional safety: if somehow accounts is empty but admin records exist,
+// treat that as "setup completed" too.
+if ($existingAccounts === 0) {
+    $resAdmin = $conn->query("SELECT COUNT(*) AS c FROM admin_account");
+    if ($resAdmin !== FALSE) {
+        $rowA = $resAdmin->fetch_assoc();
+        if (isset($rowA['c']) && (int)$rowA['c'] > 0) {
+            $existingAccounts = (int)$rowA['c'];
+        }
+        $resAdmin->free();
+    }
+    if ($existingAccounts === 0) {
+        $resSuper = $conn->query("SELECT COUNT(*) AS c FROM super_admin");
+        if ($resSuper !== FALSE) {
+            $rowS = $resSuper->fetch_assoc();
+            if (isset($rowS['c']) && (int)$rowS['c'] > 0) {
+                $existingAccounts = (int)$rowS['c'];
+            }
+            $resSuper->free();
+        }
+    }
+}
 
 $conn->close();
-?>
+
+if ($existingAccounts > 0) {
+    header("Location: login.php");
+    exit();
+} else {
+    header("Location: create_admin_account.php");
+    exit();
+}
