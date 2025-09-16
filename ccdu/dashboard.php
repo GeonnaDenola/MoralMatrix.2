@@ -1,4 +1,7 @@
 <?php
+require '../auth.php';
+require_role('ccdu');
+
 include '../includes/header.php';
 include '../config.php';
 

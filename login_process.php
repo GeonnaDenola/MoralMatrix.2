@@ -1,78 +1,71 @@
 <?php
-
 session_start();
+require 'config.php';
 
-include 'config.php';
+$conn = new mysqli(
+  $database_settings['servername'],
+  $database_settings['username'],
+  $database_settings['password'],
+  $database_settings['dbname']
+);
+if ($conn->connect_error) { die("Connection failed: ".$conn->connect_error); }
 
-$servername = $database_settings['servername'];
-$username = $database_settings['username'];
-$password = $database_settings['password'];
-$dbname = $database_settings['dbname'];
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if (!isset($_POST['email'], $_POST['password'])) {
+  $_SESSION['error'] = "❌ Invalid request.";
+  header("Location: /login.php"); exit;
 }
 
-$email = trim ($_POST['email']);
-$inputPassword = $_POST['password'];
+$email = trim($_POST['email']);
+$inputPassword = (string)$_POST['password'];
 
-//$sql = "SELECT * FROM accounts WHERE id_number = '$id_number'";
-//$result = $conn->query($sql);
-
-$stmt = $conn->prepare("SELECT * FROM accounts WHERE email = ?");
+// SELECT only columns that exist in `accounts`
+$stmt = $conn->prepare("SELECT id_number, email, password, account_type FROM accounts WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
 
+$genericError = "❌ Invalid email or password.";
 
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-    
-    if (password_verify($inputPassword, $row['password'])) {
-        session_regenerate_id(true);
+if ($result && $result->num_rows === 1) {
+  $row = $result->fetch_assoc();
 
-        $_SESSION['email'] = $row['email'];
-        $_SESSION['account_type'] = $row['account_type'];
-        $_SESSION['first_name'] = $row['first_name'];
-        $_SESSION['photo'] = $row['photo'];
-        
-        switch ($row['account_type']) {
-            case 'super_admin':
-                header("Location: /MoralMatrix/super_admin/dashboard.php");
-                break;
-            case 'administrator':
-                header("Location: /MoralMatrix/admin/index.php");
-                break;
-            case 'faculty':
-                header("Location: /MoralMatrix/faculty/index.php");
-                break;
-            case 'student':
-                header("Location: /MoralMatrix/student/index.php");
-                break;
-            case 'ccdu':
-                header("Location: /MoralMatrix/ccdu/index.php");
-                break;
-            case 'security':
-                header("Location: /MoralMatrix/security/index.php");
-                break;
-            default:
-                header("Location: /login.php");
-                break;
-        }
-    } else {
-        $_SESSION['error'] = "❌ Wrong password!";
-        header("Location: /login.php");
-        exit;
-        
+  if (password_verify($inputPassword, $row['password'])) {
+    session_regenerate_id(true);
+
+    // Standard session keys for the rest of your app
+    $_SESSION['actor_id']   = $row['id_number'];               // e.g., 2024-1234
+    $_SESSION['actor_role'] = strtolower($row['account_type']); // e.g., 'ccdu','faculty','administrator'
+
+    // Back-compat keys you already use elsewhere
+    $_SESSION['email']        = $row['email'];
+    $_SESSION['account_type'] = $row['account_type'];
+
+    // Redirect by role
+    switch ($_SESSION['actor_role']) {
+      case 'super_admin':
+        header("Location: /MoralMatrix/super_admin/dashboard.php"); exit;
+      case 'administrator':
+        header("Location: /MoralMatrix/admin/index.php"); exit;
+      case 'faculty':
+        header("Location: /MoralMatrix/faculty/index.php"); exit;
+      case 'student':
+        header("Location: /MoralMatrix/student/index.php"); exit;
+      case 'ccdu':
+        header("Location: /MoralMatrix/ccdu/index.php"); exit;
+      case 'security':
+        header("Location: /MoralMatrix/security/index.php"); exit;
+      default:
+        $_SESSION['error'] = "❌ Account type not allowed.";
+        header("Location: /login.php"); exit;
     }
+  } else {
+    $_SESSION['error'] = $genericError;
+    header("Location: /login.php"); exit;
+  }
 } else {
-    $_SESSION['error'] = "❌ No account found with that email.";
-    header("Location: /login.php");
-    exit;
-    
+  $_SESSION['error'] = $genericError;
+  header("Location: /login.php"); exit;
 }
 
+$stmt->close();
 $conn->close();
-?>

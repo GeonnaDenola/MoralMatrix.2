@@ -77,6 +77,7 @@ $sqlCreateFacultyAccountSchema = "CREATE TABLE IF NOT EXISTS faculty_account (
     email VARCHAR(50) NOT NULL UNIQUE,
     photo BLOB,
     institute VARCHAR(255),
+    status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -95,6 +96,7 @@ $sqlCreateCcduAccountSchema = "CREATE TABLE IF NOT EXISTS ccdu_account (
     email VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL UNIQUE, 
     photo BLOB,
+    status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -112,6 +114,7 @@ $sqlCreateSecurityAccountSchema = "CREATE TABLE IF NOT EXISTS security_account (
     mobile VARCHAR(15) NOT NULL,
     email VARCHAR(50) NOT NULL UNIQUE,
     photo BLOB,
+    status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
@@ -153,6 +156,7 @@ $sqlCreateAdminAccountSchema = "CREATE TABLE IF NOT EXISTS admin_account (
     mobile VARCHAR(15) NOT NULL,
     email VARCHAR(50) NOT NULL UNIQUE,
     photo BLOB,
+    status ENUM('active','archived') DEFAULT 'active',
     f_create VARCHAR(2),
     f_update VARCHAR(2),
     f_delete VARCHAR(2),
