@@ -1,8 +1,6 @@
 <?php
 require '../config.php';
-
 require __DIR__.'/_scanner.php';
-
 require 'violation_hrs.php';
 
 $hours = 0;
@@ -113,66 +111,267 @@ if ($student && !empty($student['photo'])) {
 /* Build a root-absolute directory path for this folder (e.g., /MoralMatrix/ccdu) */
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 
-
 /* Now it’s safe to include files that output HTML */
 include '../includes/header.php';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Profile</title>
+  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
 
   <style>
-  /* Make modal/backdrop truly hidden when class="hidden" is present */
-  .modal-backdrop.hidden, .modal.hidden { display: none !important; }
+    /* ====== Only COLORS for the menu button (same as header). No size changes. ====== */
+    :root { --header-bg:#b30000; --header-fg:#ffffff; } /* fallback if header is transparent */
 
-  /* Modal layers */
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.50);z-index:9998}
-  .modal{position:fixed;inset:0;display:grid;place-items:center;z-index:9999}
-  .modal-content{max-width:780px;width:min(92vw,780px);max-height:85vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:18px 20px}
-  .modal-close{position:fixed;right:18px;top:18px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;z-index:10000}
-  body.modal-open{overflow:hidden}
-</style>
+    #sidebarToggle{
+     #sidebarToggle {
+    background-color: #2c3e50;
+    color: var(--header-fg) !important;
+    border-color: var(--header-bg) !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;  
+    box-shadow: none !important;   
+    outline: none !important;
+    }
+  }
 
+    /* ===== Buttons, chips, badges, cards ===== */
+    a.btn{
+      display:inline-block;
+      padding:8px 12px;
+      border-radius:8px;
+      background:#2563eb;
+      color:#fff;
+      text-decoration:none;
+      border:1px solid #1d4ed8;
+      transition:filter .15s ease, transform .02s ease;
+    }
+    a.btn:hover{ filter:brightness(1.08); }
+    a.btn:active{ transform:translateY(1px); }
+
+    .cards-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap:14px;
+      margin-top:14px;
+    }
+
+    a.profile-card{
+      display:block;
+      text-decoration:none;
+      color:inherit;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      overflow:hidden;
+      transition:box-shadow .2s ease, transform .05s ease;
+      background:#fff;
+    }
+    a.profile-card:hover{ box-shadow:0 12px 28px rgba(0,0,0,.08); }
+    a.profile-card:active{ transform:translateY(1px); }
+    a.profile-card img{
+      display:block;
+      width:100%;
+      height:180px;
+      object-fit:cover;
+      background:#f3f4f6;
+    }
+    a.profile-card .info{
+      padding:12px;
+      line-height:1.4;
+    }
+    a.profile-card *{ text-decoration:none; }
+
+    .badge{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:.85em;
+    }
+    .badge-grave{ background:#fee2e2; color:#991b1b; }
+    .badge-light{ background:#e0f2fe; color:#075985; }
+
+    .chip{
+      display:inline-block;
+      padding:2px 8px;
+      margin:0 6px 6px 0;
+      border-radius:999px;
+      background:#f3f4f6;
+      font-size:.9em;
+    }
+
+    /* Keep the whole strip centered but full-width constrained */
+    .right-container > .profile{
+      width: min(1200px, 100%);
+      margin: 0 auto;
+    }
+
+    /* Layout */
+    .profile{
+      display: grid;
+      grid-template-columns: 120px 1fr 700px;
+      grid-template-rows: auto auto;
+      gap: 12px 24px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .profile-left{
+      display: grid;
+      grid-auto-rows: max-content;
+      justify-items: center;
+      gap: 8px;
+    }
+    .profile-left img{
+      width:96px; height:96px; object-fit:cover;
+      border-radius:12px; border:1px solid #e5e7eb; background:#f3f4f6;
+    }
+
+    .profile-name{
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      margin: 0;
+      text-align: center;
+    }
+
+    .profile-meta{
+      grid-column: 3;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
+      gap: 6px 24px;
+    }
+    .profile-meta p{ margin: 0; }
+
+    .profile img{
+      width:96px;
+      height:96px;
+      object-fit:cover;
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      background:#f3f4f6;
+    }
+    .profile h2{ margin:0; }
+
+    .add-violation-btn{
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin: 16px 0;
+    }
+
+    /* ===== Modal/backdrop ===== */
+    .modal-backdrop.hidden, .modal.hidden { display: none !important; }
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.50);z-index:9998}
+    .modal{position:fixed;inset:0;display:grid;place-items:center;z-index:9999}
+    .modal-content{max-width:780px;width:min(92vw,780px);max-height:85vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:18px 20px}
+    .modal-close{position:fixed;right:18px;top:18px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;z-index:10000}
+    body.modal-open{overflow:hidden}
+
+    .sr-only{
+      position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+    }
+
+    /* ===== Page button Sidebar: top drawer ===== */
+    .sidebar{
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      width: 100%;
+      max-height: 70vh;
+      background: #1f2937;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+      transform: translateY(-100%);
+      transition: transform .25s ease;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .sidebar.open{ transform: translateY(0); }
+
+    .sidebar-header{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      font-weight:600;
+    }
+    .sidebar-close{
+      border:1px solid rgba(255,255,255,.25);
+      background:transparent; color:#fff;
+      border-radius:8px; padding:2px 8px; cursor:pointer;
+    }
+    .sidebar-links{ padding:12px; display:grid; gap:10px; }
+
+    .sidebar-backdrop.hidden { display: none !important; }
+    .sidebar-backdrop{
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 9985;
+    }
+
+    .right-container{ padding-left: 0; }
+  </style>
 </head>
 <body>
 
-<div class="left-container">
-  <div id="pageButtons">
+<!-- Sidebar toggle (hamburger) -->
+<button id="sidebarToggle" class="sidebar-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">☰</button>
+
+<!-- Off-canvas top-drawer sidebar -->
+<aside id="sidebar" class="sidebar" aria-hidden="true">
+  <div class="sidebar-header">
+    <span>Menu</span>
+    <button id="sidebarClose" class="sidebar-close" aria-label="Close">✕</button>
+  </div>
+  <div id="pageButtons" class="sidebar-links">
     <?php include 'page_buttons.php' ?>
   </div>
-</div>
+</aside>
+
+<!-- Backdrop for the sidebar -->
+<div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
 
 <div class="right-container">
   <?php if($student): ?>
-      <div class="profile">
-          <img src="<?= htmlspecialchars($photoRel) ?>" alt="Profile">
-          <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
-          <h2><?= htmlspecialchars($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name']) ?></h2>
-          <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-          <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-          <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
-          <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-          <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?> (<?= htmlspecialchars($student['guardian_mobile']) ?>)</p>
-          <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-          <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+    <div class="profile">
+      <!-- Left: photo + ID -->
+      <div class="profile-left">
+        <img src="<?= htmlspecialchars($photoRel) ?>" alt="Profile">
+        <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
       </div>
-      <div class="violations">
-        <strong>Community Service:</strong>
-            <?= htmlspecialchars((string)$hours) . ' ' . ($hours === 1 ? 'hour' : 'hours') ?>
+
+      <!-- Center: big name -->
+      <h2 class="profile-name">
+        <?= htmlspecialchars($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name']) ?>
+      </h2>
+
+      <!-- Right: meta grid -->
+      <div class="profile-meta">
+        <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
+        <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
+        <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
+
+        <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
+        <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
+        <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
+
+        <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
+        <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+        <p><strong>Community Service:</strong> <?= htmlspecialchars((string)$hours) . ' ' . ($hours === 1 ? 'hour' : 'hours') ?></p>
       </div>
+    </div>
   <?php else: ?>
-      <p>Student not found.</p>
+    <p>Student not found.</p>
   <?php endif; ?>
 
   <div class="">
     <div class="add-violation-btn">
-      <a href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
-        <button>Add Violation</button>
-      </a>
+      <a class="btn" href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">Add Violation</a>
     </div>
 
     <div class="violationHistory-container" id="violationHistory">
@@ -201,7 +400,7 @@ include '../includes/header.php';
                   <span class="badge badge-<?= $cat ?>"><?= ucfirst($cat) ?></span>
                 </p>
                 <p><strong>Type:</strong> <?= $type ?></p>
-                 <?php if (!empty($chips)): ?>
+                <?php if (!empty($chips)): ?>
                   <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
                 <?php endif; ?>
                 <p><strong>Reported:</strong> <?= $date ?></p>
@@ -217,7 +416,7 @@ include '../includes/header.php';
   </div>
 </div>
 
-<!-- Backdrop -->
+<!-- Backdrop for the violation modal -->
 <div id="violationBackdrop" class="modal-backdrop hidden"></div>
 
 <!-- Modal -->
@@ -228,7 +427,33 @@ include '../includes/header.php';
   </div>
 </div>
 
+<!-- Make the menu button camouflage to the header's colors without changing size -->
 <script>
+(function(){
+  const btn = document.getElementById('sidebarToggle');
+  if (!btn) return;
+
+  // Find the header rendered by header.php (try common selectors)
+  const header = document.querySelector('header, .header, .navbar, .topbar, .site-header, #header');
+  if (!header) return;
+
+  const cs = getComputedStyle(header);
+  const bg = cs.backgroundColor;
+  const fg = cs.color;
+
+  // If header has a real background color, copy it
+  if (bg && bg !== 'transparent' && !/^rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/.test(bg)) {
+    btn.style.backgroundColor = bg;
+    btn.style.borderColor     = bg; // hide edge by matching border to bg
+  }
+  if (fg) {
+    btn.style.color = fg; // ensure glyph matches header text color
+  }
+})();
+</script>
+
+<script>
+/* Ensure modal is hidden at start */
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('violationBackdrop')?.classList.add('hidden');
   document.getElementById('violationModal')?.classList.add('hidden');
@@ -288,6 +513,38 @@ window.addEventListener('DOMContentLoaded', () => {
       document.body.classList.remove('modal-open');
     }
   });
+})();
+</script>
+
+<!-- Sidebar open/close behavior (top drawer) -->
+<script>
+(function(){
+  const sidebar   = document.getElementById('sidebar');
+  const openBtn   = document.getElementById('sidebarToggle');
+  const closeBtn  = document.getElementById('sidebarClose');
+  const backdrop  = document.getElementById('sidebarBackdrop');
+
+  if (!sidebar || !openBtn || !closeBtn || !backdrop) return;
+
+  function openSidebar(){
+    sidebar.classList.add('open');
+    sidebar.setAttribute('aria-hidden','false');
+    openBtn.setAttribute('aria-expanded','true');
+    backdrop.classList.remove('hidden');
+    document.body.classList.add('modal-open'); // lock scroll
+  }
+  function closeSidebar(){
+    sidebar.classList.remove('open');
+    sidebar.setAttribute('aria-hidden','true');
+    openBtn.setAttribute('aria-expanded','false');
+    backdrop.classList.add('hidden');
+    document.body.classList.remove('modal-open');
+  }
+
+  openBtn.addEventListener('click', openSidebar);
+  closeBtn.addEventListener('click', closeSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSidebar(); });
 })();
 </script>
 

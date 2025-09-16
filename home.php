@@ -33,7 +33,7 @@
 
   <main class="content">
     <article class="item">
-      <img src="https://scontent.fmnl8-5.fna.fbcdn.net/v/t39.30808-6/487206883_3466618393470366_857525555769402770_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeG7C-AGy1n5UoWs8JcJN9N4v1e_YqGtt4G_V79ioa23gROcTM0rDdeitbaf3DWnG-W6ZCFxw5IhTjFWzTNlhx5E&_nc_ohc=OpnJLOAeBGYQ7kNvwGysB-9&_nc_oc=Adn_TJbemoVwWPA2pklgoAvsNxOx1nZyGMiXT5rcY0Ao5176CSdCwKk2-IFaK3Sfykc&_nc_zt=23&_nc_ht=scontent.fmnl8-5.fna&_nc_gid=PIpWxCzhpk83j5Hc3UtvWw&oh=00_AfNEy7jEPxpKPiuWn80NPYH0SP8agp-IhskMIVXE_1-uRg&oe=686AD51F" alt="Item 1">
+      <img src="https://scontent.fmnl8-6.fna.fbcdn.net/v/t39.30808-6/459564360_3261054097360131_4116785309627896257_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeE5dbSTnGG94ajMRldj5l2xv7IWPBc0sO2_shY8FzSw7dlM1rV5yW6XqSLHtuTuoRsxpSiqQcAv-3ntAys5asUS&_nc_ohc=xEPwPkns6nQQ7kNvwG1WGLO&_nc_oc=AdllrYxG-_MHfphtn7d8zT7pa_rI2sNcskvGbcE4tLRSxWYKRXPLCbh91uDgNWlM9ng&_nc_zt=23&_nc_ht=scontent.fmnl8-6.fna&_nc_gid=wUW_7e4Kt_ChqoT-5KyGSQ&oh=00_AfZaHfA-xj6vHpaN9O29cauICCkhi_R2QOhP-ALD-XuCmA&oe=68CC0724" alt="Item 1">
       <div class="text">
         <h3>Geonna Lyzzet Denola</h3>
         <p><b><i>Team Leader</i></b></p>
@@ -43,7 +43,7 @@
     </article>
 
     <article class="item">
-      <img src="https://scontent.fcgy1-3.fna.fbcdn.net/v/t39.30808-6/474893098_1400459600934240_5459450739814056957_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeGclxTNmHAV4HyGiMJb8a2VOG9pcIK63RI4b2lwgrrdEsE1nm7yEwNW89zFnS8XGO1CK2lleK-eQd66lIF68bdH&_nc_ohc=ZoWJW8MLjJcQ7kNvwFHFEth&_nc_oc=Adl4lk7fRGbRBAe8mr67GC3WxRrKAHDYcLJvv6eXHgj7dp_vNlVwsq_Ynvb0zKMjnow&_nc_zt=23&_nc_ht=scontent.fcgy1-3.fna&_nc_gid=E-8HW7_hiWrfTI3YVsNLfQ&oh=00_AfOzLb0BrVdDYXMvcqVfbl1qhDWFK0z4ImgGgwnkxBdYjw&oe=686AB623" alt="Item 2">
+      <img src="https://scontent.fmnl8-3.fna.fbcdn.net/v/t1.6435-9/205982702_588101678836707_4488149285708952543_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=a5f93a&_nc_eui2=AeGW8gqR5cUfMAcdZP7zDIphNQYOh-yNog81Bg6H7I2iD9ayQEOE_CupEDb7DWE3UskwJFqUr65DY4IQEVH8N-75&_nc_ohc=1ARaBmiYpH0Q7kNvwEh2MsC&_nc_oc=AdnFV0yB7U_5m21--jSuG3MzkV5cOLaoadH29k-uFvBMe8iSyrtKmMTZiMa46ZBe4S8&_nc_zt=23&_nc_ht=scontent.fmnl8-3.fna&_nc_gid=Q65UwqQSomaqc-ckOHlOOA&oh=00_AfY0o3BRiCiErKfMnefQFD22y9M4Zwdk5JYUmEDGqOodQg&oe=68ED9A84" alt="Item 2">
       <div class="text">
         <h3>Marc Christian Paul Ylan</h3>
         <p><b><i>System Analyst</i></b></p>
@@ -53,7 +53,7 @@
     </article>
 
     <article class="item">
-      <img src="https://scontent.fcgy1-1.fna.fbcdn.net/v/t39.30808-6/480643752_4077799339170121_7270905793898250109_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeGfDdheYhYWVuwBbsIUUmfiX6ZhkxZhLvNfpmGTFmEu8-01BThR05YJcovArH8MUMWOHmb4abSLQBYSuwiqVush&_nc_ohc=KnYlOBWs7lkQ7kNvwH7aROJ&_nc_oc=Admc1X-SDVFDw2LjalUCxdMa57GT7Etigo_VEjqZpz7q86t_cgGVIeHNID_XK8Ks-Xs&_nc_zt=23&_nc_ht=scontent.fcgy1-1.fna&_nc_gid=D238MmZ-4yysz76UR4-W7A&oh=00_AfP6IzVS2l_ZCoZVn94iy1jOpBQ8N8UXq4EVHAZYMhV4ng&oe=686ABFA7" alt="Item 3">
+      <img src="https://scontent.fmnl8-4.fna.fbcdn.net/v/t39.30808-6/441507173_2590551781140222_7698675451629930267_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeFMAWg_szq1Vmd7ctgkKBbvoWpabeB-TJShalpt4H5MlB_HCMrCYWku1PsyhCLMqd7iYZ9DY9ZaZgrvMXPMf_ma&_nc_ohc=27uehTqGTGQQ7kNvwFYqUSA&_nc_oc=AdnNcNwdu0F_c5183UCWuMFsCgXaW6oBeL4s9kJls_k0lmlLHQNWdU-zoG-FDTp0-8c&_nc_zt=23&_nc_ht=scontent.fmnl8-4.fna&_nc_gid=2S9KfF1B7ZLA9hthd8RD7g&oh=00_Afarf_gaBNitvfysQupFzBjFWQP1hwcCKamh4cLhOJvCaQ&oe=68CBEA73" alt="Item 3">
       <div class="text">
         <h3>Khyle Alegre</h3>
         <p><b><i>Capstone Adviser</i></b></p>

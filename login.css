@@ -1,23 +1,39 @@
-/* Reset + base styles */
+/* ===============================
+   Reset + base styles
+   =============================== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+:root{
+  --brand: #990e01;
+  --btn:   #c20000;
+  --btn-hover: #a10000;
+  --link: #004466;
+}
+
 body {
-  background: url('https://mcc.edu.ph/mcc_website_revamp_2021/img/pages/about-mcc/history/athttps://mma.prnewswire.com/media/2249184/image_1.jpg?p=twitter-present.jpg') no-repeat center center fixed;
+  /* Background image with a dark transparent overlay */
+  background:
+    linear-gradient(rgba(0,0,0,.5), rgba(0,0,0,.5)),
+    url('https://mcc.edu.ph/mcc_website_revamp_2021/img/pages/about-mcc/history/at-present.jpg')
+      no-repeat center center fixed;
   background-size: cover;
+
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-
+/* ===============================
+   Header / Nav
+   =============================== */
 header {
-  background: #990e01;
-  padding: 20px 40px;  /* Increased padding (was 15px 30px) */
+  background: var(--brand);
+  padding: 20px 40px;
 }
 
 nav {
@@ -25,7 +41,7 @@ nav {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  min-height: 70px;    /* Give the header bar a minimum height */
+  min-height: 70px;
 }
 
 nav ul {
@@ -35,118 +51,32 @@ nav ul {
   padding: 0;
 }
 
-nav ul li {
-  margin: 0 10px;
-}
+nav ul li { margin: 0 10px; }
 
 nav ul li a {
   color: #fff;
   text-decoration: none;
   font-weight: bold;
   text-transform: uppercase;
-  font-size: 1.1rem;   /* Slightly bigger nav link text */
+  font-size: 1.1rem;
 }
 
-nav ul li a:hover {
-  color: #fffffd;
-}
+nav ul li a:hover { color: #fffffd; }
 
-.nav-left {
-  flex: 1;
-  justify-content: flex-start;
-}
-
-.nav-center {
-  flex: 1;
-  justify-content: center;
-}
-
+.nav-left,
+.nav-center,
 .nav-right {
-  flex: 1;
-  justify-content: flex-end;
-}
-
-/* Login form container */
-.login-page {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 50px;
-  min-height: calc(100vh - 60px);
-}
-
-.login-box {
-  background: #fff;
-  padding: 10px 10px;  /* Increase padding */
-  border: 2px solid #ccc;
-  border-radius: 30px;
-  width: 600px;        /* Increase width */
-}
-
-.login-box form {
-  display: flex;
-  flex-direction: column;
-}
-
-.login-box label {
-  margin-bottom: 5px;
-  font-weight: bold;
-  font-size: 0.85rem;
-}
-
-.login-box input {
-  padding: 8px;
-  margin-bottom: 12px;
-  border: 1px solid #aaa;
-  border-radius: 5px;
-}
-
-.btn-login {
-  background: #c20000;
-  color: #ffffff;
-  padding: 8px 0;
-  border: none;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.btn-login:hover {
-  background: #e6b800;
-}
-
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-}
-
-.remember-me {
   display: flex;
   align-items: center;
-  gap: 5px;
 }
 
-.forgot-password {
-  text-decoration: none;
-  color: #004466;
-  font-weight: bold;
-}
+.nav-left   { flex: 1; justify-content: flex-start; }
+.nav-center { flex: 1; justify-content: center; }
+.nav-right  { flex: 1; justify-content: flex-end; }
 
-.forgot-password:hover {
-  text-decoration: underline;
-}
-.login-welcome {
-  text-align: center;
-  color: #004466;
-  margin-bottom: 15px;
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
+/* ===============================
+   Layout
+   =============================== */
 .login-page {
   display: flex;
   justify-content: space-between;
@@ -156,23 +86,151 @@ nav ul li a:hover {
   gap: 30px;
 }
 
-
+/* ===============================
+   Violation message
+   =============================== */
 .violation-message {
-  width: 60%;           /* Make it take up more horizontal space */
-  padding-right: 40px;  /* Add a bit more spacing from the login box */
+  width: 60%;
+  padding-right: 40px;
 }
 
 .violation-message h3 {
   color: #c81400;
   margin-bottom: 15px;
-  font-size: 2.2rem;    /* Make the title bigger */
+  font-size: 2.2rem;
   font-weight: bold;
 }
 
 .violation-message p {
   color: #ffffff;
-  font-size: 2rem;    /* Make the paragraph text bigger */
-  line-height: 1.8;     /* Improve readability with taller lines */
+  font-size: 2rem;
+  line-height: 1.8;
+  text-shadow: 0 2px 6px rgba(0,0,0,.6);
 }
 
+/* ===============================
+   Login box
+   =============================== */
+.login-box {
+  background: #fff;
+  padding: 16px;
+  border: 2px solid #ccc;
+  border-radius: 30px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+}
 
+.login-welcome {
+  text-align: center;
+  color: var(--link);
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.login-box form { display: flex; flex-direction: column; }
+
+.login-box label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.login-box input,
+.login-box select,
+.login-box textarea {
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #fff;
+}
+
+.login-box input:focus,
+.login-box select:focus,
+.login-box textarea:focus {
+  outline: none;
+  border-color: var(--link);
+  box-shadow: 0 0 0 3px rgba(0,68,102,.15);
+}
+
+/* Form options row */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Links */
+.forgot-password {
+  text-decoration: none;
+  color: var(--link);
+  font-weight: bold;
+}
+.forgot-password:hover { text-decoration: underline; }
+
+/* ===============================
+   Button (force red)
+   =============================== */
+.login-box .btn-login,
+.login-box button[type="submit"],
+.login-box input[type="submit"] {
+  background: var(--btn) !important;
+  color: #ffffff !important;
+  padding: 12px 0;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  width: 100%;
+  cursor: pointer;
+  transition: background .2s ease, filter .2s ease, transform .02s ease;
+}
+
+.login-box .btn-login:hover,
+.login-box button[type="submit"]:hover,
+.login-box input[type="submit"]:hover {
+  background: var(--btn-hover) !important;
+}
+
+.login-box .btn-login:active,
+.login-box button[type="submit"]:active,
+.login-box input[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+.login-box .btn-login:focus-visible,
+.login-box button[type="submit"]:focus-visible,
+.login-box input[type="submit"]:focus-visible {
+  outline: 3px solid rgba(194,0,0,.35);
+  outline-offset: 2px;
+}
+
+/* ===============================
+   Responsive
+   =============================== */
+@media (max-width: 992px) {
+  .violation-message { width: 55%; }
+}
+
+@media (max-width: 768px) {
+  .login-page {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 30px 20px;
+  }
+  .violation-message {
+    width: 100%;
+    padding-right: 0;
+    margin-bottom: 20px;
+  }
+}

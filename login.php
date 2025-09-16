@@ -51,7 +51,7 @@ if (isset($_SESSION['error'])){
   <header>
     <nav>
       <ul class="nav-left">
-        <li><a href="index.php">MORAL MATRIX</a></li>
+        <li><a href="home.php">MORAL MATRIX</a></li>
       </ul>
       <ul class="nav-center">
         <li><a href="#">ABOUT</a></li>
