@@ -1,6 +1,7 @@
 <?php
-include '../config.php';
 include '../includes/header.php';
+include '../config.php';
+
 include 'page_buttons.php';
 
 $studentId = $_GET['student_id'] ?? '';
@@ -47,26 +48,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $offense_details = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : null;
 
-    $photo = null;
-    if (!empty($_FILES['photo']['tmp_name']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
-        $photo = file_get_contents($_FILES['photo']['tmp_name']);
-    }
+$photo = "";
+if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+    $uploadDir = __DIR__ . "/uploads/";
+    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
-    $ccdu_id = $_SESSION['id_number']
-            ?? $_SESSION['admin_id']
-            ?? $_SESSION['email']
-            ?? 'ccdu:unknown';
+    $photo = time() . "_" . basename($_FILES["photo"]["name"]);
+    $targetPath = $uploadDir . $photo;
+
+    if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+        $errorMsg = "⚠️ Error uploading photo.";
+        $photo = "";
+    }
+}
+
+$submitted_by = $_SESSION['actor_id'] ?? 'unknown';
+$submitted_role= $_SESSION['actor_role'] ?? 'ccdu';
 
     $sql = "INSERT INTO student_violation
-            (student_id, offense_category, offense_type, offense_details, description, photo)
-            VALUES (?, ?, ?, ?, ?, ?)";
+            (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by, submitted_role)
+            VALUES (?, ?, ?, ?, ?, ?, 'approved', ?, ?)";
     $stmtIns = $conn->prepare($sql);
     if (!$stmtIns) die("Prepare failed: ".$conn->error);
 
     $null = NULL;
-    $stmtIns->bind_param("sssssb",
+    $stmtIns->bind_param("sssssbss",
         $student_id, $offense_category, $offense_type,
-        $offense_details, $description, $null
+        $offense_details, $description, $null, $submitted_by, $submitted_role
     );
     if ($photo !== null) {
         $stmtIns->send_long_data(5, $photo);
@@ -124,7 +132,7 @@ $stmt->close();
 
   <!--LIGHT-->   
     <div id="lightForm" class="form-container">
-        <form method="POST" enctype="multipart/form-data" action="/ccdu/add_violation.php">
+        <form method="POST" enctype="multipart/form-data">
 
             <p>Light Offenses</p>
 
@@ -163,7 +171,8 @@ $stmt->close();
                 <input type="text" id ="description" name="description"><br><br>
 
                 <label>Attach Photo:</label>
-                <input type="file" name="photo" accept="image/*">
+                <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'lightPreview')">
+            <img id="lightPreview" width="100">
 
                 <br>
                 <button type="submit">Add Violation</button>
@@ -206,7 +215,8 @@ $stmt->close();
                 <input type="text" id ="description" name="description"><br><br>
 
                 <label>Attach Photo:</label>
-                <input type="file" name="photo" accept="image/*">
+                <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'moderatePreview')">
+                <img id="moderatePreview" width="100">
 
                 <br>
                 <button type="submit">Add Violation</button>
@@ -261,7 +271,8 @@ $stmt->close();
                 <input type="text" id ="description" name="description"><br><br>
 
             <label>Attach Photo:</label>
-            <input type="file" name="photo" accept="image/*">
+            <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'gravePreview')">
+            <img id="gravePreview" width="100">
 
             <br>
             <button type="submit">Add Violation</button>
@@ -328,6 +339,15 @@ $stmt->close();
             }
         }
     });
+
+    function previewPhoto(input, previewId){
+        const preview = document.getElementById(previewId);
+            if(input.files && input.files[0]){
+                const reader = new FileReader();
+                reader.onload = function(e){ preview.src=e.target.result; preview.style.display='block'; }
+                 reader.readAsDataURL(input.files[0]);
+        }
+    }
 
 </script>
 

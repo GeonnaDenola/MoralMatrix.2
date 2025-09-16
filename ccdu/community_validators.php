@@ -4,6 +4,7 @@ include '../includes/header.php';
 include '../config.php';
 include 'page_buttons.php';
 
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];

@@ -156,7 +156,7 @@ ob_start(); ?>
   <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
     <?php if (!empty($guardianMobile)): ?>
       <a class="btn" href="tel:<?= htmlspecialchars(preg_replace('/\s+/', '', $guardianMobile)) ?>">📞 Contact Guardian</a>
-      <a class="btn" href="sms:<?= htmlspecialchars(preg_replace('/\s+/', '', $guardianMobile)) ?>?&body=Regarding%20violation%20%23<?= $violationNo ?>">💬 SMS Guardian</a>
+      <a class="btn" href="">Set for Community Service</a>
     <?php else: ?>
       <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
     <?php endif; ?>
