@@ -71,6 +71,86 @@ $__VIEW_FILE = file_exists($__try1) ? 'account_view.php' : (file_exists($__try2)
       height: 100%;
       background: #fff;
     }
+  /* === Make avatar ring + left accent bar RED === */
+:root{
+  --accent-red: #464646;      /* red-500 */
+  --accent-red-dark: #464646; /* optional darker shade */
+}
+
+/* Left vertical accent on each card */
+#accountContainer .card{
+  /* if your green strip is a border-left, this flips it to red */
+  border-left: 6px solid var(--accent-red) !important;
+  border-radius: 12px; /* keep your rounded card edges */
+  position: relative;
+}
+/* if your strip is drawn with ::before, this forces it to red too */
+#accountContainer .card::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0; width:6px;
+  background: var(--accent-red) !important;
+  border-radius: 6px 0 0 6px;
+}
+
+/* Avatar ring around the photo inside .left */
+#accountContainer .card .left img{
+  border-radius: 9999px;
+
+  /* If your current ring is a BORDER, this line recolors it: */
+  border-color: var(--accent-red) !important;
+
+  /* If your current ring is a BOX-SHADOW “ring”, this recolors it: */
+  box-shadow: 0 0 0 3px var(--accent-red) !important;
+}
+
+/* (Optional) a hover/selected state in red as well */
+#accountContainer .card:hover{
+  border-left-color: var(--accent-red-dark) !important;
+}
+#accountContainer .card.active,
+#accountContainer .card.is-selected{
+  border-left-color: var(--accent-red-dark) !important;
+}
+#accountContainer .card.active .left img,
+#accountContainer .card.is-selected .left img{
+  box-shadow: 0 0 0 3px var(--accent-red-dark) !important;
+  border-color: var(--accent-red-dark) !important;
+}
+
+/* === Red theme for the filter select === */
+.filter-select{
+  appearance: none;           /* hide native arrow */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  border: 2px solid #ef4444;  /* red border */
+  border-radius: 10px;
+  padding: 10px 40px 10px 12px;   /* right padding for custom arrow */
+  background-color: #fff;
+  color: #0b132b;
+  line-height: 1.2;
+
+  /* custom red caret/chevron (inline SVG) */
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23ef4444' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.filter-select:hover{
+  border-color: #dc2626;  /* darker red on hover */
+}
+
+.filter-select:focus{
+  outline: none;                           /* remove blue outline */
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, .15); /* red focus ring */
+}
+
+/* Remove the old Windows IE arrow, just in case */
+.filter-select::-ms-expand{ display:none; }
   </style>
 </head>
 <body>
