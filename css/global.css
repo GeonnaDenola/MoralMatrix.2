@@ -2315,99 +2315,110 @@ body{ background:#f6f7fb; }
 }
 
 /*=========Topbar Toggle=========*/
-  :root{
-      --menu-btn:#2c3e50;    /* requested color */
-      --rail:var(--menu-btn);/* make the whole menu use the same color */
-      --brand:#1d4ed8;
-      --brand-strong:#2563eb;
-      --text:#e5e7eb;
-    }
+:root{
+  --menu-btn:#2c3e50;    /* requested color */
+  --rail:var(--menu-btn);/* make the whole menu use the same color */
+  --brand:#1d4ed8;
+  --brand-strong:#2563eb;
+  --text:#e5e7eb;
+}
 
-    body.no-scroll{ overflow:hidden; }
+body.no-scroll{ overflow:hidden; }
 
-    /* Launcher button */
-    .menu-launcher{
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      background: var(--menu-btn);
-      border: 0;
-      padding: 10px 14px;
-      font-weight: 700;
-      color: #fff;
-      cursor: pointer;
-      border-radius: 0;           /* <-- remove rounded edges */
-      box-shadow: none;           /* <-- remove edge/shadow */
-      transition: transform .12s ease;
-    }
-    /* Keep hover/active the SAME color */
-    .menu-launcher:hover,
-    .menu-launcher:active { background: var(--menu-btn); transform: translateY(-1px); }
-    .menu-launcher:focus-visible{ outline: 2px solid #94a3b8; outline-offset: 2px; }
+/* Launcher button */
+.menu-launcher{
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--menu-btn);
+  border: 0;
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 0;         /* square edges */
+  box-shadow: none;         /* no edge/shadow */
+  transition: transform .12s ease;
+}
+/* Keep hover/active the SAME color */
+.menu-launcher:hover,
+.menu-launcher:active { background: var(--menu-btn); transform: translateY(-1px); }
+.menu-launcher:focus-visible{ outline: 2px solid #94a3b8; outline-offset: 2px; }
 
-    /* Scrim */
-    .topsheet-scrim{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.55);
-      opacity: 0; pointer-events: none;
-      transition: opacity .2s ease;
-      z-index: 80;
-    }
-    .topsheet-scrim.open{ opacity:1; pointer-events:auto; }
+/* Scrim */
+.topsheet-scrim{
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease;
+  z-index: 980;                     /* below the sheet */
+}
+.topsheet-scrim.open{ opacity:1; pointer-events:auto; }
 
-    /* The sheet itself (same color as button) */
-    .topsheet{
-      position: fixed; left:0; right:0; top:0;
-      background: var(--rail);
-      color: var(--text);
-      transform: translateY(-100%);
-      transition: transform .22s ease;
-      z-index: 90;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-    .topsheet.open{ transform: translateY(0); }
+/* The sheet itself — FORCE full-width top bar */
+.topsheet{
+  position: fixed;
+  inset: 0 0 auto 0;                /* top/left/right; no bottom -> auto height */
+  width: 100vw;                     /* ignore any parent container width */
+  max-width: none;
+  background: var(--rail);
+  color: var(--text);
+  transform: translateY(-100%);
+  transition: transform .22s ease;
+  z-index: 990;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+.topsheet.open{ transform: translateY(0); }
 
-    .topsheet-header{
-      display:flex; align-items:center; justify-content:space-between;
-      padding: 12px 16px;
-      font-weight: 700;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-    }
-    .topsheet-close{
-      background: transparent; border:0; color: var(--text);
-      font-size: 20px; line-height: 1; cursor: pointer;
-      padding: 6px 8px; border-radius: 8px;
-    }
-    .topsheet-close:hover{ background: rgba(255,255,255,.08); }
+/* Center the header/rail content within the full-width sheet */
+.topsheet-header,
+.topsheet-rail{ max-width: 1200px; margin: 0 auto; }
 
-    .topsheet-rail{
-      background: var(--rail);
-      padding: 16px;
-      display: grid;
-      grid-template-columns: repeat(4, minmax(180px, 1fr));
-      gap: 14px;
-      border-bottom-left-radius: 12px;
-      border-bottom-right-radius: 12px;
-    }
+.topsheet-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 12px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.topsheet-close{
+  background: transparent; border:0; color: var(--text);
+  font-size: 20px; line-height: 1; cursor: pointer;
+  padding: 6px 8px; border-radius: 8px;
+}
+.topsheet-close:hover{ background: rgba(255,255,255,.08); }
 
-    .nav-tile{
-      display:flex; align-items:center; justify-content:center;
-      text-decoration: none;
-      font-weight: 800;
-      color: #fff;
-      background: var(--brand);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 12px;
-      padding: 14px 16px;
-      box-shadow: 0 6px 20px rgba(37, 99, 235, .25), inset 0 -2px 0 rgba(255,255,255,.08);
-      transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
-      text-align:center; white-space:nowrap;
-    }
-    .nav-tile:hover{ transform: translateY(-1px); background: var(--brand-strong); }
-    .nav-tile.is-active{ background: var(--brand-strong); }
+.topsheet-rail{
+  background: var(--rail);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 14px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
 
-    @media (max-width: 900px){ .topsheet-rail{ grid-template-columns: repeat(2, minmax(160px, 1fr)); } }
-    @media (max-width: 520px){ .topsheet-rail{ grid-template-columns: 1fr; } }
+/* Nav pills */
+.nav-tile{
+  display:flex; align-items:center; justify-content:center;
+  text-decoration: none;
+  font-weight: 800;
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, .25), inset 0 -2px 0 rgba(255,255,255,.08);
+  transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+  text-align:center; white-space:nowrap;
+}
+.nav-tile:hover{ transform: translateY(-1px); background: var(--brand-strong); }
+.nav-tile.is-active{ background: var(--brand-strong); }
 
-    .page-top-pad{ height: 6px; }
+@media (max-width: 900px){ .topsheet-rail{ grid-template-columns: repeat(2, minmax(160px, 1fr)); } }
+@media (max-width: 520px){ .topsheet-rail{ grid-template-columns: 1fr; } }
 
+/* When the sheet is open, temporarily hide the old left sidebar/margin */
+body.sheet-open .left-container{ display: none !important; }
+body.sheet-open .right-container{ margin-left: 0 !important; }
+
+.page-top-pad{ height: 6px; }
