@@ -1210,18 +1210,6 @@ body{
 }
 
 /* Header bar */
-.left-container{
-  position:relative;
-  width:100%;
-  background:#2c3e50;
-  color:#fff;
-  padding:16px 20px;
-  display:flex;
-  align-items:center;
-}
-.left-container .brand{ font-weight:700; }
-.left-container .logout{ margin-left:auto; }
-
 /* Main wrapper */
 .right-container{
   flex:1;
@@ -1532,8 +1520,6 @@ body {
   box-shadow: 0 6px 16px rgba(0,0,0,.08);
 }
 
-/* Photo left | text block right */
-/* --- Student info: photo left | text right, with robust overrides --- */
 /* --- Student info: photo left, text right (robust overrides) --- */
 .profile{
   display: grid !important;
@@ -1546,7 +1532,7 @@ body {
 /* keep the photo anchored on the left */
 .profile > img{
   grid-column: 1;
-  grid-row: 1 / span 3;     /* image spans the text rows */
+  grid-row: 1 / span 3;
   width: 96px;
   height: 96px;
   object-fit: cover;
@@ -1555,7 +1541,7 @@ body {
   background: #f3f4f6;
 }
 
-/* force ALL text to occupy the full right column and behave like normal text */
+/* text column */
 .profile > p{
   grid-column: 2 / -1;
   margin: 0;
@@ -1566,7 +1552,7 @@ body {
   overflow-wrap: normal !important;
 }
 
-/* critical: undo globals on nested elements (e.g., strong set to inline-block/width) */
+/* undo globals on nested elements */
 .profile > p *{
   display: inline !important;
   width: auto !important;
@@ -1592,7 +1578,7 @@ h3 {
   background: #f9fafc;
   border: 1px solid #ddd;
   border-radius: 8px;
-  width: min(1100px, 98%);   /* was ~700px; make it nice and wide */
+  width: min(1100px, 98%);
   margin: 0 auto;
 }
 
@@ -1628,7 +1614,7 @@ select:focus, input:focus {
   color: #000000;
 }
 
-/* Checkboxes */
+/* Checkboxes (generic) */
 .form-container div label {
   font-weight: normal;
   display: block;
@@ -1682,231 +1668,244 @@ button[type="submit"]:active {
   margin: 0 auto;
 }
 
+/* Menu / topsheet (unchanged styling) */
+.menu-launcher { position: fixed; top: 12px; left: 12px; }
+.page-top-pad { height: 48px; }
+.topsheet, .topsheet-scrim { transition: all .2s ease; }
+.topsheet { position: fixed; inset: 0 auto 0 0; width: 320px; background:#fff; transform: translateX(-100%); box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 1000; }
+.topsheet.open { transform: translateX(0); }
+.topsheet-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.3); opacity:0; pointer-events:none; z-index: 999; }
+.topsheet-scrim.open { opacity:1; pointer-events:auto; }
+.topsheet-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #eee; }
+.topsheet-rail { display:flex; flex-direction:column; padding:8px; gap:6px; }
+.nav-tile { padding:10px 12px; border-radius:8px; text-decoration:none; color:#111; }
+.nav-tile.is-active, .nav-tile:hover { background:#f3f4f6; }
+.no-scroll { overflow:hidden; }
+
 /* Responsive */
 @media (max-width: 600px) {
   .profile {
     flex-direction: column;
     text-align: center;
   }
-
   .profile img {
     margin-bottom: 10px;
   }
 }
 
+/* ====== PATCHES / FIXES (append at end) ====== */
+
+/* Make category + offense-type selects full width */
+#offense_category,
+#lightForm select[name="offense_type"],
+#moderateForm select[name="offense_type"],
+#graveForm select[name="offense_type"] {
+  width: 100% !important;
+  max-width: none !important;
+  display: block;
+}
+
+/* Widen inner form so long option text isn't truncated */
+.form-container form{
+  width: min(900px, 95%) !important; /* override earlier 700px */
+}
+
+/* Place detail checkbox groups below the select in a responsive grid */
+[id$="Checkbox"]{
+  /* hidden by JS until selected; JS sets display:grid */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 16px;
+  align-items: start;
+  width: 100%;
+  margin-top: 8px;
+  clear: both;
+}
+
+/* Tidy each checkbox row */
+[id$="Checkbox"] label{
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin: 0;
+  font-weight: 500;
+}
+
+  .checklist-slot {
+      margin: .75rem 0;
+      display: block !important;
+      width: 100% !important;
+      /* if the form uses CSS Grid, span all columns */
+      grid-column: 1 / -1 !important;
+      /* if the form uses Flexbox, force a full-width row */
+      flex-basis: 100% !important;
+    }
+    /* keep checklist content aligned nicely inside the slot */
+    .checklist-slot label { display: inline-block; margin-right: 1rem; }
+    /* make sure any original checklist containers don't float next to fields */
+    #light_idCheckbox, #light_uniformCheckbox, #light_civilianCheckbox, #light_accessoriesCheckbox,
+    #moderate_improper_conductCheckbox, #moderate_gadget_misuseCheckbox, #moderate_unauthorized_actsCheckbox,
+    #grave_substance_addictionCheckbox, #grave_integrity_dishonestyCheckbox, #grave_violence_misconductCheckbox,
+    #grave_property_theftCheckbox, #grave_threats_disrespectCheckbox {
+      clear: both;
+    }
+
 /*========VIEW STUDENT(CCDU)=========*/
  /* ===== Buttons, chips, badges, cards ===== */
-
-    a.btn{
-      display:inline-block;
-      padding:8px 12px;
-      border-radius:8px;
-      background:#2563eb;
-      color:#fff;
-      text-decoration:none;
-      border:1px solid #1d4ed8;
-      transition:filter .15s ease, transform .02s ease;
-    }
-    a.btn:hover{ filter:brightness(1.08); }
-    a.btn:active{ transform:translateY(1px); }
-
-    .cards-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap:14px;
-      margin-top:14px;
-    }
-
-    a.profile-card{
-      display:block;
-      text-decoration:none;
-      color:inherit;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      overflow:hidden;
-      transition:box-shadow .2s ease, transform .05s ease;
-      background:#fff;
-    }
-    a.profile-card:hover{ box-shadow:0 12px 28px rgba(0,0,0,.08); }
-    a.profile-card:active{ transform:translateY(1px); }
-    a.profile-card img{
-      display:block;
-      width:100%;
-      height:180px;
-      object-fit:cover;
-      background:#f3f4f6;
-    }
-    a.profile-card .info{
-      padding:12px;
-      line-height:1.4;
-    }
-    a.profile-card *{ text-decoration:none; }
-
-    .badge{
-      display:inline-block;
-      padding:2px 8px;
-      border-radius:999px;
-      font-size:.85em;
-    }
-    .badge-grave{ background:#fee2e2; color:#991b1b; }
-    .badge-light{ background:#e0f2fe; color:#075985; }
-
-    .chip{
-      display:inline-block;
-      padding:2px 8px;
-      margin:0 6px 6px 0;
-      border-radius:999px;
-      background:#f3f4f6;
-      font-size:.9em;
-    }
-
-    .profile{
-      display:grid;
-      grid-template-columns: 96px 1fr;
-      gap:14px;
-      align-items:center;
-      padding:14px 0;
-      border-bottom:1px solid #e5e7eb;
-    }
-
-    /* Keep the whole strip centered but full-width constrained */
-.right-container > .profile{
-  width: min(1200px, 100%);
-  margin: 0 auto;
+:root{
+  --app-ink:#0f172a;
+  --muted:#6b7280;
+  --ring:#e5e7eb;
+  --card:#ffffff;
+  --chip:#f1f5f9;
+  --primary:#2563eb;
+  --primary-hover:#1d4ed8;
 }
 
-/* Lay out like your 1st screenshot */
-.profile{
-  display: grid;
-  grid-template-columns: 120px 1fr 700px; /* left | big centered name | right meta */
-  grid-template-rows: auto auto;          /* lets name span two rows */
-  gap: 12px 24px;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid #e5e7eb;
+/* === view_student header: center name, 3-col facts, left ID === */
+
+/* === view_student header: photo + 3 fact columns, centered name === */
+/* === Finalize view_student header to 2 columns (photo + 2 fact cols) === */
+
+/* photo + 2 equal columns for facts */
+/* --- Center avatar + Student ID ABOVE the name; keep facts in 2 columns --- */
+
+/* switch header grid to two equal columns */
+.right-container .profile{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  column-gap: 42px;
+  row-gap: 10px;
+  align-items: start;
 }
 
-/* Left: photo + student id stacked */
-.profile-left{
-  display: grid;
-  grid-auto-rows: max-content;
-  justify-items: center;
-  gap: 8px;
-}
-.profile-left img{
-  width:96px; height:96px; object-fit:cover;
-  border-radius:12px; border:1px solid #e5e7eb; background:#f3f4f6;
+/* avatar centered across full width (row 1) */
+.right-container .profile > img{
+  grid-column: 1 / -1;
+  grid-row: auto !important;           /* overrides any previous pinning */
+  justify-self: center;
+  margin: 0 auto 6px;
+  width: 120px; height: 120px; border-radius: 14px; object-fit: cover;
 }
 
-/* Center: big name, centered vertically across the two rows */
-.profile-name{
-  grid-column: 2;
-  grid-row: 1 / span 2;   /* spans both rows */
-  margin: 0;
+/* Student ID centered under the photo (row 2) */
+.right-container .profile > p:first-of-type{
+  grid-column: 1 / -1;
+  justify-self: center;
   text-align: center;
+  width: max-content;
+  margin: 0 0 8px;
+  font-weight: 700;
 }
 
-/* Right: details in neat columns, same line height/fonts you already have */
-.profile-meta{
-  grid-column: 3;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr)); /* 3 columns */
-  gap: 6px 24px;
+/* big name (row 3), still full width & centered */
+.right-container .profile > h2{
+  grid-column: 1 / -1;
+  text-align: center;
+  margin: 6px 0 12px;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 800;
 }
-.profile-meta p{ margin: 0; }
 
-    .profile img{
-      width:96px;
-      height:96px;
-      object-fit:cover;
-      border-radius:12px;
-      border:1px solid #e5e7eb;
-      background:#f3f4f6;
-    }
-    .profile h2{ margin:0; }
+/* remaining facts flow into two columns below the name */
+.right-container .profile > p:nth-of-type(n+2){
+  display: block;        /* ensure grid placement (not inline-block) */
+  width: auto;
+  margin: 8px 0;
+  font-weight: 600;
+}
 
-    .add-violation-btn{ margin:16px 0; }
+/* left column = even-numbered <p> (2,4,6,...) ; right column = odd except the 1st */
+.right-container .profile > p:nth-of-type(even){ grid-column: 1; }
+.right-container .profile > p:not(:first-of-type):nth-of-type(odd){ grid-column: 2; }
 
-    /* ===== Modal/backdrop ===== */
-    .modal-backdrop.hidden, .modal.hidden { display: none !important; }
+/* optional: lighter label color */
+.right-container .profile > p strong{
+  color:#6b7280; font-weight:800; letter-spacing:.2px;
+}
 
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.50);z-index:9998}
-    .modal{position:fixed;inset:0;display:grid;place-items:center;z-index:9999}
-    .modal-content{max-width:780px;width:min(92vw,780px);max-height:85vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:18px 20px}
-    .modal-close{position:fixed;right:18px;top:18px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;z-index:10000}
-    body.modal-open{overflow:hidden}
+/* responsive: stack on phones */
+@media (max-width: 640px){
+  .right-container .profile{ grid-template-columns: 1fr !important; }
+  .right-container .profile > p:nth-of-type(even),
+  .right-container .profile > p:not(:first-of-type):nth-of-type(odd){ grid-column: 1; }
+  .right-container .profile > h2{ font-size: 26px; }
+}
 
-    /* ===== Screen-reader only ===== */
-    .sr-only{
-      position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
-    }
-
-/* Center the "Add Violation" button */
 .add-violation-btn{
-  width: 100%;
+  position:relative; display:flex; justify-content:center;
+  padding-top:18px; margin:12px 0 18px;
+}
+.add-violation-btn::before{
+  content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:75%; height:1px; background:#e5e7eb; /* slim, centered divider */
+}
+.add-violation-btn button{ border-radius:12px; padding:10px 18px; font-weight:800; }
+
+/* responsive: stack facts under 640px */
+@media (max-width:640px){
+  .right-container .profile{ grid-template-columns: 90px 1fr; }
+  .right-container .profile > h2{ font-size:26px; }
+  .right-container .profile > p:first-of-type{ grid-column:1; }
+  .right-container .profile > p:nth-of-type(n+2){ grid-column:2; }
+}
+
+/* violation card */
+a.profile-card{
   display: flex;
-  justify-content: center;  /* centers the link/button */
-  margin: 16px 0;
+  text-decoration: none;
+  color: inherit;
+  gap: 12px;
+  border: 1px solid var(--ring);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  transition: transform .08s ease, box-shadow .15s ease;
+}
+a.profile-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(15,23,42,.08);
+}
+a.profile-card > img{
+  width: 140px; height: 140px;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+a.profile-card .info{ padding: 12px 14px; }
+.badge{
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 999px;
+  background: var(--chip);
+}
+.badge-Minor{ background:#e0f2fe; }
+.badge-Major{ background:#fee2e2; }
+.badge-Serious{ background:#fde68a; }
+
+/* modal polish (uses your existing HTML/JS) */
+.modal-backdrop{ backdrop-filter: saturate(120%) blur(2px); }
+.modal .modal-content{
+  border-radius: 16px;
+  border: 1px solid var(--ring);
 }
 
-/*========Page button Sidebar======*/
-/* ==== Off-canvas TOP drawer (replaces the old .sidebar left drawer) ==== */
-.sidebar{
-  position: fixed;
-  top: 0; left: 0; right: 0;          /* full width across the screen */
+/* optional: nicer page background to match the screenshot vibe */
+body{ background:#f6f7fb; }
+
+/* Center the Community Service line */
+.right-container .violations{
   width: 100%;
-  max-height: 70vh;                   /* how tall the drawer can be */
-  background: #1f2937;                /* same tone as your header */
-  color: #fff;
-  border-bottom: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 12px 30px rgba(0,0,0,.35);
-  transform: translateY(-100%);       /* hidden above the viewport */
-  transition: transform .25s ease;    /* slide down/up */
-  z-index: 10000;                     /* above page content/header */
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;                   /* scroll if content is tall */
+  text-align: center;   /* center the text */
+  margin: 10px auto 6px;
+  font-weight: 700;
 }
-.sidebar.open{ transform: translateY(0); }
-
-/* Header & links can stay as you had them */
-.sidebar-header{
-  display:flex; justify-content:space-between; align-items:center;
-  padding:14px 16px;
-  border-bottom:1px solid rgba(255,255,255,.12);
-  font-weight:600;
+.right-container .violations strong{
+  display: inline-block;
+  margin-right: 6px;    /* small space before the hours */
 }
-.sidebar-close{
-  border:1px solid rgba(255,255,255,.25);
-  background:transparent; color:#fff;
-  border-radius:8px; padding:2px 8px; cursor:pointer;
-}
-.sidebar-links{ padding:12px; display:grid; gap:10px; }
-
-/* Backdrop stays the same */
-.sidebar-backdrop.hidden { display: none !important; }
-.sidebar-backdrop{
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.45);
-  z-index: 9985;
-}
-/* Keep the button's current size; only paint it to match the header */
-:root { --header-bg: #b30000; --header-fg: #ffffff; } /* fallback if JS can't read header */
-
-#sidebarToggle {
-  background-color: #2c3e50;
-  color: var(--header-fg) !important;
-  border-color: var(--header-bg) !important;
-  box-shadow: none !important;
-  border: 0 !important;
-  border-radius: 0 !important;  
-  box-shadow: none !important;   
-  outline: none !important;
-}
-
-/* Optional: push main content a bit so the toggle is not on top of text */
-.right-container{ padding-left: 0; } /* keep your existing layout */
-
 
 /*=======Edit Account=====*/
     :root{
@@ -2314,4 +2313,101 @@ button[type="submit"]:active {
   #ccduForm .photo-row{ grid-column: 1; }
   #ccduPreview{ width: 160px; height: 160px; }
 }
+
+/*=========Topbar Toggle=========*/
+  :root{
+      --menu-btn:#2c3e50;    /* requested color */
+      --rail:var(--menu-btn);/* make the whole menu use the same color */
+      --brand:#1d4ed8;
+      --brand-strong:#2563eb;
+      --text:#e5e7eb;
+    }
+
+    body.no-scroll{ overflow:hidden; }
+
+    /* Launcher button */
+    .menu-launcher{
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--menu-btn);
+      border: 0;
+      padding: 10px 14px;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 0;           /* <-- remove rounded edges */
+      box-shadow: none;           /* <-- remove edge/shadow */
+      transition: transform .12s ease;
+    }
+    /* Keep hover/active the SAME color */
+    .menu-launcher:hover,
+    .menu-launcher:active { background: var(--menu-btn); transform: translateY(-1px); }
+    .menu-launcher:focus-visible{ outline: 2px solid #94a3b8; outline-offset: 2px; }
+
+    /* Scrim */
+    .topsheet-scrim{
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.55);
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s ease;
+      z-index: 80;
+    }
+    .topsheet-scrim.open{ opacity:1; pointer-events:auto; }
+
+    /* The sheet itself (same color as button) */
+    .topsheet{
+      position: fixed; left:0; right:0; top:0;
+      background: var(--rail);
+      color: var(--text);
+      transform: translateY(-100%);
+      transition: transform .22s ease;
+      z-index: 90;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .topsheet.open{ transform: translateY(0); }
+
+    .topsheet-header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 12px 16px;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .topsheet-close{
+      background: transparent; border:0; color: var(--text);
+      font-size: 20px; line-height: 1; cursor: pointer;
+      padding: 6px 8px; border-radius: 8px;
+    }
+    .topsheet-close:hover{ background: rgba(255,255,255,.08); }
+
+    .topsheet-rail{
+      background: var(--rail);
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 14px;
+      border-bottom-left-radius: 12px;
+      border-bottom-right-radius: 12px;
+    }
+
+    .nav-tile{
+      display:flex; align-items:center; justify-content:center;
+      text-decoration: none;
+      font-weight: 800;
+      color: #fff;
+      background: var(--brand);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, .25), inset 0 -2px 0 rgba(255,255,255,.08);
+      transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+      text-align:center; white-space:nowrap;
+    }
+    .nav-tile:hover{ transform: translateY(-1px); background: var(--brand-strong); }
+    .nav-tile.is-active{ background: var(--brand-strong); }
+
+    @media (max-width: 900px){ .topsheet-rail{ grid-template-columns: repeat(2, minmax(160px, 1fr)); } }
+    @media (max-width: 520px){ .topsheet-rail{ grid-template-columns: 1fr; } }
+
+    .page-top-pad{ height: 6px; }
 

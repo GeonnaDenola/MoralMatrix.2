@@ -1,20 +1,16 @@
 <?php
-include '../includes/header.php';
-include '../config.php';
+// add_violation.php (full page)
 
-include 'page_buttons.php';
+// Start session early (header.php used to do this, but we handle it here)
+session_start();
+include '../includes/header.php';
 
 require_once '../config.php';
-require_once '../includes/header.php';
 
-/* ---------- STUDENT ID FROM GET OR POST ---------- */
+// Accept student_id from GET (view) or POST (submit)
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
-if (!$studentId) {
-    echo "<p>No student selected!</p>";
-    exit;
-}
 
-/* ---------- DB CONNECTION ---------- */
+// --- DB connect ---
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
@@ -23,7 +19,7 @@ $dbname     = $database_settings['dbname'];
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
 
-/* ========= INSERT HANDLER ========= */
+// ========= INSERT HANDLER =========
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $student_id       = $_POST['student_id']       ?? '';
@@ -31,11 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $offense_type     = $_POST['offense_type']     ?? '';
     $description      = $_POST['description']      ?? '';
 
-    if ($student_id === '' || $offense_category === '' || $offense_type === '') {
+    if (!$student_id || !$offense_category || !$offense_type) {
         die("Missing required fields.");
     }
 
-    // Collect all picked detail checkboxes into one array
     $detailGroups = [
         'id_offense','uniform_offense','civilian_offense','accessories_offense',
         'conduct_offense','gadget_offense','acts_offense',
@@ -50,47 +45,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $offense_details = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : null;
 
-$photo = "";
-if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-    $uploadDir = __DIR__ . "/uploads/";
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-
-    $photo = time() . "_" . basename($_FILES["photo"]["name"]);
-    $targetPath = $uploadDir . $photo;
-
-    if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
-        $errorMsg = "⚠️ Error uploading photo.";
-        $photo = "";
+    $photo = null;
+    if (!empty($_FILES['photo']['tmp_name']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
+        $photo = file_get_contents($_FILES['photo']['tmp_name']);
     }
-}
-
-$submitted_by = $_SESSION['actor_id'] ?? 'unknown';
-$submitted_role= $_SESSION['actor_role'] ?? 'ccdu';
 
     $sql = "INSERT INTO student_violation
-            (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by, submitted_role)
-            VALUES (?, ?, ?, ?, ?, ?, 'approved', ?, ?)";
+            (student_id, offense_category, offense_type, offense_details, description, photo)
+            VALUES (?, ?, ?, ?, ?, ?)";
     $stmtIns = $conn->prepare($sql);
-    if (!$stmtIns) die("Prepare failed: " . $conn->error);
+    if (!$stmtIns) die("Prepare failed: ".$conn->error);
 
     $null = NULL;
-    $stmtIns->bind_param("sssssbss",
+    $stmtIns->bind_param("sssssb",
         $student_id, $offense_category, $offense_type,
-
+        $offense_details, $description, $null
     );
     if ($photo !== null) {
         $stmtIns->send_long_data(5, $photo);
     }
 
-    if (!$stmtIns->execute()) { die("Insert failed: " . $stmtIns->error); }
+    if (!$stmtIns->execute()) {
+        die("Insert failed: ".$stmtIns->error);
+    }
     $stmtIns->close();
 
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
     exit;
 }
-/* ========= END INSERT HANDLER ========= */
+// ========= END INSERT HANDLER =========
 
-/* ---------- FETCH STUDENT FOR DISPLAY ---------- */
+// For viewing (GET), require a student_id
+if (!$studentId) {
+    echo "<p>No student selected!</p>";
+    exit;
+}
+
+// Fetch student data
 $sql = "SELECT * FROM student_account WHERE student_id=?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $studentId);
@@ -98,115 +89,61 @@ $stmt->execute();
 $result  = $stmt->get_result();
 $student = $result->fetch_assoc();
 $stmt->close();
-?>
 
+/* Active page for toggle highlight */
+$active = basename($_SERVER['PHP_SELF']);
+function activeClass($file){ global $active; return $active === $file ? ' is-active' : ''; }
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add Violation</title>
-  <link rel="stylesheet" href="/MoralMatrix/css/global.css"/>
-
+  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+  <!-- added: small spacing for the injected checklist slot -->
   <style>
-    /* ===========================
-       Sidebar (top drawer)
-       =========================== */
-    .sidebar{
-      position: fixed; top: 0; left: 0; right: 0;
-      width: 100%; max-height: 70vh;
-      background: #1f2937; color:#fff;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 12px 30px rgba(0,0,0,.35);
-      transform: translateY(-100%);           /* hidden by default */
-      transition: transform .25s ease;
-      z-index: 10000;
-      display:flex; flex-direction:column;
-      overflow-y:auto;
-    }
-    .sidebar.open{ transform: translateY(0); }
-
-    .sidebar-header{
-      display:flex; justify-content:space-between; align-items:center;
-      padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.12);
-      font-weight:600;
-    }
-    .sidebar-close{
-      border:1px solid rgba(255,255,255,.25);
-      background:transparent; color:#fff;
-      border-radius:8px; padding:2px 8px; cursor:pointer;
-    }
-    .sidebar-links{ padding:12px; display:grid; gap:10px; }
-
-    /* Backdrop */
-    .sidebar-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9985; }
-    .sidebar-backdrop.hidden{ display:none !important; }
-
-    /* Body scroll lock when open (optional) */
-    body.modal-open{ overflow:hidden; }
-
-    /* ===========================
-       Menu button: CAMO with header, no size change, no edge
-       =========================== */
-    :root{ --header-bg:#2c3e50; --header-fg:#ffffff; } /* fallback values */
-
-    #sidebarToggle{
-      background-color: var(--header-bg) !important;
-      color: var(--header-fg) !important;
-      border-color: var(--header-bg) !important;
-
-      /* remove the edge only (no size changes) */
-      border: 0 !important;
-      border-radius: 0 !important;
-      box-shadow: none !important;
-      outline: none !important;
-    }
-    #sidebarToggle:focus{ outline:none !important; box-shadow:none !important; }
-
-    /* ===========================
-       Page-specific bits
-       =========================== */
-    .form-container{ display:none; margin-top:1rem; }
-    .profile-container{ max-width:900px; margin:0 auto; padding: 1rem; }
-    .profile img{ width:120px; height:120px; object-fit:cover; border-radius:8px; }
-    .profile p{ margin:.25rem 0; }
+    .checklist-slot { margin: .75rem 0; }
   </style>
 </head>
 <body>
 
-<!-- Sidebar toggle (hamburger) -->
-<button id="sidebarToggle" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">☰</button>
+  <!-- Toggle launcher -->
+  <button id="openMenu" class="menu-launcher" aria-controls="topSheet" aria-expanded="false">Menu</button>
+  <div class="page-top-pad"></div>
 
-<!-- Off-canvas top-drawer sidebar -->
-<aside id="sidebar" class="sidebar" aria-hidden="true">
-  <div class="sidebar-header">
-    <span>Menu</span>
-    <button id="sidebarClose" class="sidebar-close" aria-label="Close">✕</button>
-  </div>
-  <div id="pageButtons" class="sidebar-links">
-    <?php include 'page_buttons.php' ?>
-  </div>
-</aside>
+  <!-- Scrim -->
+  <div id="sheetScrim" class="topsheet-scrim" aria-hidden="true"></div>
 
-<!-- Backdrop for the sidebar -->
-<div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
-
-<div class="profile-container">
-
-  <?php if ($student): ?>
-    <div class="profile">
-      <img src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo'], ENT_QUOTES) : 'placeholder.png' ?>" alt="Profile">
-      <p><strong><?= htmlspecialchars($student['student_id']) ?></strong></p>
-      <p><strong><?= htmlspecialchars($student['first_name']." ".$student['middle_name']." ".$student['last_name']) ?></strong></p>
-      <p><strong><?= htmlspecialchars($student['course'])." - ".htmlspecialchars($student['level'].$student['section']) ?></strong></p>
+  <!-- Top sheet menu -->
+  <div id="topSheet" class="topsheet" aria-hidden="true" role="dialog" aria-label="Main menu">
+    <div class="topsheet-header">
+      <span>Menu</span>
+      <button id="closeMenu" class="topsheet-close" aria-label="Close menu">✕</button>
     </div>
+    <div class="topsheet-rail">
+      <a class="nav-tile<?php echo activeClass('dashboard.php'); ?>" href="dashboard.php" <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>Dashboard</a>
+      <a class="nav-tile<?php echo activeClass('pending_reports.php'); ?>" href="pending_reports.php" <?php echo $active==='pending_reports.php'?'aria-current="page"':''; ?>>Pending Reports</a>
+      <a class="nav-tile<?php echo activeClass('community_validators.php'); ?>" href="community_validators.php" <?php echo $active==='community_validators.php'?'aria-current="page"':''; ?>>Community Service Validators</a>
+      <a class="nav-tile<?php echo activeClass('summary_report.php'); ?>" href="summary_report.php" <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>Summary Report</a>
+    </div>
+  </div>
 
+  <div class="profile-container">
+    <?php if($student): ?>
+      <div class="profile">
+        <img src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo']) : 'placeholder.png' ?>" alt="Profile">
+        <div>
+          <p><strong><?= htmlspecialchars($student['student_id']) ?></strong></p>
+          <p><strong><?= htmlspecialchars(trim($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name'])) ?></strong></p>
+          <p><strong><?= htmlspecialchars($student['course']. " - ".  $student['level'].$student['section']) ?></strong></p>
+        </div>
+      </div>
     <?php else: ?>
       <p>Student not found.</p>
     <?php endif; ?>
 
-    <h3 style="margin-top:1rem">Add Violation</h3>
+    <h3>Add Violation</h3>
 
     <label>Offense Category: </label>
     <select id="offense_category" onchange="toggleForms()" required>
@@ -218,22 +155,23 @@ $stmt->close();
 
     <!-- LIGHT -->
     <div id="lightForm" class="form-container">
-
-      <form method="POST" enctype="multipart/form-data">
-
-        <p>Light Offenses</p>
+      <form method="POST" enctype="multipart/form-data"
+            action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . '?student_id=' . urlencode($studentId) ?>">
+        <p><strong>Light Offenses</strong></p>
 
         <input type="hidden" name="offense_category" value="light">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id']) ?>">
+        <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
 
-
-        <select id="lightOffenses" name="offense_type" required>
+        <select id="lightOffenses" name="offense_type">
           <option value="">--Select--</option>
           <option value="id">ID</option>
           <option value="uniform">Dress Code (Uniform)</option>
           <option value="civilian">Revealing Clothes (Civilian Attire)</option>
           <option value="accessories">Accessories</option>
         </select>
+
+        <!-- added: checklist slot to place the selected checklist just under the selector -->
+        <div id="lightChecklistSlot" class="checklist-slot" aria-live="polite"></div>
 
         <div id="light_idCheckbox" style="display:none">
           <label><input type="checkbox" name="id_offense[]" value="no_id">No ID</label>
@@ -253,33 +191,36 @@ $stmt->close();
         <div id="light_accessoriesCheckbox" style="display:none">
           <label><input type="checkbox" name="accessories_offense[]" value="piercings">Piercing/s</label>
           <label><input type="checkbox" name="accessories_offense[]" value="hair_color">Loud Hair Color</label>
-        </div><br><br>
+        </div>
 
-        <label>Report Description: </label><br>
-        <input type="text" id="description_light" name="description"><br><br>
+        <label>Report Description: </label>
+        <input type="text" id="description_light" name="description">
 
         <label>Attach Photo:</label>
-        <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'lightPreview')">
-            <img id="lightPreview" width="100">
+        <input type="file" name="photo" accept="image/*">
 
-        <br>
         <button type="submit">Add Violation</button>
       </form>
     </div>
 
     <!-- MODERATE -->
     <div id="moderateForm" class="form-container">
-      <form method="POST" enctype="multipart/form-data">
-        <p>Moderate Offenses</p>
-        <input type="hidden" name="offense_category" value="moderate">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id']) ?>">
+      <form method="POST" enctype="multipart/form-data"
+            action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . '?student_id=' . urlencode($studentId) ?>">
+        <p><strong>Moderate Offenses</strong></p>
 
-        <select id="moderateOffenses" name="offense_type" required>
+        <input type="hidden" name="offense_category" value="moderate">
+        <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
+
+        <select id="moderateOffenses" name="offense_type">
           <option value="">--Select--</option>
           <option value="improper_conduct">Improper Language & Conduct</option>
           <option value="gadget_misuse">Gadget Misuse</option>
           <option value="unauthorized_acts">Unauthorized Acts</option>
         </select>
+
+        <!-- added: checklist slot -->
+        <div id="moderateChecklistSlot" class="checklist-slot" aria-live="polite"></div>
 
         <div id="moderate_improper_conductCheckbox" style="display:none">
           <label><input type="checkbox" name="conduct_offense[]" value="vulgar">Use of curses and vulgar words</label>
@@ -292,37 +233,30 @@ $stmt->close();
         </div>
 
         <div id="moderate_unauthorized_actsCheckbox" style="display:none">
-          <label><input type="checkbox" name="acts_offense[]" value="illegal_posters">Posting posters/streamers/banners without approval</label>
+          <label><input type="checkbox" name="acts_offense[]" value="illegal_posters">Posting posters, streamers, banners without approval</label>
           <label><input type="checkbox" name="acts_offense[]" value="pda">PDA (Public Display of Affection)</label>
-        </div><br><br>
+        </div>
 
-        <label>Report Description: </label><br>
-        <input type="text" id="description_moderate" name="description"><br><br>
+        <label>Report Description: </label>
+        <input type="text" id="description_moderate" name="description">
 
         <label>Attach Photo:</label>
         <input type="file" name="photo" accept="image/*">
 
-        <label>Report Description: </label><br>
-        <input type="text" id="description_moderate" name="description"><br><br>
-
-                <label>Attach Photo:</label>
-                <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'moderatePreview')">
-                <img id="moderatePreview" width="100">
-
-                <br>
-                <button type="submit">Add Violation</button>
-        </form>
-
+        <button type="submit">Add Violation</button>
+      </form>
     </div>
 
     <!-- GRAVE -->
     <div id="graveForm" class="form-container">
-      <form method="POST" enctype="multipart/form-data">
-        <p>Grave Offenses</p>
-        <input type="hidden" name="offense_category" value="grave">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id']) ?>">
+      <form method="POST" enctype="multipart/form-data"
+            action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . '?student_id=' . urlencode($studentId) ?>">
+        <p><strong>Grave Offenses</strong></p>
 
-        <select id="graveOffenses" name="offense_type" required>
+        <input type="hidden" name="offense_category" value="grave">
+        <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
+
+        <select id="graveOffenses" name="offense_type">
           <option value="">--Select--</option>
           <option value="substance_addiction">Substance & Addiction</option>
           <option value="integrity_dishonesty">Academic Integrity & Dishonesty</option>
@@ -330,6 +264,9 @@ $stmt->close();
           <option value="property_theft">Property & Theft</option>
           <option value="threats_disrespect">Threats & Disrespect</option>
         </select>
+
+        <!-- added: checklist slot -->
+        <div id="graveChecklistSlot" class="checklist-slot" aria-live="polite"></div>
 
         <div id="grave_substance_addictionCheckbox" style="display:none">
           <label><input type="checkbox" name="substance_offense[]" value="smoking">Smoking</label>
@@ -352,149 +289,155 @@ $stmt->close();
         </div>
 
         <div id="grave_threats_disrespectCheckbox" style="display:none">
-          <label><input type="checkbox" name="threats_offense[]" value="firearms">Carrying deadly weapons/firearms/explosives</label>
+          <label><input type="checkbox" name="threats_offense[]" value="firearms">Carrying deadly weapons, firearms, explosives</label>
           <label><input type="checkbox" name="threats_offense[]" value="disrespect">Offensive words / disrespectful deeds</label>
-        </div><br><br>
+        </div>
 
-        <label>Report Description: </label><br>
-        <input type="text" id="description_grave" name="description"><br><br>
+        <label>Report Description: </label>
+        <input type="text" id="description_grave" name="description">
 
         <label>Attach Photo:</label>
         <input type="file" name="photo" accept="image/*">
-            <label>Attach Photo:</label>
-            <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'gravePreview')">
-            <img id="gravePreview" width="100">
 
-
-        <label>Report Description: </label><br>
-        <input type="text" id ="description" name="description"><br><br>
-
-        <label>Attach Photo:</label>
-        <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'gravePreview')">
-        <img id="gravePreview" width="100">
-
-            <br>
-            <button type="submit">Add Violation</button>
-        </form>
+        <button type="submit">Add Violation</button>
+      </form>
     </div>
+  </div>
 
-<!-- Camouflage the toggle to the header color without changing size -->
-<script>
+  <script>
+    // Top sheet open/close behavior
+    const sheet = document.getElementById('topSheet');
+    const scrim = document.getElementById('sheetScrim');
+    const openBtn = document.getElementById('openMenu');
+    const closeBtn = document.getElementById('closeMenu');
 
-(function(){
-  const btn = document.getElementById('sidebarToggle');
-  if (!btn) return;
+    function openSheet(){
+      sheet.classList.add('open');
+      scrim.classList.add('open');
+      sheet.setAttribute('aria-hidden','false');
+      scrim.setAttribute('aria-hidden','false');
+      openBtn.setAttribute('aria-expanded','true');
+      document.body.classList.add('no-scroll');
+    }
+    function closeSheet(){
+      sheet.classList.remove('open');
+      scrim.classList.remove('open');
+      sheet.setAttribute('aria-hidden','true');
+      scrim.setAttribute('aria-hidden','true');
+      openBtn.setAttribute('aria-expanded','false');
+      document.body.classList.remove('no-scroll');
+    }
+    openBtn.addEventListener('click', openSheet);
+    closeBtn.addEventListener('click', closeSheet);
+    scrim.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSheet(); });
 
-  const header = document.querySelector('header, .header, .navbar, .topbar, .site-header, #header');
-  if (!header) return;
+    // Forms show/hide
+    function toggleForms(){
+      const selected = document.getElementById("offense_category").value;
+      ['light', 'moderate', 'grave'].forEach(t=>{
+        const el = document.getElementById(t+'Form');
+        if (el) el.style.display = (selected===t)?'block':'none';
+      });
+    }
+    // set default (optional)
+    window.addEventListener('load', toggleForms);
 
-  const cs = getComputedStyle(header);
-  const bg = cs.backgroundColor;
-  const fg = cs.color;
+    // Light group toggle
+    document.getElementById('lightOffenses').addEventListener('change', function() {
+      document.getElementById('light_idCheckbox').style.display = 'none';
+      document.getElementById('light_uniformCheckbox').style.display = 'none';
+      document.getElementById('light_civilianCheckbox').style.display = 'none';
+      document.getElementById('light_accessoriesCheckbox').style.display = 'none';
+      const selected = this.value;
+      if(selected) {
+        const checkboxDiv = document.getElementById('light_' + selected + 'Checkbox');
+        if(checkboxDiv) checkboxDiv.style.display = 'block';
+      }
+    });
 
+    // Moderate group toggle
+    document.getElementById('moderateOffenses').addEventListener('change', function() {
+      document.getElementById('moderate_improper_conductCheckbox').style.display = 'none';
+      document.getElementById('moderate_gadget_misuseCheckbox').style.display = 'none';
+      document.getElementById('moderate_unauthorized_actsCheckbox').style.display = 'none';
+      const selected = this.value;
+      if(selected) {
+        const checkboxDiv = document.getElementById('moderate_' + selected + 'Checkbox');
+        if(checkboxDiv) checkboxDiv.style.display = 'block';
+      }
+    });
 
-    function previewPhoto(input, previewId){
-        const preview = document.getElementById(previewId);
-            if(input.files && input.files[0]){
-                const reader = new FileReader();
-                reader.onload = function(e){ preview.src=e.target.result; preview.style.display='block'; }
-                 reader.readAsDataURL(input.files[0]);
+    // Grave group toggle
+    document.getElementById('graveOffenses').addEventListener('change', function() {
+      document.getElementById('grave_substance_addictionCheckbox').style.display = 'none';
+      document.getElementById('grave_integrity_dishonestyCheckbox').style.display = 'none';
+      document.getElementById('grave_violence_misconductCheckbox').style.display = 'none';
+      document.getElementById('grave_property_theftCheckbox').style.display = 'none';
+      document.getElementById('grave_threats_disrespectCheckbox').style.display = 'none';
+      const selected = this.value;
+      if(selected) {
+        const checkboxDiv = document.getElementById('grave_' + selected + 'Checkbox');
+        if(checkboxDiv) checkboxDiv.style.display = 'block';
+      }
+    });
+ 
+    (function(){
+      function setupChecklistRelocation(group, keys, selectId){
+        const slot = document.getElementById(group + 'ChecklistSlot');
+        if (!slot) return;
+
+        // Create a hidden warehouse right after the slot
+        const warehouse = document.createElement('div');
+        warehouse.id = group + 'ChecklistWarehouse';
+        warehouse.style.display = 'none';
+        slot.insertAdjacentElement('afterend', warehouse);
+
+        // Move existing checklists into the warehouse initially
+        keys.forEach(k => {
+          const pane = document.getElementById(`${group}_${k}Checkbox`);
+          if (pane) {
+            warehouse.appendChild(pane);
+            pane.style.display = 'none';
+          }
+        });
+
+        // Helper to mount selected checklist into the slot
+        function mount(selected){
+          // return any current child back to warehouse
+          while (slot.firstChild) warehouse.appendChild(slot.firstChild);
+
+          // hide all panes
+          keys.forEach(k => {
+            const p = document.getElementById(`${group}_${k}Checkbox`);
+            if (p) p.style.display = 'none';
+          });
+
+          if (!selected) return;
+
+          const active = document.getElementById(`${group}_${selected}Checkbox`);
+          if (active) {
+            active.style.display = 'block';
+            slot.appendChild(active); // move into slot
+          }
         }
-    }
 
+        // Hook to the selector (run after original listeners)
+        const sel = document.getElementById(selectId);
+        if (sel) {
+          sel.addEventListener('change', function(){ mount(this.value); });
+          // initial mount if a value is preselected
+          mount(sel.value);
+        }
+      }
 
-  if (bg && bg !== 'transparent' && !/^rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/.test(bg)) {
-    btn.style.backgroundColor = bg;
-    btn.style.borderColor     = bg;
-  }
-  if (fg) { btn.style.color = fg; }
-})();
-
-
-// Sidebar open/close behavior 
-
-(function(){
-  const sidebar  = document.getElementById('sidebar');
-  const openBtn  = document.getElementById('sidebarToggle');
-  const closeBtn = document.getElementById('sidebarClose');
-  const backdrop = document.getElementById('sidebarBackdrop');
-  if (!sidebar || !openBtn || !closeBtn || !backdrop) return;
-
-  function openSidebar(){
-    sidebar.classList.add('open');
-    sidebar.setAttribute('aria-hidden','false');
-    openBtn.setAttribute('aria-expanded','true');
-    backdrop.classList.remove('hidden');
-    document.body.classList.add('modal-open');
-  }
-  function closeSidebar(){
-    sidebar.classList.remove('open');
-    sidebar.setAttribute('aria-hidden','true');
-    openBtn.setAttribute('aria-expanded','false');
-    backdrop.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-  }
-
-  openBtn.addEventListener('click', openSidebar);
-  closeBtn.addEventListener('click', closeSidebar);
-  backdrop.addEventListener('click', closeSidebar);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
-})();
-
-//Offense forms behavior
-
-function toggleForms(){
-  const selected = document.getElementById("offense_category").value;
-  ['light', 'moderate', 'grave'].forEach(t=>{
-    const el = document.getElementById(t+'Form');
-    if (el) el.style.display = (selected===t)?'block':'none';
-  });
-}
-window.addEventListener('DOMContentLoaded', ()=>{
-  const lightSel = document.getElementById('lightOffenses');
-  const modSel   = document.getElementById('moderateOffenses');
-  const graveSel = document.getElementById('graveOffenses');
-
-  if (lightSel) lightSel.addEventListener('change', function(){
-    document.getElementById('light_idCheckbox').style.display = 'none';
-    document.getElementById('light_uniformCheckbox').style.display = 'none';
-    document.getElementById('light_civilianCheckbox').style.display = 'none';
-    document.getElementById('light_accessoriesCheckbox').style.display = 'none';
-    const sel = this.value;
-    if (sel) {
-      const box = document.getElementById('light_'+sel+'Checkbox');
-      if (box) box.style.display = 'block';
-    }
-  });
-
-  if (modSel) modSel.addEventListener('change', function(){
-    document.getElementById('moderate_improper_conductCheckbox').style.display = 'none';
-    document.getElementById('moderate_gadget_misuseCheckbox').style.display = 'none';
-    document.getElementById('moderate_unauthorized_actsCheckbox').style.display = 'none';
-    const sel = this.value;
-    if (sel) {
-      const box = document.getElementById('moderate_'+sel+'Checkbox');
-      if (box) box.style.display = 'block';
-    }
-  });
-
-  if (graveSel) graveSel.addEventListener('change', function(){
-    document.getElementById('grave_substance_addictionCheckbox').style.display = 'none';
-    document.getElementById('grave_integrity_dishonestyCheckbox').style.display = 'none';
-    document.getElementById('grave_violence_misconductCheckbox').style.display = 'none';
-    document.getElementById('grave_property_theftCheckbox').style.display = 'none';
-    document.getElementById('grave_threats_disrespectCheckbox').style.display = 'none';
-    const sel = this.value;
-    if (sel) {
-      const box = document.getElementById('grave_'+sel+'Checkbox');
-      if (box) box.style.display = 'block';
-    }
-  });
-
-  toggleForms();
-});
-
-</script>
+      // initialize for each group
+      setupChecklistRelocation('light', ['id','uniform','civilian','accessories'], 'lightOffenses');
+      setupChecklistRelocation('moderate', ['improper_conduct','gadget_misuse','unauthorized_acts'], 'moderateOffenses');
+      setupChecklistRelocation('grave', [
+        'substance_addiction','integrity_dishonesty','violence_misconduct','property_theft','threats_disrespect'
+      ], 'graveOffenses');
+    })();
+  </script>
 </body>
 </html>
- 
