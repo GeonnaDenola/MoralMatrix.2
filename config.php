@@ -5,5 +5,4 @@ $database_settings = array(
     'password' => '',
     'dbname' => 'moralmatrix',
 );
-
 ?>
