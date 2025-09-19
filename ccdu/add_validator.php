@@ -19,6 +19,9 @@ $flashMsg = "";
 $formValues = [
     'username'   => '',
     'password'   => '',
+    'email'      => '',
+    'validator_type' => 'inside',
+    'designation' => '',
     // Optional: assign a student immediately (can be blank)
     'student_id' => '',
     // Optional toggle
@@ -32,18 +35,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $v_username = trim($formValues['username']);
     $v_password = (string)$formValues['password'];
+    $email = trim($formValues['email']);
+    $validator_type = $formValues['validator_type'];
     $student_id = trim($formValues['student_id']);
     $active     = $formValues['active'] === '0' ? 0 : 1;
+    $designation = trim($formValues['designation']);
 
     // Basic validations
     if ($v_username === '' || $v_password === '') {
         $errorMsg = "⚠️ Username and password are required.";
     }
 
- /*   if (!$errorMsg && !preg_match('/^[A-Za-z0-9._\-\s]{3,50}$/', $v_username)) {
-        $errorMsg = "⚠️ Username must be 3–50 chars (letters, numbers, dot, underscore, dash).";
-    }
-*/
     // Duplicate username
     if (!$errorMsg) {
         $stmtCheck = $conn->prepare("SELECT validator_id FROM validator_account WHERE v_username = ?");
@@ -59,11 +61,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Proceed if OK
     if (!$errorMsg) {
 
-        $stmt = $conn->prepare("INSERT INTO validator_account (v_username, v_password, active) VALUES (?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO validator_account 
+            (v_username, v_password, email, active, validator_type, designation) 
+            VALUES (?, ?, ?, ?, ?, ?)");
         if (!$stmt) {
             $errorMsg = "⚠️ Server error preparing statement.";
         } else {
-            $stmt->bind_param("ssi", $v_username, $v_password, $active);
+            $stmt->bind_param("sssiss",
+                $v_username,
+                $v_password,
+                $email,
+                $active,
+                $validator_type,
+                $designation,  
+            );
+
             if ($stmt->execute()) {
                 $new_validator_id = (int)$stmt->insert_id;
                 $stmt->close();
@@ -101,6 +113,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     $formValues['username'] = '';
                     $formValues['password'] = '';
                     $formValues['student_id'] = '';
+                    $formValues['email'] = '';
+                    
                 }
             } else {
                 $dup = ($conn->errno === 1062 || $stmt->errno === 1062);
@@ -129,8 +143,6 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
 <body>
 <h1>Create Community Validator Account</h1>
 
-<a href="dashboard.php"><button type="button">Return to Dashboard</button></a>
-
 <?php if (!empty($errorMsg)): ?>
 <script>alert("<?php echo addslashes($errorMsg); ?>");</script>
 <?php endif; ?>
@@ -140,10 +152,24 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
 <?php endif; ?>
 
 <form action="" method="post" autocomplete="off">
+
+<label>Validator Type:</label><br>
+<select name="validator_type" id="validator_type" required onchange="toggleExpiry()">
+  <option value="inside" <?php echo ($formValues['validator_type'] ?? '')==='inside'?'selected':''; ?>>Inside Campus</option>
+  <option value="outside" <?php echo ($formValues['validator_type'] ?? '')==='outside'?'selected':''; ?>>Outside Campus</option>
+</select><br><br>
+
+  <label>Designation (for inside validators):</label><br>
+  <input type="text" name="designation"
+         value="<?php echo htmlspecialchars($formValues['designation'] ?? ''); ?>"><br><br>
+
   <label>Username:</label><br>
   <input type="text" name="username"
          value="<?php echo htmlspecialchars($formValues['username']); ?>"
          required><br><br>
+
+    <label>Email:</label>
+    <input type="email" name="email" id="email">
 
   <label>Temporary Password:</label><br>
   <input type="text" id="password" name="password"
@@ -157,12 +183,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
     <option value="0" <?php echo $formValues['active']==='0'?'selected':''; ?>>Inactive</option>
   </select><br><br>
 
-  <!-- Optional: immediately assign a student to this validator -->
-  <label>Assign Student (optional):</label><br>
-  <input type="text" name="student_id" placeholder="####-####"
-         value="<?php echo htmlspecialchars($formValues['student_id']); ?>"><br><br>
-
-  <button type="submit">Create Validator</button>
+  <button type="submit">Register Validator</button>
 </form>
 
 <script>

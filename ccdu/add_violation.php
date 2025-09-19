@@ -299,12 +299,6 @@ $stmt->close();
         <label>Report Description: </label><br>
         <input type="text" id="description_moderate" name="description"><br><br>
 
-        <label>Attach Photo:</label>
-        <input type="file" name="photo" accept="image/*">
-
-        <label>Report Description: </label><br>
-        <input type="text" id="description_moderate" name="description"><br><br>
-
                 <label>Attach Photo:</label>
                 <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'moderatePreview')">
                 <img id="moderatePreview" width="100">
@@ -358,16 +352,6 @@ $stmt->close();
 
         <label>Report Description: </label><br>
         <input type="text" id="description_grave" name="description"><br><br>
-
-        <label>Attach Photo:</label>
-        <input type="file" name="photo" accept="image/*">
-            <label>Attach Photo:</label>
-            <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'gravePreview')">
-            <img id="gravePreview" width="100">
-
-
-        <label>Report Description: </label><br>
-        <input type="text" id ="description" name="description"><br><br>
 
         <label>Attach Photo:</label>
         <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'gravePreview')">
