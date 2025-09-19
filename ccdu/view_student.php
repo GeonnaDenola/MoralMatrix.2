@@ -315,9 +315,10 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
     }
   });
 })();
+</script>
 
-//Sidebar open/close behavior (top drawer)
-
+<!-- Sidebar open/close behavior (top drawer) -->
+<script>
 (function(){
   const sidebar   = document.getElementById('sidebar');
   const openBtn   = document.getElementById('sidebarToggle');
