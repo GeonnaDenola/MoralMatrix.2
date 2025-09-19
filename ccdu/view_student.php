@@ -1,4 +1,5 @@
 <?php
+include '../includes/header.php';
 require '../config.php';
 require __DIR__.'/_scanner.php';
 require 'violation_hrs.php';
@@ -112,7 +113,7 @@ if ($student && !empty($student['photo'])) {
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 
 /* Now it’s safe to include files that output HTML */
-include '../includes/header.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -450,9 +451,7 @@ include '../includes/header.php';
     btn.style.color = fg; // ensure glyph matches header text color
   }
 })();
-</script>
 
-<script>
 /* Ensure modal is hidden at start */
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('violationBackdrop')?.classList.add('hidden');
@@ -514,10 +513,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 })();
-</script>
 
-<!-- Sidebar open/close behavior (top drawer) -->
-<script>
+//Sidebar open/close behavior (top drawer)
+
 (function(){
   const sidebar   = document.getElementById('sidebar');
   const openBtn   = document.getElementById('sidebarToggle');

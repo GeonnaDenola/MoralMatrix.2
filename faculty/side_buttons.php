@@ -13,7 +13,7 @@
         <a href="report_student.php">
             <button>Report Student</button>
         </a>
-        <a href="">
+        <a href="pending_reports.php">
             <button>Pending</button>
         </a>
     </div>

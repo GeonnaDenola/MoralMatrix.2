@@ -261,6 +261,9 @@ $sqlCreateValidatorAccountSchema = "CREATE TABLE IF NOT EXISTS validator_account
     validator_id INT AUTO_INCREMENT PRIMARY KEY,
     v_username VARCHAR(50) NOT NULL UNIQUE,
     v_password VARCHAR(255) NOT NULL,
+    email VARCHAR(50) NOT NULL,
+    validator_type ENUM('inside', 'outside') NOT NULL DEFAULT 'inside',
+    designation VARCHAR(100) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME NOT NULL,
     active TINYINT(1) DEFAULT 1
@@ -278,6 +281,7 @@ $sqlCreateValidatorStudentAssignmentSchema = "CREATE TABLE IF NOT EXISTS validat
     student_id VARCHAR(50) NOT NULL,
     starts_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ends_at DATETIME NULL,
+    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     notes VARCHAR(255) NULL,
     UNIQUE KEY uniq_validator_student (validator_id, student_id),
     INDEX idx_validator (validator_id),
