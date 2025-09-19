@@ -3,13 +3,19 @@
 
 // Start session early (header.php used to do this, but we handle it here)
 session_start();
+// add_violation.php (full page)
+
+// Start session early (header.php used to do this, but we handle it here)
+session_start();
 include '../includes/header.php';
 
 require_once '../config.php';
 
 // Accept student_id from GET (view) or POST (submit)
+// Accept student_id from GET (view) or POST (submit)
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
 
+// --- DB connect ---
 // --- DB connect ---
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -49,16 +55,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($_FILES['photo']['tmp_name']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
         $photo = file_get_contents($_FILES['photo']['tmp_name']);
     }
+    $photo = null;
+    if (!empty($_FILES['photo']['tmp_name']) && is_uploaded_file($_FILES['photo']['tmp_name'])) {
+        $photo = file_get_contents($_FILES['photo']['tmp_name']);
+    }
 
     $sql = "INSERT INTO student_violation
             (student_id, offense_category, offense_type, offense_details, description, photo)
             VALUES (?, ?, ?, ?, ?, ?)";
+            (student_id, offense_category, offense_type, offense_details, description, photo)
+            VALUES (?, ?, ?, ?, ?, ?)";
     $stmtIns = $conn->prepare($sql);
+    if (!$stmtIns) die("Prepare failed: ".$conn->error);
     if (!$stmtIns) die("Prepare failed: ".$conn->error);
 
     $null = NULL;
     $stmtIns->bind_param("sssssb",
+    $stmtIns->bind_param("sssssb",
         $student_id, $offense_category, $offense_type,
+        $offense_details, $description, $null
         $offense_details, $description, $null
     );
     if ($photo !== null) {
@@ -68,11 +83,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$stmtIns->execute()) {
         die("Insert failed: ".$stmtIns->error);
     }
+    if (!$stmtIns->execute()) {
+        die("Insert failed: ".$stmtIns->error);
+    }
     $stmtIns->close();
 
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
     exit;
 }
+// ========= END INSERT HANDLER =========
+
+// For viewing (GET), require a student_id
+if (!$studentId) {
+    echo "<p>No student selected!</p>";
+    exit;
+}
+
+// Fetch student data
 // ========= END INSERT HANDLER =========
 
 // For viewing (GET), require a student_id
@@ -93,6 +120,10 @@ $stmt->close();
 /* Active page for toggle highlight */
 $active = basename($_SERVER['PHP_SELF']);
 function activeClass($file){ global $active; return $active === $file ? ' is-active' : ''; }
+
+/* Active page for toggle highlight */
+$active = basename($_SERVER['PHP_SELF']);
+function activeClass($file){ global $active; return $active === $file ? ' is-active' : ''; }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -102,7 +133,10 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
   <title>Add Violation</title>
   <link rel="stylesheet" href="/MoralMatrix/css/global.css">
   <!-- added: small spacing for the injected checklist slot -->
+  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+  <!-- added: small spacing for the injected checklist slot -->
   <style>
+    .checklist-slot { margin: .75rem 0; }
     .checklist-slot { margin: .75rem 0; }
   </style>
 </head>
@@ -111,7 +145,25 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
   <!-- Toggle launcher -->
   <button id="openMenu" class="menu-launcher" aria-controls="topSheet" aria-expanded="false">Menu</button>
   <div class="page-top-pad"></div>
+  <!-- Toggle launcher -->
+  <button id="openMenu" class="menu-launcher" aria-controls="topSheet" aria-expanded="false">Menu</button>
+  <div class="page-top-pad"></div>
 
+  <!-- Scrim -->
+  <div id="sheetScrim" class="topsheet-scrim" aria-hidden="true"></div>
+
+  <!-- Top sheet menu -->
+  <div id="topSheet" class="topsheet" aria-hidden="true" role="dialog" aria-label="Main menu">
+    <div class="topsheet-header">
+      <span>Menu</span>
+      <button id="closeMenu" class="topsheet-close" aria-label="Close menu">✕</button>
+    </div>
+    <div class="topsheet-rail">
+      <a class="nav-tile<?php echo activeClass('dashboard.php'); ?>" href="dashboard.php" <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>Dashboard</a>
+      <a class="nav-tile<?php echo activeClass('pending_reports.php'); ?>" href="pending_reports.php" <?php echo $active==='pending_reports.php'?'aria-current="page"':''; ?>>Pending Reports</a>
+      <a class="nav-tile<?php echo activeClass('community_validators.php'); ?>" href="community_validators.php" <?php echo $active==='community_validators.php'?'aria-current="page"':''; ?>>Community Service Validators</a>
+      <a class="nav-tile<?php echo activeClass('summary_report.php'); ?>" href="summary_report.php" <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>Summary Report</a>
+    </div>
   <!-- Scrim -->
   <div id="sheetScrim" class="topsheet-scrim" aria-hidden="true"></div>
 
@@ -139,10 +191,21 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
           <p><strong><?= htmlspecialchars($student['course']. " - ".  $student['level'].$student['section']) ?></strong></p>
         </div>
       </div>
+  <div class="profile-container">
+    <?php if($student): ?>
+      <div class="profile">
+        <img src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo']) : 'placeholder.png' ?>" alt="Profile">
+        <div>
+          <p><strong><?= htmlspecialchars($student['student_id']) ?></strong></p>
+          <p><strong><?= htmlspecialchars(trim($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name'])) ?></strong></p>
+          <p><strong><?= htmlspecialchars($student['course']. " - ".  $student['level'].$student['section']) ?></strong></p>
+        </div>
+      </div>
     <?php else: ?>
       <p>Student not found.</p>
     <?php endif; ?>
 
+    <h3>Add Violation</h3>
     <h3>Add Violation</h3>
 
     <label>Offense Category: </label>
@@ -158,10 +221,15 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
       <form method="POST" enctype="multipart/form-data"
             action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . '?student_id=' . urlencode($studentId) ?>">
         <p><strong>Light Offenses</strong></p>
+      <form method="POST" enctype="multipart/form-data"
+            action="<?= htmlspecialchars($_SERVER['PHP_SELF']) . '?student_id=' . urlencode($studentId) ?>">
+        <p><strong>Light Offenses</strong></p>
 
         <input type="hidden" name="offense_category" value="light">
         <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
+        <input type="hidden" name="student_id" value="<?= htmlspecialchars($studentId) ?>">
 
+        <select id="lightOffenses" name="offense_type">
         <select id="lightOffenses" name="offense_type">
           <option value="">--Select--</option>
           <option value="id">ID</option>
@@ -169,6 +237,9 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
           <option value="civilian">Revealing Clothes (Civilian Attire)</option>
           <option value="accessories">Accessories</option>
         </select>
+
+        <!-- added: checklist slot to place the selected checklist just under the selector -->
+        <div id="lightChecklistSlot" class="checklist-slot" aria-live="polite"></div>
 
         <!-- added: checklist slot to place the selected checklist just under the selector -->
         <div id="lightChecklistSlot" class="checklist-slot" aria-live="polite"></div>
@@ -192,11 +263,15 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
           <label><input type="checkbox" name="accessories_offense[]" value="piercings">Piercing/s</label>
           <label><input type="checkbox" name="accessories_offense[]" value="hair_color">Loud Hair Color</label>
         </div>
+        </div>
 
+        <label>Report Description: </label>
+        <input type="text" id="description_light" name="description">
         <label>Report Description: </label>
         <input type="text" id="description_light" name="description">
 
         <label>Attach Photo:</label>
+        <input type="file" name="photo" accept="image/*">
         <input type="file" name="photo" accept="image/*">
 
         <button type="submit">Add Violation</button>
@@ -237,8 +312,14 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
           <label><input type="checkbox" name="acts_offense[]" value="pda">PDA (Public Display of Affection)</label>
         </div>
 
-        <label>Report Description: </label>
-        <input type="text" id="description_moderate" name="description">
+        <label>Report Description: </label><br>
+        <input type="text" id="description_moderate" name="description"><br><br>
+
+        <label>Attach Photo:</label>
+        <input type="file" name="photo" accept="image/*">
+
+        <label>Report Description: </label><br>
+        <input type="text" id="description_moderate" name="description"><br><br>
 
                 <label>Attach Photo:</label>
                 <input type="file" name="photo" accept="image/*" onchange="previewPhoto(this, 'moderatePreview')">
