@@ -5,7 +5,6 @@ require_role('faculty');
 
 include '../config.php';
 include '../includes/header.php';
-include 'side_buttons.php';
 
 // DB connect
 $servername = $database_settings['servername'];
@@ -24,7 +23,7 @@ if (!$faculty_id) {
     die("No faculty id in session. Please login again.");
 }
 
-// make sure $sql is defined
+// query
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -55,16 +54,16 @@ if (!$stmt->execute()) {
 
 $result = $stmt->get_result();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Faculty — Approved Violations</title>
+<link rel="stylesheet" href="/MoralMatrix/css/global.css">
 <style>
-/* tiny card styles (move to your CSS file if you prefer) */
-.violations { padding: 12px; }
+/* tiny card styles (page-local) */
+.violations { padding: 12px; max-width: 980px; margin: 0 auto; }
 .card-link { text-decoration:none; color:inherit; display:block; }
 .card {
   border:1px solid #ddd;
@@ -75,27 +74,48 @@ $result = $stmt->get_result();
   align-items:center;
   gap:18px;
   transition:transform .12s, box-shadow .12s;
+  background:#fff;
 }
 .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
 .card .left { flex: 0 0 120px; text-align:center; }
 .card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
 .card .info { flex:1; }
 .meta { color:#666; font-size:0.92rem; }
+
 </style>
 </head>
 <body>
+
+<!-- ======= LEFT Sidesheet trigger + panel (uses global.css) ======= -->
+<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
+<div class="page-top-pad"></div>
+
+<!-- Scrim -->
+<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
+
+<!-- LEFT Sidesheet (drawer) -->
+<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
+  <div class="sidesheet-header">
+    <span>Menu</span>
+    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
+  </div>
+
+  <div class="sidesheet-rail">
+    <div id="pageButtons" class="drawer-pages">
+      <?php include 'side_buttons.php'; ?>
+    </div>
+  </div>
+</nav>
+<!-- ======= /LEFT Sidesheet ======= -->
 
 <div class="violations">
   <?php if ($result && $result->num_rows > 0): ?>
     <?php while ($row = $result->fetch_assoc()): ?>
       <?php
-        // build student photo path (adjust if your uploads path is different)
         $studentPhotoFile = $row['student_photo'] ?? '';
         $studentPhotoSrc = $studentPhotoFile
             ? '../admin/uploads/' . htmlspecialchars($studentPhotoFile)
             : 'placeholder.png';
-
-        // sanity check: you can test the URL in browser if image not found
         $violationId = urlencode($row['violation_id']);
         $studentId = htmlspecialchars($row['student_id']);
       ?>
@@ -104,16 +124,13 @@ $result = $stmt->get_result();
           <div class="left">
             <img src="<?= $studentPhotoSrc ?>" alt="Student photo" onerror="this.src='placeholder.png'">
           </div>
-
           <div class="info">
             <h4><?= htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) ?> (<?= $studentId ?>)</h4>
             <p><strong>Category:</strong> <?= htmlspecialchars($row['offense_category']) ?> &nbsp; • &nbsp;
                <strong>Type:</strong> <?= htmlspecialchars($row['offense_type']) ?></p>
-
             <?php if (!empty($row['description'])): ?>
               <p><?= nl2br(htmlspecialchars($row['description'])) ?></p>
             <?php endif; ?>
-
             <p class="meta"><strong>Status:</strong> <?= htmlspecialchars($row['status']) ?> —
                <em>Reported at <?= htmlspecialchars($row['reported_at']) ?></em></p>
           </div>
@@ -129,5 +146,79 @@ $result = $stmt->get_result();
 $stmt->close();
 $conn->close();
 ?>
+
+<script>
+/* ======== LEFT Sidesheet: open/close + focus trap ======== */
+(function(){
+  const sheet   = document.getElementById('sideSheet');
+  const scrim   = document.getElementById('sheetScrim');
+  const openBtn = document.getElementById('openMenu');
+  const closeBtn= document.getElementById('closeMenu');
+
+  if (!sheet || !scrim || !openBtn || !closeBtn) return;
+
+  let lastFocusedEl = null;
+
+  function trapFocus(container, e){
+    const focusables = container.querySelectorAll(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last  = focusables[focusables.length - 1];
+
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  }
+  const focusTrapHandler = (e)=>trapFocus(sheet, e);
+
+  function openSheet(){
+    lastFocusedEl = document.activeElement;
+    sheet.classList.add('open');
+    scrim.classList.add('open');
+    sheet.setAttribute('aria-hidden','false');
+    scrim.setAttribute('aria-hidden','false');
+    openBtn.setAttribute('aria-expanded','true');
+    document.body.classList.add('no-scroll');
+
+    setTimeout(()=>{
+      const f = sheet.querySelector('#pageButtons a, #pageButtons button, [tabindex]:not([tabindex="-1"])');
+      (f || sheet).focus();
+    }, 10);
+
+    sheet.addEventListener('keydown', focusTrapHandler);
+  }
+
+  function closeSheet(){
+    sheet.classList.remove('open');
+    scrim.classList.remove('open');
+    sheet.setAttribute('aria-hidden','true');
+    scrim.setAttribute('aria-hidden','true');
+    openBtn.setAttribute('aria-expanded','false');
+    document.body.classList.remove('no-scroll');
+
+    sheet.removeEventListener('keydown', focusTrapHandler);
+    if (lastFocusedEl) lastFocusedEl.focus();
+  }
+
+  openBtn.addEventListener('click', openSheet);
+  closeBtn.addEventListener('click', closeSheet);
+  scrim.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeSheet(); });
+
+  // Optional: close on same-tab nav
+  sheet.addEventListener('click', (e)=>{
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const sameTab = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
+    if (sameTab) closeSheet();
+  });
+})();
+</script>
 </body>
 </html>
