@@ -164,9 +164,13 @@ if (empty($formValues['password'])) {
         <img id="photoPreview" src="" alt="No photo" width="100" style="display:none;">
         <input type="file" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)">
 
-        <label>Temporary Password:</label>
-        <input type="text" id="password" name="password" value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-        <button type="button" onclick="generatePass()">Generate Password</button>
+       <label for="password">Temporary Password:</label>
+
+          <div class="temp-pass-row">
+            <input type="text" id="password" name="password"
+                  value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
+            <button type="button" onclick="generatePass()">Generate Password</button>
+          </div>
 
         <button type="submit">Add Admin Account</button>
       </form>

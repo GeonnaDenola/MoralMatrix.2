@@ -108,7 +108,6 @@ $photoUrl = !empty($ccdu['photo']) ? htmlspecialchars($ccdu['photo']) : '';
           onchange="previewPhoto(this,'ccduPreview')"
         >
       </div>
-      <div class="help">Recommended: square PNG/JPG, up to 2&nbsp;MB.</div>
 
       <button type="submit">Update CCDU Staff Information</button>
     </form>
