@@ -16,27 +16,30 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
 </head>
 <body>
 
-  <!-- Sticky launcher to open the sheet -->
-  <button id="openMenu" class="menu-launcher" aria-controls="topSheet" aria-expanded="false">Menu</button>
+  <!-- Keep your original Menu button exactly as before -->
+  <button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
   <div class="page-top-pad"></div>
 
   <!-- Scrim -->
-  <div id="sheetScrim" class="topsheet-scrim" aria-hidden="true"></div>
+  <div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
 
-  <!-- Top sheet menu -->
-  <div id="topSheet" class="topsheet" aria-hidden="true" role="dialog" aria-label="Main menu">
-    <div class="topsheet-header">
+  <!-- LEFT Sidebar (drawer) -->
+  <nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu">
+    <div class="sidesheet-header">
       <span>Menu</span>
-      <button id="closeMenu" class="topsheet-close" aria-label="Close menu">✕</button>
+      <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
     </div>
 
-    <div class="topsheet-rail">
+    <div class="sidesheet-rail">
       <a class="nav-tile<?php echo activeClass('dashboard.php'); ?>" href="dashboard.php" <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>Dashboard</a>
+      <div class="rail-sep"></div>
       <a class="nav-tile<?php echo activeClass('pending_reports.php'); ?>" href="pending_reports.php" <?php echo $active==='pending_reports.php'?'aria-current="page"':''; ?>>Pending Reports</a>
+      <div class="rail-sep"></div>
       <a class="nav-tile<?php echo activeClass('community_validators.php'); ?>" href="community_validators.php" <?php echo $active==='community_validators.php'?'aria-current="page"':''; ?>>Community Service Validators</a>
+      <div class="rail-sep"></div>
       <a class="nav-tile<?php echo activeClass('summary_report.php'); ?>" href="summary_report.php" <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>Summary Report</a>
     </div>
-  </div>
+  </nav>
 
   <div class="right-container">
     <h2>Dashboard</h2>
@@ -72,20 +75,49 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
   </div>
 
   <script>
-    // --- Top sheet open/close behavior ---
-    const sheet = document.getElementById('topSheet');
+    // --- Sidebar (drawer) open/close behavior ---
+    const sheet = document.getElementById('sideSheet');
     const scrim = document.getElementById('sheetScrim');
     const openBtn = document.getElementById('openMenu');
     const closeBtn = document.getElementById('closeMenu');
 
+    let lastFocusedEl = null;
+
+    function trapFocus(container, e){
+      const focusables = container.querySelectorAll(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
+
     function openSheet(){
+      lastFocusedEl = document.activeElement;
       sheet.classList.add('open');
       scrim.classList.add('open');
       sheet.setAttribute('aria-hidden','false');
       scrim.setAttribute('aria-hidden','false');
       openBtn.setAttribute('aria-expanded','true');
       document.body.classList.add('no-scroll');
+
+      // Focus inside the drawer
+      setTimeout(() => {
+        const firstLink = sheet.querySelector('.nav-tile, button, a, [tabindex]:not([tabindex="-1"])');
+        (firstLink || sheet).focus();
+      }, 10);
+
+      sheet.addEventListener('keydown', focusTrapHandler);
     }
+
     function closeSheet(){
       sheet.classList.remove('open');
       scrim.classList.remove('open');
@@ -93,7 +125,13 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
       scrim.setAttribute('aria-hidden','true');
       openBtn.setAttribute('aria-expanded','false');
       document.body.classList.remove('no-scroll');
+
+      sheet.removeEventListener('keydown', focusTrapHandler);
+
+      if (lastFocusedEl) lastFocusedEl.focus();
     }
+
+    function focusTrapHandler(e){ trapFocus(sheet, e); }
 
     openBtn.addEventListener('click', openSheet);
     closeBtn.addEventListener('click', closeSheet);
