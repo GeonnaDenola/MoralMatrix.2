@@ -2003,8 +2003,9 @@ body {
 
 /* --- Student info: photo left, text right (robust overrides) --- */
 .profile{
-  display: grid !important;
-  grid-template-columns: 96px minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  grid-auto-rows: min-content;
   column-gap: 16px;
   row-gap: 6px;
   align-items: center;
@@ -2016,6 +2017,7 @@ body {
   grid-row: 1 / span 3;
   width: 96px;
   height: 96px;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -2026,11 +2028,11 @@ body {
 .profile > p{
   grid-column: 2 / -1;
   margin: 0;
-  width: auto !important;
-  max-width: none !important;
+  min-width: 0;                 /* ⬅️ lets text shrink within the grid cell */
   white-space: normal !important;
-  word-break: normal !important;
-  overflow-wrap: normal !important;
+  overflow-wrap: anywhere;       /* handles long IDs/names */
+  word-break: normal;
+  line-height: 1.25;
 }
 
 /* undo globals on nested elements */
@@ -2042,6 +2044,12 @@ body {
   word-break: inherit !important;
   overflow-wrap: inherit !important;
 }
+
+/* optional: small visual hierarchy */
+.profile .student-name{ font-weight: 600; }
+.profile .student-id,
+.profile .student-section{ color:#6b7280; font-size: 14px; }
+
 
 /* Headings */
 h3 {
