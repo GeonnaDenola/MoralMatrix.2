@@ -13,14 +13,29 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error); 
 }
 
-$sql = "SELECT validator_id, v_username, created_at, expires_at, active, designation 
+/* ---- Status filter: Active by default ---- */
+$status = $_GET['status'] ?? 'active'; // default = active
+$allowedStatus = ['active','inactive'];
+if (!in_array($status, $allowedStatus, true)) $status = 'active';
+
+$activeValue = ($status === 'active') ? 1 : 0;
+
+$sql = "SELECT validator_id, v_username, created_at, expires_at, active, designation
         FROM validator_account
+        WHERE active = ?
         ORDER BY created_at DESC";
-$result = $conn->query($sql);
-if ($result === false) {
-    die("Query error: " . $conn->error);
+
+$stmt = $conn->prepare($sql);
+if ($stmt === false) {
+  die("Prepare error: " . $conn->error);
 }
+$stmt->bind_param('i', $activeValue);
+if (!$stmt->execute()) {
+  die("Query error: " . $stmt->error);
+}
+$result = $stmt->get_result();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -69,6 +84,19 @@ if ($result === false) {
       <button>Create Account</button>
     </a>
   </div>
+
+  
+  <form method="get" style="display:flex; gap:8px; align-items:center;">
+    <label>
+      Status:
+      <select name="status">
+        <option value="active"   <?= $status==='active'?'selected':'' ?>>Active</option>
+        <option value="inactive" <?= $status==='inactive'?'selected':'' ?>>Inactive</option>
+      </select>
+    </label>
+    <button type="submit">Apply</button>
+    <a href="?status=active"><button type="button">Reset</button></a>
+  </form>
 
   <div class="card-container">
     <?php while ($row = $result->fetch_assoc()): ?>
