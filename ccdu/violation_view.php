@@ -31,8 +31,7 @@ if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) {
 /* Fetch violation */
 $r = null;
 if ($violationId > 0) {
-  $cols = "violation_id, student_id, offense_category, offense_type, offense_details, description, reported_at,
-           (photo IS NOT NULL AND OCTET_LENGTH(photo) > 0) AS has_photo";
+  $cols = "violation_id, student_id, offense_category, offense_type, offense_details, description, reported_at, photo";
   if ($hasReportedBy) $cols .= ", reported_by";
   if ($hasStatus)     $cols .= ", status";
 
@@ -44,25 +43,20 @@ if ($violationId > 0) {
   $stmt->close();
 }
 
-/* Per-student ordinal + hasPhoto cast */
+/* Per-student ordinal */
 $studentNo = 1;
-$hasPhoto  = false;
-
 if ($r) {
   $stmtN = $conn->prepare(
     "SELECT COUNT(*) AS earlier
        FROM student_violation
       WHERE student_id = ?
-        AND (reported_at < ?
-             OR (reported_at = ? AND violation_id < ?))"
+        AND (reported_at < ? OR (reported_at = ? AND violation_id < ?))"
   );
   $stmtN->bind_param("sssi", $r['student_id'], $r['reported_at'], $r['reported_at'], $r['violation_id']);
   $stmtN->execute();
   $rowN = $stmtN->get_result()->fetch_assoc();
   $stmtN->close();
   $studentNo = (int)($rowN['earlier'] ?? 0) + 1;
-
-  if (array_key_exists('has_photo', $r)) $hasPhoto = (int)$r['has_photo'] === 1;
 }
 
 /* Guardian info */
@@ -122,7 +116,13 @@ $setCsUrl = 'set_community_service.php?student_id=' . urlencode($r['student_id']
           . '&violation_id=' . urlencode((string)$violationNo)
           . '&return=' . urlencode($backTo);
 
-/* Inner content */
+/* Determine photo path */
+$photoRel = 'placeholder.png';
+if (!empty($r['photo'])) {
+    $tryAbs = __DIR__ . '/uploads/' . $r['photo'];
+    if (is_file($tryAbs)) $photoRel = 'uploads/' . $r['photo'];
+}
+
 ob_start(); ?>
 <div class="violation-view">
   <p><strong>violation #</strong> <?= $studentNo ?></p>
@@ -145,9 +145,7 @@ ob_start(); ?>
       <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
     <?php endif; ?>
 
-    <!-- ALWAYS show Set for Community Service, and pass IDs (and a return url) -->
     <a class="btn" href="<?= $setCsUrl ?>">Set for Community Service</a>
-
     <a class="btn" href="violation_edit.php?id=<?= $violationNo ?>&student_id=<?= urlencode($r['student_id']) ?>">✏️ Edit</a>
 
     <?php if ($hasStatus && $statusVal !== 'void'): ?>
@@ -162,22 +160,16 @@ ob_start(); ?>
   </div>
 
   <div style="margin-top:14px;">
-    <p><strong>photo evidence:</strong> <?= $hasPhoto ? '' : '—' ?></p>
-    <?php if ($hasPhoto): ?>
-      <div class="photo-wrap" style="margin-top:8px">
-        <img src="violation_photo.php?id=<?= $violationNo ?>" alt="Evidence photo"
-             style="max-width:100%;border-radius:10px;display:block">
-        <div class="photo-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-          <a class="btn" href="violation_photo.php?id=<?= $violationNo ?>" target="_blank" rel="noopener">🔎 View full size</a>
-        </div>
-      </div>
-    <?php endif; ?>
+    <p><strong>photo evidence:</strong></p>
+    <div class="photo-wrap" style="margin-top:8px">
+      <img src="<?= htmlspecialchars($photoRel) ?>" alt="Evidence photo"
+           style="max-width:100%;border-radius:10px;display:block">
+    </div>
   </div>
 </div>
 <?php
 $inner = ob_get_clean();
 
-/* Modal? */
 if (isset($_GET['modal']) && $_GET['modal'] == '1') {
   echo $inner;
   exit;

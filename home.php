@@ -5,31 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moral Matrix</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Dropdown button & menu (self-contained) */
+    .menu-wrap { position: relative; display: inline-block; }
+    .menu-btn {
+      appearance: none; border: 1px solid #e5e7eb; background:#fff; color:#111;
+      padding: 8px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+    }
+    .menu-btn:hover { background:#f9fafb; }
+    .dropdown {
+      position: absolute; right: 0; top: calc(100% + 6px);
+      min-width: 160px; background:#fff; border:1px solid #e5e7eb; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.08); padding: 6px; display: none; z-index: 999;
+    }
+    .dropdown.open { display: block; }
+    .dropdown a {
+      display:block; padding:10px 12px; border-radius:8px; color:#111; text-decoration:none;
+    }
+    .dropdown a:hover { background:#f3f4f6; }
+    /* Optional: keep nav lists aligned nicely */
+    header nav { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    header nav ul { list-style:none; display:flex; gap:16px; padding:0; margin:0; align-items:center; }
+    .btn-login { border:1px solid #e5e7eb; padding:8px 12px; border-radius:8px; }
+  </style>
 </head>
 <body>
   <header>
     <nav>
-  <ul class="nav-left">
-    <li><a href="#">MORAL MATRIX</a></li>
-  </ul>
-  <ul class="nav-center">
-    <li><a href="#">ABOUT</a></li>
-    <li><a href="#">SERVICES</a></li>
-  </ul>
-  <ul class="nav-right">
-    <li><a href="login.php" class="btn-login">LOGIN</a></li>
-  </ul>
-  </nav>
+      <ul class="nav-left">
+        <li><a href="#">MORAL MATRIX</a></li>
+      </ul>
+
+      <!-- Removed nav-center + standalone LOGIN.
+           All actions are now inside this single MENU dropdown. -->
+      <ul class="nav-right">
+        <li class="menu-wrap">
+          <button type="button" class="menu-btn" id="menuBtn"
+                  aria-haspopup="true" aria-expanded="false" aria-controls="mainMenu">
+            MENU ▾
+          </button>
+          <div class="dropdown" id="mainMenu" role="menu" aria-labelledby="menuBtn">
+            <!-- Pages -->
+            <a href="#about" role="menuitem">About</a>
+            <a href="handbook.php" role="menuitem">Student Violation Handbook</a>
+            <a href="#services" role="menuitem">Services</a>
+            <!-- Logins -->
+            <a href="login.php" role="menuitem">Student Login</a>
+            <a href="login.php" role="menuitem">Faculty Login</a>
+            <a href="login.php" role="menuitem">Security Login</a>
+            <a href="login.php" role="menuitem">Validator Login</a>
+          </div>
+        </li>
+      </ul>
+    </nav>
   </header>
 
-<section class="hero">  
-  <div class="hero-content">
-    <h1>Welcome to Moral Matrix</h1>
-    <p><b>Where Character Development is the priority.</b></p>
-    <a href="https://mcc.edu.ph/" class="btn">Visit MCC Page</a>
-  </div>
-</section>
-
+  <section class="hero">  
+    <div class="hero-content">
+      <h1>Welcome to Moral Matrix</h1>
+      <p><b>Where Character Development is the priority.</b></p>
+      <a href="https://mcc.edu.ph/" class="btn">Visit MCC Page</a>
+    </div>
+  </section>
 
   <main class="content">
     <article class="item">
@@ -37,8 +74,7 @@
       <div class="text">
         <h3>Geonna Lyzzet Denola</h3>
         <p><b><i>Team Leader</i></b></p>
-        <p>A team leader guides and supports a group to achieve goals. They plan tasks, delegate work, motivate members, monitor progress, and ensure good communication. A team leader resolves conflicts, provides feedback, and reports to management. Key skills include leadership, communication, problem-solving, and time management.
-</p>
+        <p>A team leader guides and supports a group to achieve goals. They plan tasks, delegate work, motivate members, monitor progress, and ensure good communication. A team leader resolves conflicts, provides feedback, and reports to management. Key skills include leadership, communication, problem-solving, and time management.</p>
       </div>
     </article>
 
@@ -47,8 +83,7 @@
       <div class="text">
         <h3>Marc Christian Paul Ylan</h3>
         <p><b><i>System Analyst</i></b></p>
-        <p>A system analyst studies an organization’s processes to design and improve computer systems. They gather requirements, analyze needs, propose solutions, and ensure systems meet business goals. Key skills include problem-solving, communication, and technical knowledge.
-</p>
+        <p>A system analyst studies an organization’s processes to design and improve computer systems. They gather requirements, analyze needs, propose solutions, and ensure systems meet business goals. Key skills include problem-solving, communication, and technical knowledge.</p>
       </div>
     </article>
 
@@ -57,10 +92,53 @@
       <div class="text">
         <h3>Khyle Alegre</h3>
         <p><b><i>Capstone Adviser</i></b></p>
-        <p>A capstone adviser guides students through their project by providing feedback, ensuring research quality, and helping them meet academic standards. They mentor, review progress, and support problem-solving.
-</p>
+        <p>A capstone adviser guides students through their project by providing feedback, ensuring research quality, and helping them meet academic standards. They mentor, review progress, and support problem-solving.</p>
       </div>
     </article>
   </main>
+
+  <script>
+    // Dropdown behavior (toggle, outside click, ESC, keyboard)
+    (function(){
+      const btn = document.getElementById('menuBtn');
+      const menu = document.getElementById('mainMenu');
+
+      function closeMenu() {
+        menu.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+      function openMenu() {
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.contains('open') ? closeMenu() : openMenu();
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target) && e.target !== btn) closeMenu();
+      });
+
+      // Keyboard: ESC closes; Enter/Space on button toggles (native)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+      });
+
+      // Optional: focus trap on first/last link
+      const links = menu.querySelectorAll('a');
+      if (links.length) {
+        links[links.length - 1].addEventListener('keydown', (e) => {
+          if (e.key === 'Tab' && !e.shiftKey) closeMenu();
+        });
+        links[0].addEventListener('keydown', (e) => {
+          if (e.key === 'Tab' && e.shiftKey) closeMenu();
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
+
