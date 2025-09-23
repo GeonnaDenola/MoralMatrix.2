@@ -74,8 +74,8 @@ $submitted_role= $_SESSION['actor_role'] ?? 'ccdu';
     if (!$stmtIns) die("Prepare failed: " . $conn->error);
 
     $null = NULL;
-    $stmtIns->bind_param("sssssbss",
-        $student_id, $offense_category, $offense_type,
+    $stmtIns->bind_param("ssssssss",
+        $student_id, $offense_category, $offense_type, $offense_details, $description, $photo, $submitted_by, $submitted_role
 
     );
     if ($photo !== null) {
@@ -365,17 +365,6 @@ $stmt->close();
 <!-- Camouflage the toggle to the header color without changing size -->
 <script>
 
-(function(){
-  const btn = document.getElementById('sidebarToggle');
-  if (!btn) return;
-
-  const header = document.querySelector('header, .header, .navbar, .topbar, .site-header, #header');
-  if (!header) return;
-
-  const cs = getComputedStyle(header);
-  const bg = cs.backgroundColor;
-  const fg = cs.color;
-
 
     function previewPhoto(input, previewId){
         const preview = document.getElementById(previewId);
@@ -386,6 +375,17 @@ $stmt->close();
         }
     }
 
+
+(function(){
+  const btn = document.getElementById('sidebarToggle');
+  if (!btn) return;
+
+  const header = document.querySelector('header, .header, .navbar, .topbar, .site-header, #header');
+  if (!header) return;
+
+  const cs = getComputedStyle(header);
+  const bg = cs.backgroundColor;
+  const fg = cs.color;
 
   if (bg && bg !== 'transparent' && !/^rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/.test(bg)) {
     btn.style.backgroundColor = bg;
