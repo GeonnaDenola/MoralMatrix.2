@@ -115,7 +115,6 @@ $photoUrl = !empty($faculty['photo']) ? htmlspecialchars($faculty['photo']) : ''
           onchange="previewPhoto(this,'facultyPreview')"
         >
       </div>
-      <div class="help">Recommended: square PNG/JPG, up to 2&nbsp;MB.</div>
 
       <button type="submit">Update Faculty Information</button>
     </form>
@@ -133,6 +132,31 @@ $photoUrl = !empty($faculty['photo']) ? htmlspecialchars($faculty['photo']) : ''
       };
       reader.readAsDataURL(file);
     }
+
+    (function () {
+    const sel = `
+      #facultyForm input[type="text"],
+      #facultyForm input[type="email"],
+      #facultyForm input[type="file"],
+      #facultyForm select
+    `;
+    const fields = document.querySelectorAll(sel);
+
+    function isFilled(el) {
+      if (el.type === 'file') return el.files && el.files.length > 0;
+      return !!el.value && el.value.trim() !== '';
+    }
+    function sync(el){ el.classList.toggle('filled', isFilled(el)); }
+
+    fields.forEach(el => {
+      // initial (for pre-filled forms)
+      sync(el);
+      // inputs update while typing
+      el.addEventListener('input', () => sync(el));
+      // selects & files update on change
+      el.addEventListener('change', () => sync(el));
+    });
+  })();
   </script>
 </body>
 </html>
