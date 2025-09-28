@@ -316,17 +316,438 @@ button.secondary:hover { background: #0a53be; }
 
 /* Fallback in case there is no .actions wrapper */
 .modal-content form button[type="button"][onclick="generatePass()"]{
-  display:block !important;
-  width:100% !important;
-  margin:0 0 10px 0 !important;
-  float:none !important;
-  clear:both !important;
+  display: block !important;
+  width: auto !important;              /* was 100% */
+  margin: 0 auto 10px !important;      /* centers horizontally */
+  float: none !important;
+  clear: both !important;
 }
+
 .modal-content form button[type="submit"]{
   display:block !important;
   width:100% !important;
   float:none !important;
   clear:both !important;
+}
+
+/* center the button within its current .col-*-? column */
+.modal-content form .form-group > [class*="col-"] {
+  text-align: center !important;            /* only affects this row */
+}
+.modal-content form .form-group > [class*="col-"] 
+  > button[type="button"][onclick="generatePass()"]{
+  display: inline-block !important;
+  width: auto !important;
+  margin: 0 0 10px !important;              /* no auto margins needed */
+  float: none !important;
+  clear: both !important;
+}
+
+/*====Edit Super admin======*/
+/* --- Layout polish --- */
+body {
+  padding-top: 14px;             /* room under your top bar */
+}
+
+h2 {
+  text-align: center;
+  opacity: .9;
+  font-weight: 800;
+  letter-spacing: .3px;
+  margin: 28px auto 10px;
+}
+
+body > form {
+  max-width: 540px;              /* slightly narrower card */
+  margin: 12px auto 48px;
+  padding: 22px;
+  border-radius: 16px;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.15),
+    inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* --- Section label inside the card --- */
+form::before {
+  content: "ADMIN DETAILS";      /* uppercase like in your shot */
+  display: block;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .18em;
+  color: var(--muted);
+  margin: 4px 2px 2px;
+}
+
+/* --- Labels & spacing --- */
+label {
+  font-size: 12.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 14px 2px 6px;
+}
+
+/* --- Inputs --- */
+input[type="text"],
+input[type="email"],
+input[type="number"] {
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 70%, white 30%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3);
+}
+
+/* subtle hover/focus like native macOS */
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="number"]:hover {
+  border-color: color-mix(in oklab, var(--border) 40%, var(--accent) 60%);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(94,161,255,.25);
+}
+
+/* --- File input + preview --- */
+#photoPreview {
+  width: 120px;
+  height: 120px;
+  border-radius: 14px;
+  margin-top: 4px;
+}
+
+input[type="file"] {
+  margin-top: 6px;
+  padding: 8px 10px;
+}
+
+input[type="file"]::-file-selector-button {
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+/* --- Submit button --- */
+button[type="submit"] {
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* --- Optional: two-column on large screens --- */
+@media (min-width: 960px) {
+  body > form { max-width: 620px; }
+}
+/* Make the form container a little bigger */
+body > form,
+body > .form-wrap {
+  max-width: 720px;   /* was ~540–680px; bump the width */
+  padding: 28px;      /* a touch more breathing room */
+  border-radius: 18px;
+}
+
+/* Optional: slightly larger heading to match the bigger card */
+h2 {
+  font-size: clamp(24px, 3vw, 32px);
+}
+
+/* Optional: on large screens, allow it to grow a bit more */
+@media (min-width: 1200px) {
+  body > form,
+  body > .form-wrap {
+    max-width: 780px;
+    padding: 32px;
+  }
+}
+/* Remove the injected "ADMIN DETAILS" heading */
+form::before,
+body > form::before,
+body > .form-wrap::before {
+  content: none !important;
+  display: none !important;
+  margin: 0 !important;
+}
+/* Make the form card wider */
+body > form,
+body > .form-wrap {
+  max-width: 920px;   /* try 920–1040px depending on taste */
+  padding: 32px;      /* a bit more breathing room */
+}
+
+/* Keep inputs stretching edge-to-edge of the wider card */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="file"] {
+  width: 100%;
+}
+
+/* (Optional) two-column layout on large screens */
+@media (min-width: 900px) {
+  form {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* two equal columns */
+    gap: 22px 24px;                 /* row / column gaps */
+  }
+
+  /* Make each label+input pair span one column by default */
+  label { grid-column: span 2; } /* label on its own row */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="file"] { grid-column: span 2; }
+
+  /* If you want certain fields side-by-side, target them like this: */
+  #first_name, #last_name,
+  #middle_name, #email { grid-column: span 1; }
+}
+/* ===== Screenshot-style form ===== */
+
+/* Wider centered card */
+body > form,
+body > .form-wrap {
+  max-width: 980px;
+  padding: 36px 40px;
+  border-radius: 16px;
+}
+
+/* Remove the injected ADMIN DETAILS title if present */
+form::before { content: none !important; display: none !important; }
+
+/* Headings */
+h2 {
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: .3px;
+  margin: 20px auto 18px;
+}
+
+/* Turn the form into a 2-column grid: labels left, inputs right */
+form {
+  display: grid;
+  grid-template-columns: 260px 1fr;   /* label / input columns */
+  column-gap: 28px;
+  row-gap: 18px;
+  align-items: center;
+}
+
+/* Remove <br> gaps from the HTML markup */
+form br { display: none; }
+
+/* Labels: small, uppercase, muted like the shot */
+label {
+  grid-column: 1;
+  justify-self: end;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12.5px;
+  color: #6b7280;                  /* slate-500 */
+  margin: 0;                       /* grid handles spacing */
+}
+
+/* Inputs: soft gray background, subtle border, rounded */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="file"] {
+  grid-column: 2;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #eef2f6;             /* light gray fill */
+  border: 1px solid #d9e1ea;       /* soft border */
+  color: #111827;                  /* slate-900 */
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+/* Focus/hover states (kept subtle) */
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="number"]:hover {
+  border-color: #cbd5e1;           /* slate-300 */
+}
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus {
+  border-color: #9bb4ff;           /* light indigo */
+  box-shadow: 0 0 0 3px rgba(155,180,255,.28);
+}
+
+/* Fix autofill dark backgrounds */
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #eef2f6 inset;
+  -webkit-text-fill-color: #111827;
+  caret-color: #111827;
+}
+
+/* Number spinners off */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+
+/* File input: dark button + rounded, like the screenshot */
+input[type="file"] {
+  padding: 10px 12px;
+  background: #e9eef4;
+}
+input[type="file"]::-file-selector-button {
+  padding: 9px 12px;
+  margin-right: 12px;
+  border-radius: 10px;
+  border: 1px solid #0f172a;
+  background: #0f172a;             /* dark navy */
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Profile picture row layout (label + image left, picker right) */
+label[for="photo"] { align-self: start; }
+#photoPreview {
+  grid-column: 1;                   /* left column under the label */
+  justify-self: end;
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #d9e1ea;
+  margin-top: 8px;
+}
+#photo { grid-column: 2; align-self: center; }
+
+/* Section headers inside the form (e.g., "Emergency Contact") */
+form h3,
+form .section-title {
+  grid-column: 1 / -1;
+  text-align: center;
+  margin: 24px 0 6px;
+  font-weight: 800;
+  color: #334155;                   /* slate-700 */
+}
+
+/* Make it comfortable on smaller screens */
+@media (max-width: 780px) {
+  form {
+    grid-template-columns: 1fr;
+    row-gap: 14px;
+  }
+  label,
+  #photoPreview { justify-self: start; }
+  #photoPreview,
+  #photo,
+  label { grid-column: 1; }
+}
+
+/* --- Photo Uploader --- */
+.uploader {
+  grid-column: 1 / -1;               /* spans full width in the grid */
+  display: grid;
+  gap: 10px;
+}
+
+.uploader-drop {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  border: 2px dashed #cbd5e1;        /* slate-300 */
+  border-radius: 14px;
+  background: #f1f5f9;               /* slate-100 */
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  padding: 16px;
+  text-align: center;
+}
+
+.uploader-drop:focus { outline: none; box-shadow: 0 0 0 3px rgba(155,180,255,.28); }
+.uploader-drop:hover { border-color: #94a3b8; }         /* slate-400 */
+.uploader-drop.dragover {
+  background: #e2e8f0;               /* slate-200 */
+  border-color: #64748b;              /* slate-500 */
+}
+
+#photoPreview {
+  display: block;
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #d9e1ea;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+}
+
+.uploader-instructions {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  color: #475569;                     /* slate-600 */
+  pointer-events: none;               /* clicks go to the drop area */
+}
+
+.uploader-instructions .uploader-browse {
+  pointer-events: auto;               /* enable button click */
+  border: 1px solid #0f172a;
+  background: #0f172a;                /* dark */
+  color: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.uploader-hint { font-size: 12px; opacity: .75; }
+
+.uploader-meta {
+  display: flex; gap: 10px; align-items: center;
+  color: #334155;                     /* slate-700 */
+  font-size: 14px;
+}
+
+.uploader-actions { display: flex; gap: 10px; }
+.uploader-remove {
+  border: 1px solid #e11d48;          /* rose-600 */
+  color: #e11d48;
+  background: #fff1f2;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.uploader-remove:hover { background: #ffe4e6; }
+
+@media (max-width: 780px) {
+  #photoPreview { width: 120px; height: 120px; }
+}
+/* When a photo is present, hide the overlay + browse button completely */
+.uploader.has-image .uploader-instructions,
+.uploader.has-image .uploader-browse {
+  display: none !important;
+}
+
+/* If your plain <input type="file"> is still visible anywhere, hide it */
+#photo[type="file"] { display: none !important; }
+
+/* Center the REMOVE button under the uploader */
+#photo-uploader .uploader-actions {
+  display: flex;
+  justify-content: center;   /* center horizontally */
+  margin-top: 10px;
+}
+#photo-uploader .uploader-remove {
+  margin: 0;                  /* no leftover left margin */
+}
+
+/* Center the UPDATE button and span both columns */
+button[type="submit"] {
+  grid-column: 1 / -1;        /* span across the 2-column form */
+  display: block;
+  margin: 20px auto 0;        /* centers the block element */
+  min-width: 240px;           /* optional: consistent size */
 }
 
 /*=====DASHBOARDS=======*/
@@ -341,7 +762,7 @@ body {
 /* Top */
 .top-container { text-align:center; margin-bottom:30px; }
 .top-container h2 { font-size:32px; font-weight:800; color:#222; margin-bottom:15px; }
-.top-container .btn { background:#007bff; color:#fff; border-radius:90px; text-decoration:none; font-size:14px; font-weight:600; display:inline-block; padding:10px 16px; transition:background-color .2s; }
+.top-container .btn { background:#701010; color:#fff; border-radius:90px; text-decoration:none; font-size:14px; font-weight:600; display:inline-block; padding:10px 16px; transition:background-color .2s; }
 .top-container .btn:hover { background:#000000; }
 
 /* Center the "WELCOME ADMIN" heading */
@@ -424,17 +845,17 @@ h3 { text-align:center; margin:20px 0 10px; color: #000000;}
   .top-container h2 { font-size:24px; }
 }
 
-/* Center the bar */
 .add-users{
-  display:flex;
-  justify-content:center;
-  margin: 8px 0 24px;
+  position: static;          /* undo fixed/absolute */
+  inset: auto;               /* reset any top/left values */
+  transform: none;           /* remove translateX(-50%) */
+  display: flex;
+  justify-content: center;   /* center horizontally */
+  align-items: center;
+  width: 100%;
+  margin: 16px 0 24px;       /* space above/below so it won’t touch the select */
 }
 
-/* remove underline around the button */
-.add-users a{ text-decoration:none; }
-
-/* Pretty button */
 .add-user-btn{
   appearance:none;
   display:inline-flex;
@@ -442,33 +863,52 @@ h3 { text-align:center; margin:20px 0 10px; color: #000000;}
   gap:8px;
   padding:12px 18px;
   border:0;
-  border-radius:9999px;                 /* pill shape */
-  background:linear-gradient(135deg,#721304,#781616f4);
+  border-radius:9999px;
+  background:linear-gradient(135deg,#ef4444,#dc2626); /* red gradient */
   color:#fff;
   font-weight:700;
   letter-spacing:.2px;
   cursor:pointer;
-  box-shadow:0 8px 16px rgba(0,123,255,.25);
+  box-shadow:0 8px 16px rgba(220,38,38,.25);          /* red-tinted shadow */
   transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
 }
 
 .add-user-btn:hover{
   transform:translateY(-1px);
   filter:brightness(1.05);
-  box-shadow:0 12px 22px rgba(0,123,255,.35);
+  box-shadow:0 12px 22px rgba(220,38,38,.35);
 }
 
 .add-user-btn:active{
   transform:translateY(0);
-  box-shadow:0 6px 12px rgba(0,123,255,.22);
+  box-shadow:0 6px 12px rgba(220,38,38,.22);
 }
 
 .add-user-btn:focus-visible{
   outline:none;
-  box-shadow:0 0 0 4px rgba(0,123,255,.28), 0 8px 16px rgba(0,123,255,.25);
+  box-shadow:0 0 0 4px rgba(220,38,38,.28), 0 8px 16px rgba(220,38,38,.25);
+}
+/* Force the button to be red */
+.add-users .add-user-btn{
+  background: linear-gradient(135deg,#771a1a,#771b1b) !important; /* red gradient */
+  background-color: #861212 !important; /* fallback */
+  color:#fff !important;
+  box-shadow:0 8px 16px rgba(220,38,38,.25) !important;
 }
 
-.add-user-btn svg{ width:18px; height:18px; }
+.add-users .add-user-btn:hover{
+  filter:brightness(1.05);
+  box-shadow:0 12px 22px rgba(220,38,38,.35) !important;
+}
+
+.add-users .add-user-btn:active{
+  box-shadow:0 6px 12px rgba(220,38,38,.22) !important;
+}
+
+.add-users .add-user-btn:focus-visible{
+  outline:none;
+  box-shadow:0 0 0 4px rgba(220,38,38,.28), 0 8px 16px rgba(220,38,38,.25) !important;
+}
 
 /* Filter control */
 .filter-bar{
@@ -750,15 +1190,15 @@ select,
 input[type="file"]{
   width: 100%;
   appearance: none;
-  background: #0d131b;
-  color: var(--text);
+  background: #ffffff;
+  color: black;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px 12px;
   outline: none;
   transition: border .15s ease, box-shadow .15s ease, background .15s ease;
 }
-input::placeholder{ color: #76859b; }
+input::placeholder{ color: #000000; }
 
 input:focus,
 select:focus,
@@ -811,7 +1251,7 @@ label + input[type="file"]{
 /* ---------- Buttons ---------- */
 button{
   font-weight: 800;
-  border: px solid transparent;
+  border: 1px solid transparent; /* (optional fix) was 'px' */
   border-radius: 12px;
   padding: 10px 14px;
   cursor: pointer;
@@ -819,32 +1259,47 @@ button{
 }
 
 a > button{
-  background: #0f1520;
+  background: #711515;
   color: var(--text);
   border-color: var(--border);
 }
-a > button:hover{ transform: translateY(-1px); }
+a > button:hover{
+  background: #000000;
+  color: #fff;                 /* optional for contrast */
+  transform: translateY(-1px);
+}
 
 button[type="button"]{
-  background: #0f1724;
+  background: #761212;
   color: var(--text);
   border-color: var(--border);
 }
 button[type="button"]:hover{
-  background: #111b2b;
+  background: #000000;
+  color: #fff;                 /* optional */
 }
 
 button[type="submit"]{
-  background: var(--brand);
+  background:#000000;
   color: #fff;
   box-shadow: 0 4px 18px rgba(79,140,255,.25);
 }
 button[type="submit"]:hover{
-  background: var(--brand-2);
+  background: #000000;         /* ← black on hover */
   transform: translateY(-1px);
 }
 button[type="submit"]:active{
   transform: translateY(0);
+}
+
+/* force all button hovers to black */
+button:hover,
+a > button:hover,
+button[type="button"]:hover,
+button[type="submit"]:hover{
+  background: #000 !important;
+  color: #fff;                 /* optional for contrast */
+  border-color: #000 !important; /* if border uses the var too */
 }
 
 /* tiny helper for stacked controls you already have */
@@ -1110,11 +1565,21 @@ body {
   width: 100%;
   padding: 10px;
   margin-bottom: 15px;
-  border: 1px solid #ccc;
+  border: 1px solid #bbb;
   border-radius: 6px;
   font-size: 14px;
-  transition: border 0.3s;
+  transition: border 0.3s, background-color 0.3s;
   box-sizing: border-box;
+
+  background-color: #f2f2f2; /* ← grey */
+  color: #333;
+}
+
+/* Optional: on focus keep it grey but with clearer border */
+.form-container input:focus,
+.form-container select:focus {
+  outline: none;
+  border-color: #888;
 }
 
 .form-container input:focus,
@@ -1283,23 +1748,29 @@ body{
 
 /* Search (centered) */
 #search{
-  -webkit-appearance:none;
-  appearance:none;
-  padding:12px 14px;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 12px 14px;
   width: clamp(420px, 70vw, 1100px);
-  max-width:100%;
-  border:1px solid var(--ctrl-border);
-  border-radius:12px;
-  font-size:14px;
-  font-weight:700;
+  max-width: 100%;
+  border: 1px solid #e5e7eb;   /* light gray border */
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
   margin: 6px auto 20px;
-  display:block;
-  color:var(--ctrl-text);
-  background:var(--ctrl-bg);
+  display: block;
+
+  color: #111;                  /* dark text */
+  background: #fff;             /* white background */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.04),
-    0 1px 2px rgba(0,0,0,.15);
+    inset 0 1px 0 rgba(255,255,255,.6),
+    0 1px 2px rgba(0,0,0,.08);
 }
+
+/* optional: placeholder + focus */
+#search::placeholder { color: #9ca3af; font-weight: 600; }
+#search:focus { outline: 2px solid #111; outline-offset: 2px; }
+
 #search::placeholder{ color:var(--ctrl-muted); opacity:1; }
 #search:hover{ border-color:#2a3648; }
 #search:focus{
@@ -1331,26 +1802,36 @@ body{
 
 /* Selects (dark, rounded, with chevron) */
 .sort select{
-  -webkit-appearance:none;
-  appearance:none;
-  flex:1 1 0;
-  min-width:180px;
-  padding:12px 42px 12px 14px;
-  border:1px solid var(--ctrl-border);
-  border-radius:12px;
-  font-size:14px;
-  font-weight:700;
-  background:var(--ctrl-bg) !important;
-  color:var(--ctrl-text) !important;
-  cursor:pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 0;
+  min-width: 180px;
+  padding: 12px 42px 12px 14px;
+
+  border: 1px solid #e5e7eb;     /* light gray border */
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+
+  background: #fff !important;   /* white bg */
+  color: #111 !important;         /* dark text */
+  cursor: pointer;
+
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.04),
-    0 1px 2px rgba(0,0,0,.15);
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;
-  background-position:right 12px center;
-  background-size:18px;
+    inset 0 1px 0 rgba(255,255,255,.6),
+    0 1px 2px rgba(0,0,0,.08);
+
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
 }
+
+/* states */
+.sort select:hover { filter: brightness(0.98); }
+.sort select:focus { outline: 2px solid #111; outline-offset: 2px; }
+.sort select:disabled { background: #f9fafb !important; color: #9ca3af !important; cursor: not-allowed; }
+
 .sort select:hover{ border-color:#2a3648; }
 .sort select:focus{
   outline:none;
@@ -1522,8 +2003,9 @@ body {
 
 /* --- Student info: photo left, text right (robust overrides) --- */
 .profile{
-  display: grid !important;
-  grid-template-columns: 96px minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  grid-auto-rows: min-content;
   column-gap: 16px;
   row-gap: 6px;
   align-items: center;
@@ -1535,6 +2017,7 @@ body {
   grid-row: 1 / span 3;
   width: 96px;
   height: 96px;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -1545,11 +2028,11 @@ body {
 .profile > p{
   grid-column: 2 / -1;
   margin: 0;
-  width: auto !important;
-  max-width: none !important;
+  min-width: 0;                 /* ⬅️ lets text shrink within the grid cell */
   white-space: normal !important;
-  word-break: normal !important;
-  overflow-wrap: normal !important;
+  overflow-wrap: anywhere;       /* handles long IDs/names */
+  word-break: normal;
+  line-height: 1.25;
 }
 
 /* undo globals on nested elements */
@@ -1561,6 +2044,12 @@ body {
   word-break: inherit !important;
   overflow-wrap: inherit !important;
 }
+
+/* optional: small visual hierarchy */
+.profile .student-name{ font-weight: 600; }
+.profile .student-id,
+.profile .student-section{ color:#6b7280; font-size: 14px; }
+
 
 /* Headings */
 h3 {
@@ -1575,8 +2064,8 @@ h3 {
 .form-container {
   display: none;
   margin-top: 15px;
-  background: #f9fafc;
-  border: 1px solid #ddd;
+  background: #f3f5f8;          /* light grey card */
+  border: 1px solid #e1e6ec;
   border-radius: 8px;
   width: min(1100px, 98%);
   margin: 0 auto;
@@ -1589,7 +2078,7 @@ h3 {
   color: #444;
 }
 
-/* Inputs & Selects */
+/* Labels */
 label {
   display: block;
   margin: 8px 0 4px;
@@ -1598,20 +2087,41 @@ label {
   color: #333;
 }
 
-select, input[type="text"], input[type="file"] {
+/* Inputs & Selects — grey fill */
+select,
+input[type="text"],
+input[type="file"],
+textarea {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #cfd6de;
   border-radius: 6px;
   font-size: 14px;
   margin-bottom: 12px;
+  background: #eef1f4;          /* soft grey fill */
+  color: #111;
+  box-sizing: border-box;
 }
 
-select:focus, input:focus {
-  border-color: #007bff;
+/* Focus state: keep grey, add subtle ring */
+select:focus,
+input[type="text"]:focus,
+input[type="file"]:focus,
+textarea:focus {
+  background: #e8edf2;
+  border-color: #7aa7ff;
+  box-shadow: 0 0 0 2px rgba(26,115,232,.18);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(0,123,255,.2);
-  color: #000000;
+  color: #000;
+}
+
+/* Disabled fields */
+select:disabled,
+input[type="text"]:disabled,
+input[type="file"]:disabled,
+textarea:disabled {
+  background: #f3f5f7;
+  color: #777;
 }
 
 /* Checkboxes (generic) */
@@ -1624,7 +2134,7 @@ select:focus, input:focus {
 
 /* Submit Button */
 button[type="submit"] {
-  background: #007bff;
+  background: #710f0f;
   color: #fff;
   padding: 12px 20px;
   border: none;
@@ -1664,7 +2174,7 @@ button[type="submit"]:active {
 
 /* Ensure the form cards use the same max width and are centered */
 .form-container form{
-  width: min(700px, 95%);
+  width: min(900px, 95%) !important; /* override earlier 700px */
   margin: 0 auto;
 }
 
@@ -1705,11 +2215,6 @@ button[type="submit"]:active {
   display: block;
 }
 
-/* Widen inner form so long option text isn't truncated */
-.form-container form{
-  width: min(900px, 95%) !important; /* override earlier 700px */
-}
-
 /* Place detail checkbox groups below the select in a responsive grid */
 [id$="Checkbox"]{
   /* hidden by JS until selected; JS sets display:grid */
@@ -1729,30 +2234,58 @@ button[type="submit"]:active {
   padding: 4px 0;
   margin: 0;
   font-weight: 500;
+  background: #f0f3f6;         /* subtle chip background */
+  border-radius: 6px;
+  padding: 6px 10px;
 }
 
-  .checklist-slot {
-      margin: .75rem 0;
-      display: block !important;
-      width: 100% !important;
-      /* if the form uses CSS Grid, span all columns */
-      grid-column: 1 / -1 !important;
-      /* if the form uses Flexbox, force a full-width row */
-      flex-basis: 100% !important;
-    }
-    /* keep checklist content aligned nicely inside the slot */
-    .checklist-slot label { display: inline-block; margin-right: 1rem; }
-    /* make sure any original checklist containers don't float next to fields */
-    #light_idCheckbox, #light_uniformCheckbox, #light_civilianCheckbox, #light_accessoriesCheckbox,
-    #moderate_improper_conductCheckbox, #moderate_gadget_misuseCheckbox, #moderate_unauthorized_actsCheckbox,
-    #grave_substance_addictionCheckbox, #grave_integrity_dishonestyCheckbox, #grave_violence_misconductCheckbox,
-    #grave_property_theftCheckbox, #grave_threats_disrespectCheckbox {
-      clear: both;
-    }
+/* Checklist slot helper (kept if you use it) */
+.checklist-slot {
+  margin: .75rem 0;
+  display: block !important;
+  width: 100% !important;
+  grid-column: 1 / -1 !important;
+  flex-basis: 100% !important;
+}
+.checklist-slot label { display: inline-block; margin-right: 1rem; }
+
+/* Make sure any original checklist containers don't float next to fields */
+#light_idCheckbox, #light_uniformCheckbox, #light_civilianCheckbox, #light_accessoriesCheckbox,
+#moderate_improper_conductCheckbox, #moderate_gadget_misuseCheckbox, #moderate_unauthorized_actsCheckbox,
+#grave_substance_addictionCheckbox, #grave_integrity_dishonestyCheckbox, #grave_violence_misconductCheckbox,
+#grave_property_theftCheckbox, #grave_threats_disrespectCheckbox {
+  clear: both;
+}
+
+/* Drawer tiles for sidesheet */
+.sidesheet-rail .drawer-pages,
+.sidesheet-rail #pageButtons{
+  display:grid; gap:10px; padding:8px 10px 16px; margin:0;
+}
+.sidesheet-rail #pageButtons a,
+.sidesheet-rail #pageButtons button{
+  display:block; width:100%; padding:10px 14px; border-radius:14px;
+  background:rgba(255,255,255,.04); color:var(--ink-100); text-align:left;
+  font-weight:700; font-size:15px; line-height:1.2; border:0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sidesheet-rail #pageButtons a:hover{ background:rgba(255,255,255,.06); }
+.sidesheet-rail #pageButtons a:focus{
+  outline:2px solid rgba(26,115,232,.45); outline-offset:2px;
+  box-shadow: inset 0 0 0 1px rgba(59,130,246,.35), 0 0 0 3px rgba(59,130,246,.12);
+}
+
+.sidesheet{
+  height:100dvh; display:flex; flex-direction:column;
+}
+.sidesheet-rail{
+  flex:1; min-height:0; overflow:auto; overflow-x:hidden; scrollbar-width:none;
+}
+.sidesheet-rail::-webkit-scrollbar{ width:0; height:0; }
 
 /*========VIEW STUDENT(CCDU)=========*/
- /* ===== Buttons, chips, badges, cards ===== */
-:root{
+ :root{
   --app-ink:#0f172a;
   --muted:#6b7280;
   --ring:#e5e7eb;
@@ -1907,6 +2440,137 @@ body{ background:#f6f7fb; }
   margin-right: 6px;    /* small space before the hours */
 }
 
+/* ===== Drawer / rail styles retained from your page (condensed) ===== */
+.sidesheet-rail .drawer-pages,
+.sidesheet-rail #pageButtons{
+  display: grid !important;
+  grid-auto-rows: minmax(44px, auto);
+  align-content: start;
+  gap: 10px !important;
+  padding: 8px 10px 16px !important;
+  margin: 0 !important;
+}
+.sidesheet-rail .drawer-pages .rail-sep,
+.sidesheet-rail #pageButtons .rail-sep{
+  height: 1px; background: rgba(255,255,255,.08);
+  margin: 6px 6px; border-radius: 1px;
+}
+.sidesheet-rail #pageButtons a,
+.sidesheet-rail #pageButtons button,
+.sidesheet-rail .drawer-pages a,
+.sidesheet-rail .drawer-pages button{
+  display:block !important; width:100% !important; box-sizing:border-box !important;
+  padding:10px 14px !important; border-radius:14px !important;
+  background:rgba(255,255,255,.04) !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.07) !important;
+  border:0 !important; color:var(--ink-100) !important; text-align:left !important;
+  font-weight:700 !important; font-size:15px !important; line-height:1.2 !important;
+  white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important;
+}
+.sidesheet-rail #pageButtons a:hover,
+.sidesheet-rail #pageButtons button:hover{ background:rgba(255,255,255,.06) !important; }
+.sidesheet-rail #pageButtons a:focus,
+
+.sidesheet-rail #pageButtons a[aria-current="page"],
+.sidesheet-rail #pageButtons .is-active{
+  background:rgba(26,115,232,.14) !important; box-shadow:inset 0 0 0 2px rgba(26,115,232,.45) !important;
+}
+.sidesheet{ height:100dvh; display:flex; flex-direction:column; }
+.sidesheet-rail{ flex:1; min-height:0; overflow:auto; overflow-x:hidden; scrollbar-width:none; }
+.sidesheet-rail::-webkit-scrollbar{ width:0; height:0; }
+
+/* === Modal/backdrop: REQUIRED base rules === */
+.modal-backdrop.hidden, .modal.hidden { display: none !important; }
+
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.50);
+  z-index: 9998;
+  /* you already have this extra polish too: */
+  backdrop-filter: saturate(120%) blur(2px);
+}
+
+.modal{
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
+
+.modal-content{
+  max-width: 780px;
+  width: min(92vw, 780px);
+  max-height: 85vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;           /* keep your polish */
+  border: 1px solid var(--ring); /* keep your polish */
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  padding: 18px 20px;
+}
+
+.modal-close{
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  z-index: 10000;
+}
+
+body.modal-open{ overflow: hidden; }
+/* Base button style used across the app (anchors and buttons) */
+a.btn,
+button.btn,
+input[type="button"].btn,
+input[type="submit"].btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  border: 1px solid #c81e1e; /* darker red border */
+  background: #e02424;       /* red background */
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter .15s ease, transform .02s ease;
+}
+
+a.btn:hover,
+button.btn:hover,
+input[type="button"].btn:hover,
+input[type="submit"].btn:hover { filter: brightness(1.06); }
+a.btn:active,
+button.btn:active,
+input[type="button"].btn:active,
+input[type="submit"].btn:active { transform: translateY(1px); }
+
+/* Optional variants if you need them later */
+.btn--outline { background: #fff; color: var(--primary); border-color: var(--primary); }
+.btn--danger  { background: #ef4444; border-color: #dc2626; }
+
+/* Center the whole student info header + limit its width */
+.right-container .profile{
+  max-width: 960px;        /* tweak: 800–1040px works too */
+  margin: 0 auto;          /* centers the grid on the page */
+  justify-content: center; /* keeps columns centered inside the grid area */
+  padding: 14px 16px;      /* a little side breathing room */
+}
+
+/* Make the two columns comfortable on large screens */
+@media (min-width: 641px){
+  .right-container .profile{
+    grid-template-columns: repeat(2, minmax(280px, 1fr)) !important;
+  }
+}
+
 /*=======Edit Account=====*/
     :root{
       --bg: #0f172a;           /* input background (dark navy) */
@@ -2022,14 +2686,95 @@ body{ background:#f6f7fb; }
       .file-row{ flex-direction:column; align-items:stretch; }
       .preview-wrap{ width:100%; height:180px; }
     }
+/* ADD — force-show the native file input/button even if global.css hides it */
+.photo-row input[type="file"]{
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  pointer-events: auto !important;
+  z-index: 10 !important;
+}
+
+/* Make sure the native "Choose File" button actually renders */
+.photo-row input[type="file"]{-webkit-appearance: auto !important; appearance: auto !important;}
+
+/* Style the modern file button so it’s visible on all themes */
+.photo-row input[type="file"]::file-selector-button{
+  padding: 8px 12px;
+  border: 1px solid #0b1220;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Safari/old WebKit fallback */
+.photo-row input[type="file"]::-webkit-file-upload-button{
+  padding: 8px 12px;
+  border: 1px solid #0b1220;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+/* SUPER OVERRIDES: make sure the file input (#photo) is visible & clickable */
+#studentForm .photo-row #photo{
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+
+  /* if a global "screen-reader only" rule was applied */
+  position: relative !important;
+  width: auto !important;
+  height: auto !important;
+  pointer-events: auto !important;
+  clip: auto !important;
+  clip-path: none !important;
+  overflow: visible !important;
+
+  /* bring it above any overlapping elements */
+  z-index: 1000 !important;
+  transform: none !important;
+
+  /* ensure the native button renders */
+  -webkit-appearance: auto !important;
+  appearance: auto !important;
+}
+
+/* If the preview image is overlapping/capturing clicks, ignore pointer events */
+#studentForm .photo-row #photoPreview{
+  pointer-events: none !important;
+}
+
+/* make the native "Choose File" button obviously clickable */
+#studentForm .photo-row #photo::file-selector-button{
+  padding: 8px 12px;
+  border: 1px solid #0b1220;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+#studentForm .photo-row #photo::-webkit-file-upload-button{
+  padding: 8px 12px;
+  border: 1px solid #0b1220;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* (Temporary) debug aid — remove after you see it appear */
+#studentForm .photo-row #photo{ outline: 1px dashed #6b7280 !important; }
 
 /*===========Faculty Edit=========*/
 .top-actions{
-  display:flex;
-  justify-content:center;
+  display: flex;
+  justify-content: center;
   margin: 24px auto 0;
   padding: 0 16px;
+  color: red;
 }
+
 .top-actions .btn-return{
   display:inline-flex;
   align-items:center;
@@ -2043,125 +2788,166 @@ body{ background:#f6f7fb; }
   font-weight:800;
   box-shadow:0 8px 20px rgba(0,0,0,.12);
 }
-/* ---------- Grid: label | field ---------- */
+/* ===== Light card container ===== */
+#facultyForm{
+  max-width: 760px;
+  margin: 36px auto;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow:
+    0 6px 14px rgba(16, 24, 40, 0.06),
+    0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* Title (optional) */
+#facultyForm h2,
+#facultyForm .title{
+  text-align: center;
+  font-weight: 800;
+  margin: 4px 0 18px;
+  color: #111827;
+}
+
+/* Grid stays the same */
 #facultyForm form{
-  display:grid;
+  display: grid;
   grid-template-columns: 220px minmax(0,1fr);
   column-gap: 22px;
   row-gap: 16px;
-  align-items:center;
+  align-items: center;
 }
-
-/* Hide stray <br> tags that can break the grid */
 #facultyForm form br{ display:none; }
 
-/* Labels (left column) */
+/* Labels */
 #facultyForm form > label{
-  justify-self:end;
-  text-align:right;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.6px;
-  color: var(--muted);
-  font-weight:800;
+  justify-self: end;
+  text-align: right;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #6b7280;            /* muted */
+  font-weight: 800;
 }
 
-/* Inputs (dark style to match your UI) */
+/* ===== Inputs & selects: grey-filled ===== */
 #facultyForm input[type="text"],
 #facultyForm input[type="email"],
+#facultyForm input[type="number"],
 #facultyForm select{
-  width:100%;
-  appearance:none;
-  background:#0b121a;
-  color:#e8eef6;
-  border:1px solid var(--border-dark);
-  border-radius:10px;
-  padding:12px 12px;
-  outline:none;
+  width: 100%;
+  appearance: none;
+  background: #f3f4f6;       /* grey fill */
+  color: #111827;
+  border: 1px solid #d1d5db; /* soft border */
+  border-radius: 10px;
+  padding: 12px 12px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background-color .15s;
 }
-#facultyForm input[type="text"]::placeholder{ color:#8a96a8; }
+#facultyForm input::placeholder{ color:#9ca3af; }
 
-/* Select arrow */
+/* Focus: blue border + soft ring */
+#facultyForm input:focus,
+#facultyForm select:focus{
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  background: #f3f4f6; /* stay grey */
+}
+
+/* Disabled/read-only look matches screenshot */
+#facultyForm input[readonly],
+#facultyForm input[disabled],
+#facultyForm select[disabled]{
+  background: #f5f6f8;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Select arrow (subtle) */
 #facultyForm select{
   background-image:
     linear-gradient(45deg, transparent 50%, #9ba6b5 50%),
     linear-gradient(135deg, #9ba6b5 50%, transparent 50%),
     linear-gradient(to right, transparent, transparent);
   background-position:
-    calc(100% - 21px) calc(1em + 2px),
-    calc(100% - 16px) calc(1em + 2px),
+    calc(100% - 21px) calc(50% + 2px),
+    calc(100% - 16px) calc(50% + 2px),
     100% 0;
-  background-size:5px 5px, 5px 5px, 2.8em 2.8em;
-  background-repeat:no-repeat;
-  padding-right:44px;
+  background-size: 5px 5px, 5px 5px, 2.8em 2.8em;
+  background-repeat: no-repeat;
+  padding-right: 44px;
 }
 
-/* ---------- File input (force visible) ---------- */
+/* ===== Photo row ===== */
+#facultyForm .photo-row{
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+#facultyPreview{
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+}
+
+/* File input (visible + tidy) */
 #facultyForm input[type="file"]{
-  display:inline-block !important;
-  visibility:visible !important;
-  opacity:1 !important;
-  width:100%;
-  max-width:460px;
-  background:#0b121a;
-  color:#e8eef6;
-  border:1px solid var(--border-dark);
-  border-radius:10px;
-  padding:10px 12px;
+  display: inline-block !important;
+  width: 100%;
+  max-width: 460px;
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 #facultyForm ::file-selector-button{
-  margin-right:12px;
-  border:1px solid var(--border-dark);
-  background:#0f1724;
-  color:#e8eef6;
-  border-radius:10px;
-  padding:8px 12px;
-  cursor:pointer;
+  margin-right: 12px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+  color: #111827;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+#facultyForm input[type="file"]:focus{
+  border-color:#2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
 }
 
-/* ---------- Photo row: preview (left) + file input (right) ---------- */
-#facultyForm .photo-row{
-  grid-column: 2;                 /* stays in the field column */
-  display:flex;
-  align-items:center;
-  gap:16px;
-}
-
-/* Preview box */
-#facultyPreview{
-  width:120px;
-  height:120px;
-  object-fit:cover;
-  border-radius:12px;
-  border:1px solid var(--border-dark);
-  background:#0f172a;
-}
-
-/* Optional helper text under the row */
+/* Helper text */
 #facultyForm .help{
-  grid-column:2;
-  font-size:12px;
-  color: var(--muted);
-  margin:-6px 0 8px;
+  grid-column: 2;
+  font-size: 12px;
+  color: #6b7280;
+  margin: -6px 0 8px;
 }
 
-/* Submit button centered */
+/* Submit button */
 #facultyForm button[type="submit"]{
   grid-column: 1 / -1;
   justify-self: center;
-  background: var(--brand);
-  color:#fff;
-  border:none;
-  border-radius:12px;
-  padding:12px 18px;
-  font-weight:800;
-  box-shadow: 0 6px 20px rgba(79,140,255,.22);
-  cursor:pointer;
+  background: #741616;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, .22);
+  cursor: pointer;
+  transition: transform .05s ease, background-color .15s ease;
 }
-#facultyForm button[type="submit"]:hover{ background: var(--brand-2); }
+#facultyForm button[type="submit"]:hover{ background:#000000; }
+#facultyForm button[type="submit"]:active{ transform: translateY(1px); }
 
-/* ---------- Mobile ---------- */
+/* Mobile */
 @media (max-width: 720px){
+  #facultyForm{ padding: 22px; border-radius: 16px; }
   #facultyForm form{ grid-template-columns: 1fr; }
   #facultyForm form > label{ justify-self:start; text-align:left; }
   #facultyForm .photo-row{ grid-column: 1; }
@@ -2171,11 +2957,13 @@ body{ background:#f6f7fb; }
 /*===========CCDU Account Edit==========*/
 
 .top-actions{
-  display:flex;
-  justify-content:center;
+  display: flex;
+  justify-content: center;
   margin: 24px auto 0;
   padding: 0 16px;
+  color: red;
 }
+
 .top-actions .btn-return{
   display:inline-flex;
   align-items:center;
@@ -2190,235 +2978,402 @@ body{ background:#f6f7fb; }
   box-shadow:0 8px 20px rgba(0,0,0,.12);
 }
 
+/* ===== Light card container ===== */
+#ccduForm{
+  max-width: 760px;
+  margin: 36px auto;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow:
+    0 6px 14px rgba(16, 24, 40, 0.06),
+    0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* Title (optional) */
+#ccduForm h2,
+#ccduForm .title{
+  text-align: center;
+  font-weight: 800;
+  margin: 4px 0 18px;
+  color: #111827;
+}
+
+/* Grid */
 #ccduForm form{
-  display:grid;
+  display: grid;
   grid-template-columns: 220px minmax(0,1fr);
   column-gap: 22px;
   row-gap: 16px;
-  align-items:center;
+  align-items: center;
 }
-
-/* Hide stray <br> that can break the grid */
 #ccduForm form br{ display:none; }
 
-/* Labels (left column) */
+/* Labels */
 #ccduForm form > label{
-  justify-self:end;
-  text-align:right;
-  font-size:12px;
-  text-transform:uppercase;
-  letter-spacing:.6px;
-  color: var(--muted);
-  font-weight:800;
+  justify-self: end;
+  text-align: right;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #6b7280;            /* muted */
+  font-weight: 800;
 }
 
-/* Inputs (dark style to match your UI) */
+/* ===== Inputs & selects: grey-filled ===== */
 #ccduForm input[type="text"],
 #ccduForm input[type="email"],
+#ccduForm input[type="number"],
 #ccduForm select{
-  width:100%;
-  appearance:none;
-  background:#0b121a;
-  color:#e8eef6;
-  border:1px solid var(--border-dark);
-  border-radius:10px;
-  padding:12px 12px;
-  outline:none;
+  width: 100%;
+  appearance: none;
+  background: #f3f4f6;       /* grey fill */
+  color: #111827;
+  border: 1px solid #d1d5db; /* soft border */
+  border-radius: 10px;
+  padding: 12px 12px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s, background-color .15s;
 }
-#ccduForm input[type="text"]::placeholder{ color:#8a96a8; }
+#ccduForm input::placeholder{ color:#9ca3af; }
 
-/* Select arrow */
+/* Focus: blue border + soft ring */
+#ccduForm input:focus,
+#ccduForm select:focus{
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  background: #f3f4f6; /* stay grey */
+}
+
+/* Disabled / read-only */
+#ccduForm input[readonly],
+#ccduForm input[disabled],
+#ccduForm select[disabled]{
+  background: #f5f6f8;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Select arrow (subtle) */
 #ccduForm select{
   background-image:
     linear-gradient(45deg, transparent 50%, #9ba6b5 50%),
     linear-gradient(135deg, #9ba6b5 50%, transparent 50%),
     linear-gradient(to right, transparent, transparent);
   background-position:
-    calc(100% - 21px) calc(1em + 2px),
-    calc(100% - 16px) calc(1em + 2px),
+    calc(100% - 21px) calc(50% + 2px),
+    calc(100% - 16px) calc(50% + 2px),
     100% 0;
-  background-size:5px 5px, 5px 5px, 2.8em 2.8em;
-  background-repeat:no-repeat;
-  padding-right:44px;
+  background-size: 5px 5px, 5px 5px, 2.8em 2.8em;
+  background-repeat: no-repeat;
+  padding-right: 44px;
 }
 
-/* ---------- File input (force visible) ---------- */
+/* ===== Photo row ===== */
+#ccduForm .photo-row{
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+#ccduPreview{
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+}
+
+/* File input (visible + tidy) */
 #ccduForm input[type="file"]{
-  display:inline-block !important;
-  visibility:visible !important;
-  opacity:1 !important;
-  width:100%;
-  max-width:460px;
-  background:#0b121a;
-  color:#e8eef6;
-  border:1px solid var(--border-dark);
-  border-radius:10px;
-  padding:10px 12px;
+  display: inline-block !important;
+  width: 100%;
+  max-width: 460px;
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 #ccduForm ::file-selector-button{
-  margin-right:12px;
-  border:1px solid var(--border-dark);
-  background:#0f1724;
-  color:#e8eef6;
-  border-radius:10px;
-  padding:8px 12px;
-  cursor:pointer;
+  margin-right: 12px;
+  border: 1px solid #d1d5db;
+  background: #e5e7eb;
+  color: #111827;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+#ccduForm input[type="file"]:focus{
+  border-color:#2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .18);
 }
 
-/* ---------- Photo row: preview (left) + file input (right) ---------- */
-#ccduForm .photo-row{
-  grid-column: 2;                 /* stays in the field column */
-  display:flex;
-  align-items:center;
-  gap:16px;
-}
-
-/* Preview box */
-#ccduPreview{
-  width:120px;
-  height:120px;
-  object-fit:cover;
-  border-radius:12px;
-  border:1px solid var(--border-dark);
-  background:#0f172a;
-}
-
-/* Optional helper text under the row */
+/* Helper text */
 #ccduForm .help{
-  grid-column:2;
-  font-size:12px;
-  color: var(--muted);
-  margin:-6px 0 8px;
+  grid-column: 2;
+  font-size: 12px;
+  color: #6b7280;
+  margin: -6px 0 8px;
 }
 
-/* Submit button centered */
+/* Submit button */
 #ccduForm button[type="submit"]{
   grid-column: 1 / -1;
   justify-self: center;
-  background: var(--brand);
-  color:#fff;
-  border:none;
-  border-radius:12px;
-  padding:12px 18px;
-  font-weight:800;
-  box-shadow: 0 6px 20px rgba(79,140,255,.22);
-  cursor:pointer;
+  background: #711010;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, .22);
+  cursor: pointer;
+  transition: transform .05s ease, background-color .15s ease;
 }
-#ccduForm button[type="submit"]:hover{ background: var(--brand-2); }
+#ccduForm button[type="submit"]:hover{ background:#1d4ed8; }
+#ccduForm button[type="submit"]:active{ transform: translateY(1px); }
 
-/* ---------- Mobile ---------- */
+/* Mobile */
 @media (max-width: 720px){
+  #ccduForm{ padding: 22px; border-radius: 16px; }
   #ccduForm form{ grid-template-columns: 1fr; }
   #ccduForm form > label{ justify-self:start; text-align:left; }
   #ccduForm .photo-row{ grid-column: 1; }
   #ccduPreview{ width: 160px; height: 160px; }
 }
 
-/*=========Topbar Toggle=========*/
-:root{
-  --menu-btn:#2c3e50;    /* requested color */
-  --rail:var(--menu-btn);/* make the whole menu use the same color */
-  --brand:#1d4ed8;
-  --brand-strong:#2563eb;
-  --text:#e5e7eb;
-}
-
-body.no-scroll{ overflow:hidden; }
-
-/* Launcher button */
+/*=========sidebar Toggle=========*/
 .menu-launcher{
-  position: sticky;
+  position: sticky;          /* sits under header */
   top: 0;
-  z-index: 30;
-  background: var(--menu-btn);
-  border: 0;
-  padding: 10px 14px;
-  font-weight: 700;
+  left: 0;
+  width: 100%;
+  z-index: 1200;             /* above header/content */
+  background: #2c3e50;       /* deep navy */
   color: #fff;
-  cursor: pointer;
-  border-radius: 0;         /* square edges */
-  box-shadow: none;         /* no edge/shadow */
-  transition: transform .12s ease;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 16px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .02em;
+  box-shadow: none;
 }
-/* Keep hover/active the SAME color */
-.menu-launcher:hover,
-.menu-launcher:active { background: var(--menu-btn); transform: translateY(-1px); }
-.menu-launcher:focus-visible{ outline: 2px solid #94a3b8; outline-offset: 2px; }
+.menu-launcher:hover{ background: #2c3e50; }
+.menu-launcher:active{ background: #0c2035; }
+.menu-launcher:focus{
+  outline: 2px solid rgba(255,255,255,.25);
+  outline-offset: 2px;
+}
 
-/* Scrim */
+/* If an old page inlines styles for a floating button, neutralize them */
+.menu-launcher.menu-launcher--floating,
+button.menu-launcher[style]{
+  position: sticky !important;
+  left: 0 !important;
+  right: auto !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  width: 100% !important;
+}
+
+/* Menu bar provides its own spacing */
+.page-top-pad{ height: 0; }
+
+/* ---------- Theme vars ---------- */
+:root{
+  --drawer-width: 300px;
+  --navy-900: #0d1b2a;  /* drawer bg */
+  --navy-800: #0f2436;  /* hover bg */
+  --ink-100: #e8eef6;   /* text */
+  --brand:   #1a73e8;   /* accent blue */
+  --scrim-bg: rgba(0,0,0,.45);
+  --shadow-24: 0 14px 28px rgba(0,0,0,.28), 0 10px 10px rgba(0,0,0,.22);
+}
+
+/* ---------- Scrims (new + legacy) ---------- */
+.sidesheet-scrim,
 .topsheet-scrim{
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.55);
-  opacity: 0; pointer-events: none;
-  transition: opacity .2s ease;
-  z-index: 980;                     /* below the sheet */
-}
-.topsheet-scrim.open{ opacity:1; pointer-events:auto; }
-
-/* The sheet itself — FORCE full-width top bar */
-.topsheet{
   position: fixed;
-  inset: 0 0 auto 0;                /* top/left/right; no bottom -> auto height */
-  width: 100vw;                     /* ignore any parent container width */
-  max-width: none;
-  background: var(--rail);
-  color: var(--text);
-  transform: translateY(-100%);
-  transition: transform .22s ease;
-  z-index: 990;
-  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  inset: 0;
+  background: var(--scrim-bg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+  z-index: 1250;                    /* between menu bar and panel */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
-.topsheet.open{ transform: translateY(0); }
+.sidesheet-scrim.open,
+.topsheet-scrim.open{ opacity: 1; pointer-events: auto; }
 
-/* Center the header/rail content within the full-width sheet */
-.topsheet-header,
-.topsheet-rail{ max-width: 1200px; margin: 0 auto; }
+/* ---------- Drawer Panels ---------- */
+/* New class */
+.sidesheet{
+  position: fixed; top: 0; left: 0; height: 100dvh; width: var(--drawer-width);
+  background: var(--navy-900); color: var(--ink-100);
+  transform: translateX(-100%);
+  transition: transform .28s cubic-bezier(.2,.7,.2,1);
+  z-index: 1300;                       /* above scrim */
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-24);
+  will-change: transform;
+}
+.sidesheet.open{ transform: translateX(0); }
 
+/* Legacy class (acts the same) */
+.topsheet{
+  position: fixed; top: 0; left: 0; bottom: 0; width: var(--drawer-width);
+  background: var(--navy-900); color: var(--ink-100);
+  transform: translateX(-100%);
+  transition: transform .28s cubic-bezier(.2,.7,.2,1);
+  z-index: 1300;
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-24);
+  will-change: transform;
+}
+.topsheet.open{ transform: translateX(0); }
+
+/* Edge highlight for depth */
+.sidesheet::after,
+.topsheet::after{
+  content:"";
+  position:absolute; top:0; right:-1px; width:1px; height:100%;
+  background: linear-gradient(to right, rgba(255,255,255,.08), rgba(255,255,255,0));
+  pointer-events:none;
+}
+
+/* ---------- Panel header ---------- */
+.sidesheet-header,
 .topsheet-header{
   display:flex; align-items:center; justify-content:space-between;
-  padding: 12px 16px;
-  font-weight: 700;
+  padding: 14px 14px 8px 14px;
   border-bottom: 1px solid rgba(255,255,255,.06);
+  color: var(--ink-100);
 }
+
+/* Close button (rounded blue X) */
+.sidesheet-close,
 .topsheet-close{
-  background: transparent; border:0; color: var(--text);
-  font-size: 20px; line-height: 1; cursor: pointer;
-  padding: 6px 8px; border-radius: 8px;
+  width: 36px; height: 36px; border: 0; border-radius: .75rem;
+  background: var(--brand); color: #fff; font-size: 18px; line-height: 1;
+  display: inline-grid; place-items: center; cursor: pointer;
+  box-shadow: 0 6px 20px rgba(26,115,232,.35);
 }
-.topsheet-close:hover{ background: rgba(255,255,255,.08); }
+.sidesheet-close:hover,
+.topsheet-close:hover{ filter: brightness(1.05); }
+.sidesheet-close:active,
+.topsheet-close:active{ transform: translateY(1px); }
 
+/* ---------- Nav rail & links ---------- */
+.sidesheet-rail,
 .topsheet-rail{
-  background: var(--rail);
-  padding: 16px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 14px;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  padding: 10px 10px 18px;
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
-/* Nav pills */
+.rail-sep{
+  height: 1px; background: rgba(255,255,255,.06);
+  margin: 10px 6px; border-radius: 1px;
+}
+
 .nav-tile{
-  display:flex; align-items:center; justify-content:center;
-  text-decoration: none;
-  font-weight: 800;
-  color: #fff;
-  background: var(--brand);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, .25), inset 0 -2px 0 rgba(255,255,255,.08);
-  transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
-  text-align:center; white-space:nowrap;
+  display:block; padding:12px 14px; margin:8px 6px;
+  border-radius:12px; text-decoration:none; color:var(--ink-100);
+  font-weight:700; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
 }
-.nav-tile:hover{ transform: translateY(-1px); background: var(--brand-strong); }
-.nav-tile.is-active{ background: var(--brand-strong); }
+.nav-tile:hover{ background: var(--navy-800); }
+.nav-tile:focus{ outline: 2px solid rgba(255,255,255,.25); outline-offset: 2px; }
+.nav-tile.is-active,
+.nav-tile[aria-current="page"]{
+  background: rgba(26,115,232,.14);
+  box-shadow: inset 0 0 0 2px rgba(26,115,232,.45);
+}
 
-@media (max-width: 900px){ .topsheet-rail{ grid-template-columns: repeat(2, minmax(160px, 1fr)); } }
-@media (max-width: 520px){ .topsheet-rail{ grid-template-columns: 1fr; } }
+/* Scrollbar styling */
+.sidesheet-rail::-webkit-scrollbar,
+.topsheet-rail::-webkit-scrollbar{ height: 8px; width: 8px; }
+.sidesheet-rail::-webkit-scrollbar-track,
+.topsheet-rail::-webkit-scrollbar-track{ background: rgba(255,255,255,.05); border-radius: 10px; }
+.sidesheet-rail::-webkit-scrollbar-thumb,
+.topsheet-rail::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.22); border-radius: 10px; }
+.sidesheet-rail::-webkit-scrollbar-thumb:hover,
+.topsheet-rail::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.30); }
 
-/* When the sheet is open, temporarily hide the old left sidebar/margin */
-body.sheet-open .left-container{ display: none !important; }
-body.sheet-open .right-container{ margin-left: 0 !important; }
+/* ---------- Body lock while drawer open ---------- */
+.no-scroll{ overflow: hidden; }
 
-.page-top-pad{ height: 6px; }
+/* ---------- Optional: persistent rail on wide screens ----------
+body.has-persistent-rail .right-container{ margin-left: var(--drawer-width); }
+.sidesheet-scrim.open{ opacity: 0 !important; pointer-events: none !important; }
+----------------------------------------------------------------- */
+
+/* ---------- Small responsive helper from your code ---------- */
+@media (max-width: 600px) {
+  .profile { flex-direction: column; text-align: center; }
+  .profile img { margin-bottom: 10px; }
+}
+
+/*=========view violation=======*/
+/* Scope styles so global .btn rules don't bleed in */
+.violation-view :is(a.btn, button.btn){
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:.5rem;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;              /* force neutral */
+  color: #111;                   /* force neutral text */
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform .02s ease, background-color .15s ease, border-color .15s ease;
+  user-select: none;
+}
+@media (prefers-color-scheme: dark){
+  .violation-view :is(a.btn, button.btn){ background:#0f1524; color:#e5e7eb; border-color:#1f2937; }
+}
+
+.violation-view :is(a.btn, button.btn):hover{ background:#f9fafb; text-decoration:none; }
+.violation-view :is(a.btn, button.btn):active{ transform: translateY(1px); }
+.violation-view :is(a.btn[disabled], button.btn[disabled]){ opacity:.6; cursor:not-allowed; }
+
+/* Danger only when explicitly marked .btn-danger */
+.violation-view :is(a.btn-danger, button.btn-danger){
+  border-color:#ef4444;
+  color:#991b1b;
+  background:#fee2e2;
+}
+.violation-view :is(a.btn-danger, button.btn-danger):hover{ background:#fecaca; }
+
+/* Tag for voided state */
+.violation-view .tag-void{
+  display:inline-block; padding:4px 10px; border-radius:9999px;
+  background:#fee2e2; color:#991b1b; border:1px solid #fecaca;
+}
+
+/* Optional: action bar wrapper so you can remove inline flex styles */
+.violation-view .action-bar,
+.violation-view .photo-actions{
+  margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;
+}
+
+/* Optional: description box (wrap the text in <div class="description">...</div>) */
+.violation-view .description{
+  margin-top:4px; padding:12px 14px;
+  border:1px dashed #e5e7eb; border-radius:10px; background:#f9fafb;
+  white-space:pre-wrap;
+}
+@media (prefers-color-scheme: dark){
+  .violation-view .description{ background:#111827; border-color:#1f2937; }
+}
+
+/* Photo block polish */
+.violation-view .photo-wrap img{
+  width:100%; height:auto; display:block; border-radius:10px; border:1px solid #e5e7eb;
+}
+@media (prefers-color-scheme: dark){
+  .violation-view .photo-wrap img{ border-color:#1f2937; }
+}

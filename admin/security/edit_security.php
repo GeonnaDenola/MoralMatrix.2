@@ -52,6 +52,52 @@ $photoUrl = !empty($security['photo']) ? htmlspecialchars($security['photo']) : 
     }
 
     .photo-row{ display:flex; align-items:center; gap:16px; }
+
+    /* ---------- ADD: super overrides so #photo can't be hidden/covered ---------- */
+    #securityForm .photo-row #photo{
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+
+      position: relative !important;   /* undo sr-only tricks */
+      width: auto !important;
+      height: auto !important;
+      pointer-events: auto !important;
+      clip: auto !important;
+      clip-path: none !important;
+      overflow: visible !important;
+
+      z-index: 1000 !important;        /* above overlaps */
+      transform: none !important;
+
+      -webkit-appearance: auto !important;
+      appearance: auto !important;
+
+      outline: 1px dashed #6b7280 !important; /* temp debug, remove if you want */
+    }
+    /* prevent preview from capturing clicks if it overlaps */
+    #securityForm .photo-row #securityPreview{
+      pointer-events: none !important;
+    }
+    /* make native button clearly clickable */
+    #securityForm .photo-row #photo::file-selector-button{
+      padding: 8px 12px;
+      border: 1px solid #0b1220;
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+    }
+    #securityForm .photo-row #photo::-webkit-file-upload-button{
+      padding: 8px 12px;
+      border: 1px solid #0b1220;
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+    }
+    /* ---------- /ADD ---------- */
+
+    /* optional helper text style */
+    .help{ font-size:12px; color:#6b7280; margin:6px 0 14px; }
   </style>
 </head>
 <body>
@@ -103,7 +149,6 @@ $photoUrl = !empty($security['photo']) ? htmlspecialchars($security['photo']) : 
         <img id="securityPreview" src="<?php echo $photoUrl; ?>" alt="Photo Preview">
         <input id="photo" type="file" name="photo" accept="image/*" onchange="previewPhoto(this,'securityPreview')">
       </div>
-      <br>
 
       <button type="submit">Update Security Personnel Information</button>
     </form>

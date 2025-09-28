@@ -122,250 +122,64 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Profile</title>
   <link rel="stylesheet" href="/MoralMatrix/css/global.css">
-
-  <style>
-    /* ====== Only COLORS for the menu button (same as header). No size changes. ====== */
-    :root { --header-bg:#b30000; --header-fg:#ffffff; } /* fallback if header is transparent */
-
-    #sidebarToggle{
-     #sidebarToggle {
-    background-color: #2c3e50;
-    color: var(--header-fg) !important;
-    border-color: var(--header-bg) !important;
-    box-shadow: none !important;
-    border: 0 !important;
-    border-radius: 0 !important;  
-    box-shadow: none !important;   
-    outline: none !important;
-    }
-  }
-
-    /* ===== Buttons, chips, badges, cards ===== */
-    a.btn{
-      display:inline-block;
-      padding:8px 12px;
-      border-radius:8px;
-      background:#2563eb;
-      color:#fff;
-      text-decoration:none;
-      border:1px solid #1d4ed8;
-      transition:filter .15s ease, transform .02s ease;
-    }
-    a.btn:hover{ filter:brightness(1.08); }
-    a.btn:active{ transform:translateY(1px); }
-
-    .cards-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap:14px;
-      margin-top:14px;
-    }
-
-    a.profile-card{
-      display:block;
-      text-decoration:none;
-      color:inherit;
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      overflow:hidden;
-      transition:box-shadow .2s ease, transform .05s ease;
-      background:#fff;
-    }
-    a.profile-card:hover{ box-shadow:0 12px 28px rgba(0,0,0,.08); }
-    a.profile-card:active{ transform:translateY(1px); }
-    a.profile-card img{
-      display:block;
-      width:100%;
-      height:180px;
-      object-fit:cover;
-      background:#f3f4f6;
-    }
-    a.profile-card .info{
-      padding:12px;
-      line-height:1.4;
-    }
-    a.profile-card *{ text-decoration:none; }
-
-    .badge{
-      display:inline-block;
-      padding:2px 8px;
-      border-radius:999px;
-      font-size:.85em;
-    }
-    .badge-grave{ background:#fee2e2; color:#991b1b; }
-    .badge-light{ background:#e0f2fe; color:#075985; }
-
-    .chip{
-      display:inline-block;
-      padding:2px 8px;
-      margin:0 6px 6px 0;
-      border-radius:999px;
-      background:#f3f4f6;
-      font-size:.9em;
-    }
-
-    /* Keep the whole strip centered but full-width constrained */
-    .right-container > .profile{
-      width: min(1200px, 100%);
-      margin: 0 auto;
-    }
-
-    /* Layout */
-    .profile{
-      display: grid;
-      grid-template-columns: 120px 1fr 700px;
-      grid-template-rows: auto auto;
-      gap: 12px 24px;
-      align-items: center;
-      padding: 14px 0;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .profile-left{
-      display: grid;
-      grid-auto-rows: max-content;
-      justify-items: center;
-      gap: 8px;
-    }
-    .profile-left img{
-      width:96px; height:96px; object-fit:cover;
-      border-radius:12px; border:1px solid #e5e7eb; background:#f3f4f6;
-    }
-
-    .profile-name{
-      grid-column: 2;
-      grid-row: 1 / span 2;
-      margin: 0;
-      text-align: center;
-    }
-
-    .profile-meta{
-      grid-column: 3;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(160px, 1fr));
-      gap: 6px 24px;
-    }
-    .profile-meta p{ margin: 0; }
-
-    .profile img{
-      width:96px;
-      height:96px;
-      object-fit:cover;
-      border-radius:12px;
-      border:1px solid #e5e7eb;
-      background:#f3f4f6;
-    }
-    .profile h2{ margin:0; }
-
-    .add-violation-btn{
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      margin: 16px 0;
-    }
-
-    /* ===== Modal/backdrop ===== */
-    .modal-backdrop.hidden, .modal.hidden { display: none !important; }
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.50);z-index:9998}
-    .modal{position:fixed;inset:0;display:grid;place-items:center;z-index:9999}
-    .modal-content{max-width:780px;width:min(92vw,780px);max-height:85vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:18px 20px}
-    .modal-close{position:fixed;right:18px;top:18px;border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:4px 8px;cursor:pointer;z-index:10000}
-    body.modal-open{overflow:hidden}
-
-    .sr-only{
-      position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
-    }
-
-    /* ===== Page button Sidebar: top drawer ===== */
-    .sidebar{
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      width: 100%;
-      max-height: 70vh;
-      background: #1f2937;
-      color: #fff;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 12px 30px rgba(0,0,0,.35);
-      transform: translateY(-100%);
-      transition: transform .25s ease;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    .sidebar.open{ transform: translateY(0); }
-
-    .sidebar-header{
-      display:flex; justify-content:space-between; align-items:center;
-      padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.12);
-      font-weight:600;
-    }
-    .sidebar-close{
-      border:1px solid rgba(255,255,255,.25);
-      background:transparent; color:#fff;
-      border-radius:8px; padding:2px 8px; cursor:pointer;
-    }
-    .sidebar-links{ padding:12px; display:grid; gap:10px; }
-
-    .sidebar-backdrop.hidden { display: none !important; }
-    .sidebar-backdrop{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.45);
-      z-index: 9985;
-    }
-
-    .right-container{ padding-left: 0; }
-  </style>
 </head>
 <body>
 
-<!-- Sidebar toggle (hamburger) -->
-<button id="sidebarToggle" class="sidebar-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">☰</button>
+<!-- ======= LEFT Sidesheet trigger + panel (uses global.css) ======= -->
+<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
+<div class="page-top-pad"></div>
 
-<!-- Off-canvas top-drawer sidebar -->
-<aside id="sidebar" class="sidebar" aria-hidden="true">
-  <div class="sidebar-header">
+<!-- Scrim -->
+<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
+
+<!-- LEFT Sidesheet (drawer) -->
+<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
+  <div class="sidesheet-header">
     <span>Menu</span>
-    <button id="sidebarClose" class="sidebar-close" aria-label="Close">✕</button>
+    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
   </div>
-  <div id="pageButtons" class="sidebar-links">
-    <?php include 'page_buttons.php' ?>
-  </div>
-</aside>
 
-<!-- Backdrop for the sidebar -->
-<div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
+  <div class="sidesheet-rail">
+    <div id="pageButtons" class="drawer-pages">
+      <?php include 'page_buttons.php'; ?>
+    </div>
+  </div>
+</nav>
+<!-- ======= /LEFT Sidesheet ======= -->
 
 <div class="right-container">
   <?php if($student): ?>
     <div class="profile">
-      <!-- Left: photo + ID -->
-      <div class="profile-left">
-        <img src="<?= htmlspecialchars($photoRel) ?>" alt="Profile">
-        <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
-      </div>
+      <!-- Photo -->
+      <img src="<?= htmlspecialchars($photoRel) ?>" alt="Profile">
 
-      <!-- Center: big name -->
-      <h2 class="profile-name">
-        <?= htmlspecialchars($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name']) ?>
+      <!-- Student ID (first-of-type p) -->
+      <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
+
+      <!-- Big centered name -->
+      <h2>
+        <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
       </h2>
 
-      <!-- Right: meta grid -->
-      <div class="profile-meta">
-        <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-        <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-        <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
+      <!-- Facts (flow into two columns automatically) -->
+      <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
+      <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
+      <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
 
-        <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-        <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
-        <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
+      <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
+      <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
+      <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
 
-        <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-        <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
-        <p><strong>Community Service:</strong> <?= htmlspecialchars((string)$hours) . ' ' . ($hours === 1 ? 'hour' : 'hours') ?></p>
-      </div>
+      <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
+      <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+      <!-- Community Service moved below as a centered line -->
     </div>
+
+    <!-- Centered Community Service line (matches CSS .violations) -->
+    <p class="violations">
+      <strong>Community Service:</strong>
+      <?= htmlspecialchars((string)$hours) . ' ' . ($hours === 1 ? 'hour' : 'hours') ?>
+    </p>
   <?php else: ?>
     <p>Student not found.</p>
   <?php endif; ?>
@@ -379,7 +193,7 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
       <?php if (empty($violations)): ?>
         <p>No Violations Recorded.</p>
       <?php else: ?>
-        <div class="cards-grid">
+        <div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px;">
           <?php foreach ($violations as $v):
             $cat  = htmlspecialchars($v['offense_category']);
             $type = htmlspecialchars($v['offense_type']);
@@ -428,30 +242,7 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
   </div>
 </div>
 
-<!-- Make the menu button camouflage to the header's colors without changing size -->
 <script>
-(function(){
-  const btn = document.getElementById('sidebarToggle');
-  if (!btn) return;
-
-  // Find the header rendered by header.php (try common selectors)
-  const header = document.querySelector('header, .header, .navbar, .topbar, .site-header, #header');
-  if (!header) return;
-
-  const cs = getComputedStyle(header);
-  const bg = cs.backgroundColor;
-  const fg = cs.color;
-
-  // If header has a real background color, copy it
-  if (bg && bg !== 'transparent' && !/^rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/.test(bg)) {
-    btn.style.backgroundColor = bg;
-    btn.style.borderColor     = bg; // hide edge by matching border to bg
-  }
-  if (fg) {
-    btn.style.color = fg; // ensure glyph matches header text color
-  }
-})();
-
 /* Ensure modal is hidden at start */
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('violationBackdrop')?.classList.add('hidden');
@@ -513,36 +304,80 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 })();
+</script>
 
-//Sidebar open/close behavior (top drawer)
-
+<script>
+/* ======== LEFT Sidesheet: open/close + focus trap (uses global.css classes) ======== */
 (function(){
-  const sidebar   = document.getElementById('sidebar');
-  const openBtn   = document.getElementById('sidebarToggle');
-  const closeBtn  = document.getElementById('sidebarClose');
-  const backdrop  = document.getElementById('sidebarBackdrop');
+  const sheet   = document.getElementById('sideSheet');
+  const scrim   = document.getElementById('sheetScrim');
+  const openBtn = document.getElementById('openMenu');
+  const closeBtn= document.getElementById('closeMenu');
 
-  if (!sidebar || !openBtn || !closeBtn || !backdrop) return;
+  if (!sheet || !scrim || !openBtn || !closeBtn) return;
 
-  function openSidebar(){
-    sidebar.classList.add('open');
-    sidebar.setAttribute('aria-hidden','false');
+  let lastFocusedEl = null;
+
+  function trapFocus(container, e){
+    const focusables = container.querySelectorAll(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last  = focusables[focusables.length - 1];
+
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    }
+  }
+  const focusTrapHandler = (e)=>trapFocus(sheet, e);
+
+  function openSheet(){
+    lastFocusedEl = document.activeElement;
+    sheet.classList.add('open');
+    scrim.classList.add('open');
+    sheet.setAttribute('aria-hidden','false');
+    scrim.setAttribute('aria-hidden','false');
     openBtn.setAttribute('aria-expanded','true');
-    backdrop.classList.remove('hidden');
-    document.body.classList.add('modal-open'); // lock scroll
-  }
-  function closeSidebar(){
-    sidebar.classList.remove('open');
-    sidebar.setAttribute('aria-hidden','true');
-    openBtn.setAttribute('aria-expanded','false');
-    backdrop.classList.add('hidden');
-    document.body.classList.remove('modal-open');
+    document.body.classList.add('no-scroll'); // provided by global.css
+
+    // Focus first interactive element for a11y
+    setTimeout(()=>{
+      const f = sheet.querySelector('.nav-tile, button, a, [tabindex]:not([tabindex="-1"])');
+      (f || sheet).focus();
+    }, 10);
+
+    sheet.addEventListener('keydown', focusTrapHandler);
   }
 
-  openBtn.addEventListener('click', openSidebar);
-  closeBtn.addEventListener('click', closeSidebar);
-  backdrop.addEventListener('click', closeSidebar);
-  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSidebar(); });
+  function closeSheet(){
+    sheet.classList.remove('open');
+    scrim.classList.remove('open');
+    sheet.setAttribute('aria-hidden','true');
+    scrim.setAttribute('aria-hidden','true');
+    openBtn.setAttribute('aria-expanded','false');
+    document.body.classList.remove('no-scroll');
+
+    sheet.removeEventListener('keydown', focusTrapHandler);
+    if (lastFocusedEl) lastFocusedEl.focus();
+  }
+
+  openBtn.addEventListener('click', openSheet);
+  closeBtn.addEventListener('click', closeSheet);
+  scrim.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeSheet(); });
+
+  // Optional: close when clicking a same-tab nav link
+  sheet.addEventListener('click', (e)=>{
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const sameTab = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
+    if (sameTab) closeSheet();
+  });
 })();
 </script>
 
