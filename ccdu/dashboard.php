@@ -132,7 +132,7 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
 
             card.innerHTML = `
               <div class="left">
-                <img src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Photo">
+                <img src="${student.photo ? '../admin/uploads/' + student.photo : '../admin/uploads/placeholder.png'}" alt="Photo">
                 <div class="info">
                   <strong>${student.student_id}</strong><br>
                   ${student.last_name}, ${student.first_name} ${student.middle_name}<br>
