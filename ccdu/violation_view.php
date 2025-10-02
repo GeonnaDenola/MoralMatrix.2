@@ -117,7 +117,7 @@ $setCsUrl = 'set_community_service.php?student_id=' . urlencode($r['student_id']
           . '&return=' . urlencode($backTo);
 
 /* Determine photo path */
-$photoRel = 'placeholder.png';
+$photoRel = 'uploads/placeholder.png';
 if (!empty($r['photo'])) {
     $tryAbs = __DIR__ . '/uploads/' . $r['photo'];
     if (is_file($tryAbs)) $photoRel = 'uploads/' . $r['photo'];
