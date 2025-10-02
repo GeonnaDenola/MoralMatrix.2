@@ -1,7 +1,8 @@
 <?php
-// faculty/dashboard.php
+// security/dashboard.php
 require '../auth.php';
 require_role('security');
+include __DIR__ . '/_scanner.php';
 
 include '../config.php';
 include '../includes/header.php';
@@ -17,10 +18,10 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// current faculty id (id_number stored in session by your login)
-$faculty_id = $_SESSION['actor_id'] ?? null;
-if (!$faculty_id) {
-    die("No faculty id in session. Please login again.");
+// current security id (id_number stored in session by your login)
+$security_id = $_SESSION['actor_id'] ?? null;
+if (!$security_id) {
+    die("No security id in session. Please login again.");
 }
 
 // query
@@ -47,7 +48,7 @@ if (!$stmt) {
     die("Prepare failed: " . $conn->error);
 }
 
-$stmt->bind_param("s", $faculty_id);
+$stmt->bind_param("s", $security_id);
 if (!$stmt->execute()) {
     die("Execute failed: " . $stmt->error);
 }
@@ -59,7 +60,7 @@ $result = $stmt->get_result();
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Faculty — Approved Violations</title>
+<title>Security — Approved Violations</title>
 <link rel="stylesheet" href="/MoralMatrix/css/global.css">
 <style>
 /* tiny card styles (page-local) */
