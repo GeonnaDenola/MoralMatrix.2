@@ -1,0 +1,264 @@
+/* ===========================
+   Design System / Variables
+   =========================== */
+:root {
+  --brand: #990e01;          /* original header red */
+  --brand-dark: #971200;     /* original button red */
+  --ink: #1a1a1a;
+  --muted: #6b7280;
+  --bg: #f7f7f7;
+  --card: #ffffff;
+  --ring: rgba(0,0,0,.08);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, .06);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, .10);
+
+  /* Drawer width: responsive but never huge */
+  /* min 320px, prefer ~86vw on phones, max 420px */
+  --drawer-w: clamp(320px, 86vw, 420px);
+}
+
+/* Base */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  color: var(--ink);
+  background: var(--bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+img { max-width: 100%; display: block; border-radius: 10px; }
+a { color: inherit; text-decoration: none; }
+.container { width: min(1200px, 100% - 2rem); margin-inline: auto; }
+
+/* Skip link */
+.skip-link {
+  position: absolute; left: 8px; top: -40px;
+  background: #fff; color: #000; padding: 8px 12px; border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: top .18s ease;
+  z-index: 9999;
+}
+.skip-link:focus { top: 8px; }
+
+/* ===========================
+   Header
+   =========================== */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--brand);
+  box-shadow: 0 1px 0 rgba(255,255,255,.05), 0 10px 30px rgba(0,0,0,.15);
+}
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 72px; gap: 12px;
+  position: relative; /* needed for absolute-centered nav */
+}
+.brand {
+  color: #fff; font-weight: 800; letter-spacing: .08em;
+  text-transform: uppercase; font-size: 1.05rem;
+  padding: .5rem .75rem; border-radius: 10px;
+}
+.brand:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+/* Centered top nav */
+.primary-nav { display: none; }
+.primary-nav ul {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; gap: 28px; align-items: center;
+}
+.primary-nav a {
+  position: relative;
+  color: #fff; font-weight: 700;
+  padding: .5rem .25rem; line-height: 1;
+}
+.primary-nav a::after{
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform .2s ease;
+}
+.primary-nav a:hover::after,
+.primary-nav a:focus-visible::after { transform: scaleX(1); }
+.primary-nav a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; border-radius: 6px; }
+
+/* Show & absolutely center nav on desktop */
+@media (min-width: 768px) {
+  .primary-nav {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  /* hamburger stays visible unless drawer is open (handled below) */
+}
+
+/* Hamburger (always visible) */
+.hamburger {
+  --size: 44px;
+  width: var(--size); height: var(--size);
+  display: inline-grid; place-content: center; gap: 5px;
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+
+}
+.hamburger:focus-visible { outline: 3px solid #fff; border-radius: 10px; }
+.hamburger .bar {
+  width: 26px; height: 3px; background: #fff; border-radius: 2px;
+}
+
+/* Hide the hamburger while drawer is open (uses your .no-scroll flag on <body>) */
+.no-scroll .hamburger { visibility: hidden; }
+
+/* Prevent body scroll when drawer open */
+.no-scroll { overflow: hidden; }
+
+/* ===========================
+   Drawer Navigation (dark with white text)
+   =========================== */
+.nav-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); /* a bit darker so the page is fully obscured */
+  backdrop-filter: blur(2px);
+  z-index: 80;
+}
+
+/* anchor the drawer to the right, but push it 1px off-screen to avoid border/shadow peeking */
+.nav-drawer {
+  position: fixed;
+  inset: 0 -1px 0 auto;         /* right:-1px prevents any sliver leak */
+  width: var(--drawer-w);
+  background: #1C1D21; color: #fff;
+  box-shadow: var(--shadow-md);
+  /* OVERSHOOT the translate so even borders/shadows never show */
+  transform: translate3d(calc(100% + 12px), 0, 0);
+  transition: transform .25s ease;
+  z-index: 90; display: flex; flex-direction: column;
+  /* border only when open (prevents the 1px line from showing when closed) */
+  border-left: 0;
+  will-change: transform;
+}
+.nav-drawer.open {
+  transform: translate3d(0,0,0);
+  border-left: 1px solid rgba(255,255,255,.08);
+}
+
+.drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.12);
+  background: #1C1D21;
+}
+.drawer-header strong { color: #fff; letter-spacing: .02em; }
+.close-drawer {
+  font-size: 28px; line-height: 1; border: 0; background: transparent; cursor: pointer;
+  padding: 4px 10px; border-radius: 10px; color: #fff;
+}
+.close-drawer:hover { background: rgba(255,255,255,.12); }
+
+.drawer-links {
+  list-style: none; margin: 0; padding: 10px;
+}
+.drawer-links li a {
+  display: block; padding: 12px 14px; border-radius: 10px; font-weight: 600;
+  color: #fff;
+}
+.drawer-links li a:hover { background: rgba(255,255,255,.10); color: #fff; }
+.drawer-links .divider {
+  height: 1px; background: rgba(255,255,255,.15); margin: 10px 4px;
+}
+
+/* ===========================
+   Hero
+   =========================== */
+.hero {
+  position: relative; min-height: 440px; display: grid; place-items: center;
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.55), rgba(0,0,0,.55)),
+    url('https://the-post-assets.sgp1.digitaloceanspaces.com/2020/08/The-Feed_UST-1896x800.jpg')
+    center/cover no-repeat;
+  color: #fff;
+}
+.hero-content { text-align: center; padding-block: 56px; padding-inline: 1rem; }
+.hero-content h1 { font-size: clamp(2rem, 3vw, 2.6rem); margin: 0 0 .5rem; }
+.hero-content p { opacity: .95; margin: 0 0 1.25rem; }
+.btn {
+  display: inline-block; padding: 12px 20px; border-radius: 999px;
+  background: var(--brand-dark); color: #fff; font-weight: 700;
+  box-shadow: 0 8px 20px rgba(151,18,0,.35), inset 0 -1px 0 rgba(255,255,255,.25);
+  transition: transform .12s ease, box-shadow .12s ease, background .2s ease;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(151,18,0,.45); }
+.btn:active { transform: translateY(0); }
+
+/* ===========================
+   Cards (Team)
+   =========================== */
+.cards {
+  display: grid; gap: 24px; padding-block: 36px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.card {
+  background: var(--card); border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid rgba(0,0,0,.06); box-shadow: var(--shadow-sm);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  display: grid; grid-template-rows: auto 1fr;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(0,0,0,.12);
+}
+.card-media { aspect-ratio: 16 / 10; overflow: hidden; margin: 0; background: #f1f5f9; }
+.card-media img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.card-body { padding: 18px 18px 20px; }
+.card-body h3 { margin: 0 0 .25rem; color: #0f172a; font-size: 1.1rem; }
+.card-body .role { margin: 0 0 .5rem; color: var(--muted); }
+.card-body p { margin: 0; color: #334155; }
+
+/* Spacer for #services anchor */
+.spacer { height: 1px; }
+
+/* ===========================
+   Footer
+   =========================== */
+.site-footer {
+  border-top: 1px solid rgba(0,0,0,.08);
+  background: #fff; color: #111;
+}
+.site-footer .container {
+  padding-block: 22px; display: flex; align-items: center; justify-content: center;
+}
+
+/* ===========================
+   Responsive Enhancements
+   =========================== */
+@media (min-width: 900px) {
+  .hero { min-height: 520px; }
+  .card-body { padding: 20px 22px 24px; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ===========================
+   DESKTOP-ONLY: hide first 3 hamburger items in drawer
+   (About, Student Violation Handbook, Services)
+   =========================== */
+@media (min-width: 768px) {
+  .nav-drawer .drawer-links > li:nth-of-type(-n+3) {
+    display: none !important;
+  }
+}
