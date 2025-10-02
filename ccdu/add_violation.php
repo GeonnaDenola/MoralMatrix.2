@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $photo = "";
     if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-        $uploadDir = __DIR__ . "/uploads/";
+        $uploadDir = __DIR__ . "../admin/uploads/";
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
         $photo = time() . "_" . basename($_FILES["photo"]["name"]);
