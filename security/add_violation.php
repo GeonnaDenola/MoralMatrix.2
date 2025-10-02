@@ -1,6 +1,14 @@
 <?php
-include '../config.php';
+declare(strict_types=1);
+
+// 1) Start auth/session before any output and enforce role
+require '../auth.php';
+require_role('security');
+
 include '../includes/header.php';
+include '../config.php';
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $studentId = $_GET['student_id'] ?? '';
 if (!$studentId) {

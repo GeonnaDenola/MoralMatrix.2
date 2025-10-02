@@ -1,6 +1,7 @@
 <?php
 include '../config.php';
 include '../includes/header.php';
+include __DIR__ . '/_scanner.php';
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];

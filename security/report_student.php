@@ -2,6 +2,7 @@
 
 include '../config.php';
 include '../includes/header.php';
+include __DIR__ . '/_scanner.php';
 
 include 'side_buttons.php';
 
