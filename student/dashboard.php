@@ -87,7 +87,7 @@ h2 { color: #333; }
             </div>
             <div class="card-footer">
                 <span class="badge <?= strtolower($row['status']) ?>"><?= htmlspecialchars($row['status']) ?></span>
-                <span>Submitted by: <?= htmlspecialchars($row['submitted_by']) ?></span>
+<!--               <span>Reported by: <?= htmlspecialchars($row['submitted_by']) ?></span> --> 
             </div>
         </div>
     <?php endwhile; ?>
