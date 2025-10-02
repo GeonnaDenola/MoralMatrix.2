@@ -44,6 +44,11 @@ if ($result && $result->num_rows === 1) {
       header("Location: /MoralMatrix/change_password.php"); exit;
     }
 
+    if ($_SESSION['actor_role'] === 'student') {
+    $_SESSION['student_id'] = $row['id_number'];  // So dashboard can use it
+    $_SESSION['first_name'] = $row['first_name'] ?? '';
+}
+
     // Otherwise, redirect by role
     switch ($_SESSION['actor_role']) {
       case 'super_admin':

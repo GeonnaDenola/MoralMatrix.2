@@ -102,12 +102,14 @@ while ($row = $resv->fetch_assoc()) { $violations[] = $row; }
 $stmtv->close();
 
 /* --- Robust photo path (fallback if file is missing) --- */
-$photoRel = 'placeholder.png';
-if ($student && !empty($student['photo'])) {
-    $tryRel = '../admin/uploads/' . $student['photo'];            // web path from /ccdu
-    $tryAbs = __DIR__ . '/../admin/uploads/' . $student['photo']; // filesystem check
-    if (is_file($tryAbs)) { $photoRel = $tryRel; }
+$photoFile = !empty($student['photo']) ? $student['photo'] : 'placeholder.png';
+$photoPath = __DIR__ . '/../admin/uploads/' . $photoFile;
+
+if (!is_file($photoPath)) {
+    $photoFile = 'placeholder.png'; // fallback if file missing
 }
+
+$photo = '../admin/uploads/' . $photoFile;
 
 /* Build a root-absolute directory path for this folder (e.g., /MoralMatrix/ccdu) */
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
@@ -151,7 +153,7 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
   <?php if($student): ?>
     <div class="profile">
       <!-- Photo -->
-      <img src="<?= htmlspecialchars($photoRel) ?>" alt="Profile">
+      <img src="<?= htmlspecialchars($photo) ?>" alt="Profile Image" class="profile-img">
 
       <!-- Student ID (first-of-type p) -->
       <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
