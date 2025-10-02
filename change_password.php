@@ -12,13 +12,14 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$recordId    = $_SESSION['record_id'];
-$accountType = $_SESSION['account_type'];
+session_start(); // ✅ make sure session is started
+$recordId    = $_SESSION['record_id'] ?? null;
+$accountType = strtolower($_SESSION['account_type'] ?? ""); // normalize lowercase
 $message     = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $newPassword     = $_POST['new_password'];
-    $confirmPassword = $_POST['confirm_password'];
+    $newPassword     = $_POST['new_password'] ?? "";
+    $confirmPassword = $_POST['confirm_password'] ?? "";
 
     if (empty($newPassword) || empty($confirmPassword)) {
         $message = "⚠ Please fill in all fields.";
@@ -34,16 +35,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt->bind_param("si", $hashedPassword, $recordId);
 
         if ($stmt->execute()) {
-            // ✅ after change, send to correct dashboard
-            header("Location: " . $accountType . "/dashboard.php");
-            exit();
+            // ✅ redirect map for each account type
+            $redirects = [
+                "student"  => "student/dashboard.php",
+                "faculty"  => "faculty/dashboard.php",
+                "security" => "security/dashboard.php",
+                "ccdu"     => "ccdu/dashboard.php",
+                "administrator"    => "admin/index.php" // 👈 change here if you want admin/dashboard.php
+            ];
+
+            if (isset($redirects[$accountType])) {
+                header("Location: " . $redirects[$accountType]);
+                exit();
+            } else {
+                $message = "❌ Invalid account type.";
+            }
         } else {
             $message = "❌ Error updating password. Try again.";
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
