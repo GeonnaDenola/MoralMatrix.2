@@ -5,4 +5,6 @@ $database_settings = array(
     'password' => '',
     'dbname' => 'moralmatrix',
 );
+
+define('BASE_URL', '/MoralMatrix');
 ?>
