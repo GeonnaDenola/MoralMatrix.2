@@ -62,17 +62,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submitted_by  = $_SESSION['actor_id']   ?? 'unknown';
 
     // CHANGED: removed submitted_role; align columns, placeholders, bind types/args
-    $sql = "INSERT INTO student_violation
-            (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by)
-            VALUES (?, ?, ?, ?, ?, ?, 'approved', ?)";
+   $sql = "INSERT INTO student_violation
+        (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by)
+        VALUES (?, ?, ?, ?, ?, ?, 'approved', ?)";
+
     $stmtIns = $conn->prepare($sql);
     if (!$stmtIns) die("Prepare failed: " . $conn->error);
 
-    $null = NULL;
-    $stmtIns->bind_param("ssssssss",
-        $student_id, $offense_category, $offense_type, $offense_details, $description, $photo, $submitted_by, $submitted_role
-
+    $stmtIns->bind_param("sssssss",
+        $student_id, $offense_category, $offense_type,
+        $offense_details, $description, $photo, $submitted_by
     );
+
 
     if (!$stmtIns->execute()) { die("Insert failed: " . $stmtIns->error); }
     $stmtIns->close();
