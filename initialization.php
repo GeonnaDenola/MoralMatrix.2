@@ -41,6 +41,7 @@ $sqlCreateLoginSchema = "CREATE TABLE IF NOT EXISTS accounts (
     id_number VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    change_pass TINYINT(1) DEFAULT 1,
     account_type ENUM('super_admin', 'administrator', 'ccdu', 'faculty', 'student', 'security') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateLoginSchema) === FALSE) {
@@ -78,7 +79,8 @@ $sqlCreateFacultyAccountSchema = "CREATE TABLE IF NOT EXISTS faculty_account (
     institute VARCHAR(255),
     status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    change_pass TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateFacultyAccountSchema) === FALSE) {
     handleQueryError($sqlCreateFacultyAccountSchema, $conn);
@@ -98,7 +100,8 @@ $sqlCreateCcduAccountSchema = "CREATE TABLE IF NOT EXISTS ccdu_account (
     photo BLOB,
     status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    change_pass TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateCcduAccountSchema) === FALSE) {
     handleQueryError($sqlCreateCcduAccountSchema, $conn);
@@ -117,7 +120,8 @@ $sqlCreateSecurityAccountSchema = "CREATE TABLE IF NOT EXISTS security_account (
     photo BLOB,
     status ENUM('active','archived') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    change_pass TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateSecurityAccountSchema) === FALSE) {
     handleQueryError($sqlCreateSecurityAccountSchema, $conn);
@@ -142,7 +146,8 @@ $sqlCreateStudentAccountSchema = "CREATE TABLE IF NOT EXISTS student_account (
     guardian VARCHAR(50),
     guardian_mobile VARCHAR(15),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    change_pass TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateStudentAccountSchema) === FALSE) {
     handleQueryError($sqlCreateStudentAccountSchema, $conn);
@@ -174,7 +179,8 @@ $sqlCreateAdminAccountSchema = "CREATE TABLE IF NOT EXISTS admin_account (
     c_update VARCHAR(2),
     c_delete VARCHAR(2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    change_pass TINYINT(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 if ($conn->query($sqlCreateAdminAccountSchema) === FALSE) {
     handleQueryError($sqlCreateAdminAccountSchema, $conn);
