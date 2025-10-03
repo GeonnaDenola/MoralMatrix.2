@@ -120,82 +120,86 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Student Profile</title>
-  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+  <link rel="stylesheet" href="../css/view_student.css" />
+  <!-- Theme color matches red header tone -->
+  <meta name="theme-color" content="#b91c1c">
 </head>
 <body>
 
-<!-- ======= LEFT Sidesheet trigger + panel (uses global.css) ======= -->
-<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
-<div class="page-top-pad"></div>
+  <!-- Your global header/nav stays as-is above this file -->
 
-<!-- Scrim -->
-<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
+  <main class="page container content-safe">
+    <!-- Optional on-page title (NOT a header element) -->
+    <h2 class="page-title">Student Profile</h2>
 
-<!-- LEFT Sidesheet (drawer) -->
-<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
-  <div class="sidesheet-header">
-    <span>Menu</span>
-    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
-  </div>
+    <?php if ($student): ?>
+      <!-- Student profile -->
+      <section class="card student-card">
+        <div class="student-card__media">
+          <img src="<?= htmlspecialchars($photo) ?>"
+               alt="Profile Image"
+               class="profile-img"
+               loading="lazy">
+        </div>
 
-  <div class="sidesheet-rail">
-    <div id="pageButtons" class="drawer-pages">
-      <?php include 'page_buttons.php'; ?>
-    </div>
-  </div>
-</nav>
-<!-- ======= /LEFT Sidesheet ======= -->
+        <div class="student-card__body">
+          <p class="muted"><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
 
-<div class="right-container">
-  <?php if($student): ?>
-    <div class="profile">
-      <!-- Photo -->
-      <img src="<?= htmlspecialchars($photo) ?>" alt="Profile Image" class="profile-img">
+          <h3 class="student-name">
+            <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
+          </h3>
 
-      <!-- Student ID (first-of-type p) -->
-      <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
+          <div class="facts-grid">
+            <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
+            <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
+            <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
 
-      <!-- Big centered name -->
-      <h2>
-        <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
-      </h2>
+            <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
+            <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
+            <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
 
-      <!-- Facts (flow into two columns automatically) -->
-      <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-      <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-      <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
+            <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
+            <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+          </div>
+        </div>
+      </section>
 
-      <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-      <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
-      <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
+      <!-- Community service stat -->
+      <section class="stat card">
+        <div class="stat__value">
+          <?= htmlspecialchars((string)$hours) ?>
+        </div>
+        <div class="stat__label">
+         <?= $hours === 1 ? 'hour' : 'hours' ?> Community Service 
+        </div>
+      </section>
+    <?php else: ?>
+      <section class="card">
+        <p>Student not found.</p>
+      </section>
+    <?php endif; ?>
 
-      <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-      <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
-      <!-- Community Service moved below as a centered line -->
-    </div>
+    <!-- Actions -->
+    <section class="actions">
+      <a class="btn btn-primary"
+         href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
+        Add Violation
+      </a>
+    </section>
 
-    <!-- Centered Community Service line (matches CSS .violations) -->
-    <p class="violations">
-      <strong>Community Service:</strong>
-      <?= htmlspecialchars((string)$hours) . ' ' . ($hours === 1 ? 'hour' : 'hours') ?>
-    </p>
-  <?php else: ?>
-    <p>Student not found.</p>
-  <?php endif; ?>
+    <!-- Violations -->
+    <section aria-labelledby="violationsTitle" class="card">
+      <div class="section-head">
+        <h3 id="violationsTitle">Violation History</h3>
+      </div>
 
-  <div class="">
-    <div class="add-violation-btn">
-      <a class="btn" href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">Add Violation</a>
-    </div>
-
-    <div class="violationHistory-container" id="violationHistory">
       <?php if (empty($violations)): ?>
-        <p>No Violations Recorded.</p>
+        <p class="muted">No Violations Recorded.</p>
       <?php else: ?>
-        <div class="cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px;">
+        <div class="cards-grid">
           <?php foreach ($violations as $v):
             $cat  = htmlspecialchars($v['offense_category']);
             $type = htmlspecialchars($v['offense_type']);
@@ -210,178 +214,116 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
             }
             $href = $selfDir . "/violation_view.php?id=" . urlencode($v['violation_id']) . "&student_id=" . urlencode($student_id);
           ?>
-            <a class="profile-card" data-violation-link href="<?= $href ?>">
-              <img src="<?= $selfDir ?>/violation_photo.php?id=<?= urlencode($v['violation_id']) ?>" alt="Evidence" onerror="this.style.display='none'">
-              <div class="info">
-                <p><strong>Category: </strong>
-                  <span class="badge badge-<?= $cat ?>"><?= ucfirst($cat) ?></span>
+            <a class="violation-card" data-violation-link href="<?= $href ?>">
+              <div class="violation-card__media">
+                <img src="<?= $selfDir ?>/violation_photo.php?id=<?= urlencode($v['violation_id']) ?>"
+                     alt="Evidence"
+                     loading="lazy"
+                     onerror="this.style.display='none'">
+              </div>
+
+              <div class="violation-card__body">
+                <p class="chip-row">
+                  <span class="badge badge-<?= strtolower($cat) ?>"><?= ucfirst($cat) ?></span>
                 </p>
-                <p><strong>Type:</strong> <?= $type ?></p>
+
+                <p class="title"><strong>Type:</strong> <?= $type ?></p>
+
                 <?php if (!empty($chips)): ?>
                   <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
                 <?php endif; ?>
-                <p><strong>Reported:</strong> <?= $date ?></p>
+
+                <p class="muted"><strong>Reported:</strong> <?= $date ?></p>
+
                 <?php if ($desc): ?>
-                  <p><strong>Description:</strong> <?= $desc ?></p>
+                  <p class="description"><strong>Description:</strong> <?= $desc ?></p>
                 <?php endif; ?>
               </div>
             </a>
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
+    </section>
+  </main>
+
+  <!-- Backdrop for the violation modal -->
+  <div id="violationBackdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
+
+  <!-- Modal -->
+  <div id="violationModal"
+       class="modal hidden"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="violationModalTitle">
+    <button type="button" class="modal-close" id="violationClose" aria-label="Close">✕</button>
+    <div id="violationContent" class="modal-content">
+      <!-- violation_view.php?modal=1 will be injected here -->
     </div>
   </div>
-</div>
 
-<!-- Backdrop for the violation modal -->
-<div id="violationBackdrop" class="modal-backdrop hidden"></div>
-
-<!-- Modal -->
-<div id="violationModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="violationModalTitle">
-  <button type="button" class="modal-close" id="violationClose" aria-label="Close">✕</button>
-  <div id="violationContent" class="modal-content">
-    <!-- violation_view.php?modal=1 will be injected here -->
-  </div>
-</div>
-
-<script>
-/* Ensure modal is hidden at start */
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('violationBackdrop')?.classList.add('hidden');
-  document.getElementById('violationModal')?.classList.add('hidden');
-  document.body.classList.remove('modal-open');
-});
-
-(function () {
-  const backdrop = document.getElementById('violationBackdrop');
-  const modal    = document.getElementById('violationModal');
-  const content  = document.getElementById('violationContent');
-  const btnClose = document.getElementById('violationClose');
-
-  function openModalWith(url) {
-    fetch(url, { credentials: 'same-origin' })
-      .then(r => { if (!r.ok) throw new Error('Failed to load violation'); return r.text(); })
-      .then(html => {
-        content.innerHTML = html;
-        backdrop.classList.remove('hidden');
-        modal.classList.remove('hidden');
-        document.body.classList.add('modal-open');
-        if (!history.state || history.state.modalOpen !== true) {
-          history.pushState({ modalOpen: true }, '');
-        }
-      })
-      .catch(err => alert('Unable to load violation: ' + err.message));
-  }
-
-  function closeModal() {
-    backdrop.classList.add('hidden');
-    modal.classList.add('hidden');
-    document.body.classList.remove('modal-open');
-    if (history.state && history.state.modalOpen === true) history.back();
-  }
-
-  // Intercept clicks ONLY on links that opted-in via data-violation-link
-  document.addEventListener('click', function (e) {
-    const link = e.target.closest('a[data-violation-link]');
-    if (!link) return;
-
-    // allow new-tab/middle-click
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-
-    e.preventDefault();
-    const url = link.href + (link.href.includes('?') ? '&' : '?') + 'modal=1';
-    openModalWith(url);
-  });
-
-  btnClose.addEventListener('click', closeModal);
-  backdrop.addEventListener('click', closeModal);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-  // Handle back/forward
-  window.addEventListener('popstate', function () {
-    if (!backdrop.classList.contains('hidden') || !modal.classList.contains('hidden')) {
-      backdrop.classList.add('hidden');
-      modal.classList.add('hidden');
+  <!-- JS: violation modal loader -->
+  <script>
+    // Ensure modal is hidden at start
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('violationBackdrop')?.classList.add('hidden');
+      document.getElementById('violationModal')?.classList.add('hidden');
       document.body.classList.remove('modal-open');
-    }
-  });
-})();
-</script>
+    });
 
-<script>
-/* ======== LEFT Sidesheet: open/close + focus trap (uses global.css classes) ======== */
-(function(){
-  const sheet   = document.getElementById('sideSheet');
-  const scrim   = document.getElementById('sheetScrim');
-  const openBtn = document.getElementById('openMenu');
-  const closeBtn= document.getElementById('closeMenu');
+    (function () {
+      const backdrop = document.getElementById('violationBackdrop');
+      const modal    = document.getElementById('violationModal');
+      const content  = document.getElementById('violationContent');
+      const btnClose = document.getElementById('violationClose');
 
-  if (!sheet || !scrim || !openBtn || !closeBtn) return;
-
-  let lastFocusedEl = null;
-
-  function trapFocus(container, e){
-    const focusables = container.querySelectorAll(
-      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-    );
-    if (!focusables.length) return;
-    const first = focusables[0];
-    const last  = focusables[focusables.length - 1];
-
-    if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault(); last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault(); first.focus();
+      function openModalWith(url) {
+        fetch(url, { credentials: 'same-origin' })
+          .then(r => { if (!r.ok) throw new Error('Failed to load violation'); return r.text(); })
+          .then(html => {
+            content.innerHTML = html;
+            backdrop.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            if (!history.state || history.state.modalOpen !== true) {
+              history.pushState({ modalOpen: true }, '');
+            }
+          })
+          .catch(err => alert('Unable to load violation: ' + err.message));
       }
-    }
-  }
-  const focusTrapHandler = (e)=>trapFocus(sheet, e);
 
-  function openSheet(){
-    lastFocusedEl = document.activeElement;
-    sheet.classList.add('open');
-    scrim.classList.add('open');
-    sheet.setAttribute('aria-hidden','false');
-    scrim.setAttribute('aria-hidden','false');
-    openBtn.setAttribute('aria-expanded','true');
-    document.body.classList.add('no-scroll'); // provided by global.css
+      function closeModal() {
+        backdrop.classList.add('hidden');
+        modal.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        if (history.state && history.state.modalOpen === true) history.back();
+      }
 
-    // Focus first interactive element for a11y
-    setTimeout(()=>{
-      const f = sheet.querySelector('.nav-tile, button, a, [tabindex]:not([tabindex="-1"])');
-      (f || sheet).focus();
-    }, 10);
+      // Intercept clicks ONLY on links that opted-in via data-violation-link
+      document.addEventListener('click', function (e) {
+        const link = e.target.closest('a[data-violation-link]');
+        if (!link) return;
 
-    sheet.addEventListener('keydown', focusTrapHandler);
-  }
+        // allow new-tab/middle-click
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
-  function closeSheet(){
-    sheet.classList.remove('open');
-    scrim.classList.remove('open');
-    sheet.setAttribute('aria-hidden','true');
-    scrim.setAttribute('aria-hidden','true');
-    openBtn.setAttribute('aria-expanded','false');
-    document.body.classList.remove('no-scroll');
+        e.preventDefault();
+        const url = link.href + (link.href.includes('?') ? '&' : '?') + 'modal=1';
+        openModalWith(url);
+      });
 
-    sheet.removeEventListener('keydown', focusTrapHandler);
-    if (lastFocusedEl) lastFocusedEl.focus();
-  }
+      btnClose.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-  openBtn.addEventListener('click', openSheet);
-  closeBtn.addEventListener('click', closeSheet);
-  scrim.addEventListener('click', closeSheet);
-  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeSheet(); });
-
-  // Optional: close when clicking a same-tab nav link
-  sheet.addEventListener('click', (e)=>{
-    const link = e.target.closest('a[href]');
-    if (!link) return;
-    const sameTab = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
-    if (sameTab) closeSheet();
-  });
-})();
-</script>
-
+      // Handle back/forward
+      window.addEventListener('popstate', function () {
+        if (!backdrop.classList.contains('hidden') || !modal.classList.contains('hidden')) {
+          backdrop.classList.add('hidden');
+          modal.classList.add('hidden');
+          document.body.classList.remove('modal-open');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
