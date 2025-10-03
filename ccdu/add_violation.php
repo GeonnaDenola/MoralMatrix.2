@@ -1,10 +1,15 @@
 <?php
-include '../includes/header.php';
-include '../config.php';
+// ccdu/add_violation.php
+
+// Start session BEFORE any output
+session_start();
+
+require_once '../config.php';
 
 /* ---------- STUDENT ID FROM GET OR POST ---------- */
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
-if (!$studentId) {
+if (!$studentId && ($_SERVER['REQUEST_METHOD'] !== 'POST')) {
+    // For GET views we need a student id; for POST we use the hidden input
     echo "<p>No student selected!</p>";
     exit;
 }
@@ -16,9 +21,12 @@ $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+if ($conn->connect_error) {
+    http_response_code(500);
+    die("Connection failed: " . $conn->connect_error);
+}
 
-/* ========= INSERT HANDLER ========= */
+/* ========= INSERT HANDLER (RUNS BEFORE ANY OUTPUT) ========= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $student_id       = $_POST['student_id']       ?? '';
@@ -27,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description      = $_POST['description']      ?? '';
 
     if ($student_id === '' || $offense_category === '' || $offense_type === '') {
+        http_response_code(400);
         die("Missing required fields.");
     }
 
@@ -45,53 +54,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $offense_details = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : null;
 
+    // ---- Photo upload (optional) ----
     $photo = "";
-    if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-        $uploadDir = __DIR__ . "../admin/uploads/";
-        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+    if (isset($_FILES["photo"]) && is_uploaded_file($_FILES["photo"]["tmp_name"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
+        // Ensure correct path with slash
+        $uploadDir = dirname(__DIR__) . "/admin/uploads/";
+        if (!is_dir($uploadDir)) {
+            // 0777 is fine here because it's server-side; adjust to your policy
+            mkdir($uploadDir, 0777, true);
+        }
 
-        $photo = time() . "_" . basename($_FILES["photo"]["name"]);
+        // Safer filename: keep dots, dashes, underscores, alnum
+        $original = basename($_FILES["photo"]["name"]);
+        $safeBase = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
+        $photo = time() . "_" . $safeBase;
+
         $targetPath = $uploadDir . $photo;
 
         if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
-            $errorMsg = "⚠️ Error uploading photo.";
+            // If upload fails, don't block the whole request
             $photo = "";
         }
     }
 
-    $submitted_by  = $_SESSION['actor_id']   ?? 'unknown';
+    $submitted_by  = $_SESSION['actor_id'] ?? 'unknown';
 
-    // CHANGED: removed submitted_role; align columns, placeholders, bind types/args
-   $sql = "INSERT INTO student_violation
-        (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by)
-        VALUES (?, ?, ?, ?, ?, ?, 'approved', ?)";
+    // Insert (no output before this!)
+    $sql = "INSERT INTO student_violation
+            (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by)
+            VALUES (?, ?, ?, ?, ?, ?, 'approved', ?)";
 
     $stmtIns = $conn->prepare($sql);
-    if (!$stmtIns) die("Prepare failed: " . $conn->error);
+    if (!$stmtIns) {
+        http_response_code(500);
+        die("Prepare failed: " . $conn->error);
+    }
 
-    $stmtIns->bind_param("sssssss",
-        $student_id, $offense_category, $offense_type,
-        $offense_details, $description, $photo, $submitted_by
+    // Note: passing NULL through bind_param is okay; MySQL will store NULL
+    $stmtIns->bind_param(
+        "sssssss",
+        $student_id,
+        $offense_category,
+        $offense_type,
+        $offense_details,
+        $description,
+        $photo,
+        $submitted_by
     );
 
-
-    if (!$stmtIns->execute()) { die("Insert failed: " . $stmtIns->error); }
+    if (!$stmtIns->execute()) {
+        http_response_code(500);
+        die("Insert failed: " . $stmtIns->error);
+    }
     $stmtIns->close();
 
+    // Redirect BEFORE any output has been sent
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
     exit;
 }
+
 /* ========= END INSERT HANDLER ========= */
 
+// From here on, it's safe to output HTML
+include '../includes/header.php';
+
 /* ---------- FETCH STUDENT FOR DISPLAY ---------- */
-$sql = "SELECT * FROM student_account WHERE student_id=?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $studentId);
-$stmt->execute();
-$result  = $stmt->get_result();
-$student = $result->fetch_assoc();
-$stmt->close();
-?><!DOCTYPE html>
+if ($studentId) {
+    $sql = "SELECT * FROM student_account WHERE student_id=?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $studentId);
+    $stmt->execute();
+    $result  = $stmt->get_result();
+    $student = $result->fetch_assoc();
+    $stmt->close();
+} else {
+    $student = null;
+}
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -115,13 +155,13 @@ $stmt->close();
         </div>
         <div class="profile__info">
           <div class="profile__name">
-            <strong><?= htmlspecialchars($student['first_name']." ".$student['middle_name']." ".$student['last_name']) ?></strong>
+            <strong><?= htmlspecialchars(trim(($student['first_name'] ?? '').' '.($student['middle_name'] ?? '').' '.($student['last_name'] ?? ''))) ?></strong>
           </div>
           <div class="profile__meta">
             <span class="badge"><?= htmlspecialchars($student['student_id']) ?></span>
             <span class="divider" aria-hidden="true">•</span>
             <span><?= htmlspecialchars($student['course']) ?> —
-              <?= htmlspecialchars($student['level'].$student['section']) ?>
+              <?= htmlspecialchars(($student['level'] ?? '').($student['section'] ?? '')) ?>
             </span>
           </div>
         </div>
