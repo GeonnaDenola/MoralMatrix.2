@@ -4,6 +4,8 @@ include '../config.php';
 
 include 'page_buttons.php';
 
+include __DIR__ . '/_scanner.php';
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
@@ -52,6 +54,24 @@ $result = $conn->query($sql)
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+
+    <style>
+  .violations { padding: 12px; max-width: 980px; margin: 0 auto; }
+  .card-link { text-decoration:none; color:inherit; display:block; }
+  .card {
+    border:1px solid #ddd; border-radius:10px; padding:12px; margin:10px 0;
+    display:flex; align-items:center; gap:18px; background:#fff;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
+  .card .left { flex: 0 0 120px; text-align:center; }
+  .card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
+  .card .info { flex:1; }
+  .meta { color:#666; font-size:0.92rem; }
+  .debug { background:#fff7ed; border:1px solid #fed7aa; padding:8px 10px; border-radius:8px; margin:12px auto; max-width:980px; font-size:.9rem; }
+  .debug table { border-collapse:collapse; }
+  .debug th, .debug td { border:1px solid #ddd; padding:4px 8px; }
+    </style>
 </head>
 <body>
     <h3>Pending Reports</h3>
