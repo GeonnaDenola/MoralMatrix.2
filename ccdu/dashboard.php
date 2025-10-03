@@ -12,9 +12,7 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Dashboard</title>
-
-  <!-- New, separated stylesheet -->
-  <link rel="stylesheet" href="../css/dashboard_ccd.css"/>
+  <link rel="stylesheet" href="../css/dashboard_ccd.css?v=2"/>
 </head>
 <body>
   <div class="app">
@@ -41,7 +39,7 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
       </header>
 
       <!-- Filters -->
-      <section class="filters" id="filters" data-collapsed="true">
+      <section class="filters" id="filters" data-collapsed="true" aria-label="Filters">
         <div class="filters__grid">
           <label class="field field--search">
             <span class="field-label sr-only">Search</span>
@@ -139,7 +137,8 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
 
     function loadStudents(filters = {}) {
       skeleton(8);
-      fetch("get_students.php")
+
+      fetch("get_students.php", {cache: "no-store"})
         .then(response => response.json())
         .then(data => {
           container.innerHTML = "";
@@ -159,9 +158,11 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
           });
 
           if (filtered.length === 0) {
-            container.innerHTML = "<div class='empty' role='status'>No student records found.</div>";
+            container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Try removing some filters or changing your search.</div></div>";
             return;
           }
+
+          const frag = document.createDocumentFragment();
 
           filtered.forEach(student => {
             const card = document.createElement("button");
@@ -172,21 +173,28 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
             const mid = student.middle_name ? ` ${student.middle_name}` : '';
             const photo = student.photo ? `../admin/uploads/${student.photo}` : '../admin/uploads/placeholder.png';
 
+            // Level–Section: use non-breaking hyphen and uppercase section (e.g., 1-B)
+            const levelSection = `${student.level}\u2011${String(student.section).toUpperCase()}`;
+
             card.innerHTML = `
               <div class="card-left">
-                <img class="avatar" src="${photo}" alt="Photo of ${student.first_name} ${student.last_name}" loading="lazy" decoding="async">
+                <img class="avatar" src="${photo}" alt="Photo of ${student.first_name} ${student.last_name}"
+                     loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='../admin/uploads/placeholder.png';">
                 <div class="meta">
                   <div class="id">${student.student_id}</div>
                   <div class="name">${student.last_name}, ${student.first_name}${mid}</div>
-                  <div class="sub">${student.institute} • ${student.course} • ${student.level}-${student.section}</div>
+                  <div class="sub">${student.institute} • ${student.course} • ${levelSection}</div>
                 </div>
               </div>
               <div class="card-right">
-                <span class="pill" title="Level & Section">${student.level}-${student.section}</span>
+                <span class="pill" title="Level & Section">${levelSection}</span>
               </div>
             `;
-            container.appendChild(card);
+            frag.appendChild(card);
           });
+
+          container.appendChild(frag);
         })
         .catch(error => {
           container.innerHTML = "<div class='empty error' role='alert'>Error loading data.</div>";
@@ -197,24 +205,28 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
     function filterStudents() {
       const filters = {
         institute: instituteSelect.value,
-        course: courseSelect.value,
-        level: levelSelect.value,
-        section: sectionSelect.value,
-        search: searchInput.value
+        course:    courseSelect.value,
+        level:     levelSelect.value,
+        section:   sectionSelect.value,
+        search:    searchInput.value.trim()
       };
       loadStudents(filters);
     }
 
     // --- Wire up selects ---
-    instituteSelect.addEventListener("change", function () {
-      const selected = this.value;
+    function populateCourseSelect(inst){
       courseSelect.innerHTML = '<option value="">All Courses</option>';
-      if (selected && courses[selected]) {
-        courses[selected].forEach(c => {
+      if (inst && courses[inst]) {
+        courses[inst].forEach(c => {
           const opt = document.createElement("option");
-          opt.value = c; opt.textContent = c; courseSelect.appendChild(opt);
+          opt.value = c; opt.textContent = c;
+          courseSelect.appendChild(opt);
         });
       }
+    }
+
+    instituteSelect.addEventListener("change", function () {
+      populateCourseSelect(this.value);
       filterStudents();
     });
 
@@ -236,7 +248,7 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
     btnClear.addEventListener("click", () => {
       searchInput.value = "";
       instituteSelect.value = "";
-      courseSelect.innerHTML = '<option value="">All Courses</option>';
+      populateCourseSelect("");
       levelSelect.value = "";
       sectionSelect.value = "";
       loadStudents();
@@ -251,14 +263,17 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
       const collapsed = filtersEl.dataset.collapsed !== 'false';
       setFiltersCollapsed(!collapsed);
     });
-    // Show filters automatically on wider screens
+
+    // Auto toggle based on width (show on desktop)
     const mq = window.matchMedia('(min-width: 900px)');
-    function handleMQ(e){ setFiltersCollapsed(!e.matches ? true : false); }
+    function handleMQ(e){ setFiltersCollapsed(!e.matches); }
     mq.addEventListener ? mq.addEventListener('change', handleMQ) : mq.addListener(handleMQ);
-    handleMQ(mq);
 
     // Initial load
-    loadStudents();
+    document.addEventListener('DOMContentLoaded', () => {
+      handleMQ(mq);
+      loadStudents();
+    });
   </script>
 </body>
 </html>
