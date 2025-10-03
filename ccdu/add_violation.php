@@ -2,6 +2,8 @@
 include '../includes/header.php';
 include '../config.php';
 
+include __DIR__ . '/_scanner.php';
+
 /* ---------- STUDENT ID FROM GET OR POST ---------- */
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
 if (!$studentId) {
