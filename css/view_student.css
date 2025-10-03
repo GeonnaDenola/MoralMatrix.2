@@ -1,15 +1,14 @@
-/* =========================================================
-   Student Profile — Light UI (Responsive, CSS-only)
-========================================================= */
-
-/* ------------------------------
-   Tokens
----------------------------------*/
+/* =========================================
+   Global Theme
+========================================= */
 :root{
   --container: 1120px;
-  --left-nav-width: 220px;     /* desktop */
-  --left-nav-mobile: 72px;     /* collapsed/mobile width */
 
+  /* fixed left nav widths */
+  --left-nav-width: 220px;      /* desktop */
+  --left-nav-mobile: 72px;      /* collapsed/mobile */
+
+  /* palette */
   --bg:        #f5f7fb;
   --panel:     #ffffff;
   --panel-2:   #f9fafb;
@@ -17,24 +16,29 @@
   --muted:     #6b7280;
   --border:    #e5e7eb;
 
+  /* brand red */
   --brand:     #b91c1c;
   --brand-2:   #991b1b;
 
+  /* state */
   --success:   #16a34a;
   --warning:   #f59e0b;
   --danger:    #dc2626;
 
+  /* radii & shadows */
+  --radius-xl: 18px;
   --radius-lg: 16px;
   --radius:    14px;
 
-  --shadow-sm: 0 6px 12px rgba(17,24,39,.06);
-  --shadow:    0 10px 22px rgba(17,24,39,.08);
+  --shadow-xs: 0 3px 8px rgba(17,24,39,.05);
+  --shadow-sm: 0 6px 12px rgba(17,24,39,.08);
+  --shadow:    0 10px 22px rgba(17,24,39,.10);
   --shadow-lg: 0 18px 40px rgba(17,24,39,.12);
 }
 
-/* ------------------------------
+/* =========================================
    Base
----------------------------------*/
+========================================= */
 *,
 *::before,
 *::after{ box-sizing: border-box; }
@@ -64,18 +68,16 @@ h2, h3{ margin: 0; }
   padding: 0 16px;
 }
 
-/* Keep content clear of fixed left sidebar across breakpoints */
-.content-safe{
-  padding: 16px; /* default */
-}
-@media (max-width: 1023.98px){
+/* Keep content clear of fixed left sidebar */
+.content-safe{ padding: 16px; }
+@media (max-width:1023.98px){
   .content-safe{ padding-left: calc(16px + var(--left-nav-mobile)); }
 }
-@media (min-width: 1024px){
+@media (min-width:1024px){
   .content-safe{ padding-left: calc(16px + var(--left-nav-width)); }
 }
 
-/* Page title (in-body, not your app header) */
+/* Page title (in-body) */
 .page-title{
   font-size: clamp(18px, 2.4vw, 22px);
   font-weight: 800;
@@ -83,14 +85,16 @@ h2, h3{ margin: 0; }
   margin: 6px 0 14px;
 }
 
-/* ------------------------------
-   Cards
----------------------------------*/
+.muted{ color: var(--muted); }
+
+/* =========================================
+   Generic Cards
+========================================= */
 .card{
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
   padding: clamp(14px, 2.2vw, 22px);
 }
 .section-head{
@@ -101,41 +105,39 @@ h2, h3{ margin: 0; }
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
-.muted{ color: var(--muted); }
 
-/* ------------------------------
+/* =========================================
    Student Card
----------------------------------*/
+========================================= */
 .student-card{
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 180px 1fr;
   gap: 18px;
   align-items: center;
   margin-bottom: 8px;
 }
-@media (max-width: 640px){
+@media (max-width:640px){
   .student-card{
     grid-template-columns: 1fr;
     text-align: center;
   }
 }
-
 .student-card__media{ display: grid; place-items: center; }
 
 .profile-img{
-  width: 110px;
-  height: 110px;
+  width: 160px;
+  height: 160px;
   border-radius: 50%;
   object-fit: cover;
   background: #fff;
-  border: 3px solid #fee2e2;
-  box-shadow: var(--shadow-sm);
+  border: 4px solid #fee2e2;
+  box-shadow: var(--shadow);
 }
-@media (max-width: 640px){
-  .profile-img{ width: 90px; height: 90px; }
+@media (max-width:640px){
+  .profile-img{ width: 140px; height: 140px; }
 }
-@media (max-width: 380px){
-  .profile-img{ width: 72px; height: 72px; }
+@media (max-width:380px){
+  .profile-img{ width: 120px; height: 120px; }
 }
 
 .student-name{
@@ -151,7 +153,7 @@ h2, h3{ margin: 0; }
   gap: 10px 16px;
   margin-top: 8px;
 }
-@media (max-width: 420px){
+@media (max-width:420px){
   .facts-grid{ grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 }
 .facts-grid p{
@@ -162,9 +164,9 @@ h2, h3{ margin: 0; }
   border-radius: 12px;
 }
 
-/* ------------------------------
+/* =========================================
    Community Service Stat
----------------------------------*/
+========================================= */
 .stat{
   display: grid;
   grid-template-columns: auto 1fr;
@@ -176,10 +178,9 @@ h2, h3{ margin: 0; }
   border-radius: 14px;
   margin-bottom: 12px;
 }
-@media (max-width: 640px){
+@media (max-width:640px){
   .stat{ grid-template-columns: 1fr; text-align: center; }
 }
-
 .stat__value{
   font-size: clamp(32px, 5vw, 44px);
   font-weight: 900;
@@ -187,28 +188,22 @@ h2, h3{ margin: 0; }
   line-height: 1;
   letter-spacing: .2px;
 }
-.stat__label{
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 14px;
-}
+.stat__label{ margin-top: 2px; color: var(--muted); font-size: 14px; }
 
-/* ------------------------------
-   Actions / Primary Button
----------------------------------*/
+/* =========================================
+   Actions
+========================================= */
 .actions{
   display: flex;
   justify-content: flex-end;
-  margin-top: 0;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
   gap: 8px;
   flex-wrap: wrap;
 }
-@media (max-width: 640px){
+@media (max-width:640px){
   .actions{ justify-content: stretch; }
   .actions .btn{ width: 100%; justify-content: center; }
 }
-
 .btn{
   display: inline-flex;
   align-items: center;
@@ -227,7 +222,6 @@ h2, h3{ margin: 0; }
   outline: none;
   box-shadow: 0 0 0 4px rgba(185,28,28,.22);
 }
-
 .btn-primary{
   background: linear-gradient(180deg, var(--brand), var(--brand-2));
   box-shadow: 0 10px 22px rgba(185,28,28,.22);
@@ -238,57 +232,108 @@ h2, h3{ margin: 0; }
   box-shadow: 0 14px 30px rgba(185,28,28,.26);
 }
 
-/* ------------------------------
+/* =========================================
    Violation Cards Grid
----------------------------------*/
+========================================= */
 .cards-grid{
   display: grid;
-  gap: 16px;
+  gap: 18px;
   grid-template-columns: repeat(3, 1fr);
 }
-@media (max-width: 1100px){
+@media (max-width:1100px){
   .cards-grid{ grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 640px){
+@media (max-width:640px){
   .cards-grid{ grid-template-columns: 1fr; }
 }
 
+/* =========================================
+   Violation Card – image top, tidy text
+========================================= */
 .violation-card{
-  display: grid;
-  grid-template-rows: 160px auto;
+  display: block;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  border-radius: var(--radius-xl);
+  overflow: hidden;                          /* rounds the image too */
   transform: translateY(0);
   transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+  box-shadow: var(--shadow-xs);
 }
 .violation-card:hover{
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: #fecaca;
   box-shadow: var(--shadow);
 }
 
+/* Top image with consistent aspect ratio */
 .violation-card__media{
   background: #f3f4f6;
-  display: grid;
-  place-items: center;
+  aspect-ratio: 16 / 9;
+}
+@supports not (aspect-ratio: 16 / 9){
+  .violation-card__media{ height: 220px; }
 }
 .violation-card__media img{
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover;                         /* clean crop */
 }
 
+/* Bottom text body */
 .violation-card__body{
-  padding: 12px 14px 16px;
+  background: #fff;
+  border-top: 1px solid #f3f4f6;
+  padding: 14px 18px 16px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  align-content: start;
 }
-.violation-card .title{ margin: 0; font-size: clamp(14px, 1.8vw, 16px); }
-.violation-card .description{ margin: 0; }
 
-/* Badges */
+/* Badge row */
+.violation-card__body .chip-row{ margin-bottom: 2px; }
+
+/* === Key-Value rows
+   Use FLEX so label is tight on the left and the value sits right after it.
+   No fixed label width. Long values wrap under themselves (not under the label).
+================================================== */
+.violation-card__body p{
+  margin: 0;
+  display: flex;
+  align-items: baseline;                     /* "Type:" and value on same baseline */
+  gap: 8px;                                  /* small gap between label/value */
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;                   /* break long_tokens_like_this */
+}
+
+/* Label */
+.violation-card__body p strong{
+  flex: 0 0 auto;                            /* keep natural width */
+  color: #374151;
+  font-weight: 800;
+  letter-spacing: .1px;
+  white-space: nowrap;                       /* don't wrap the label itself */
+  margin-right: 2px;                         /* tiny tuck-in */
+}
+
+/* Type row value a bit heavier like your example */
+.violation-card .title{ font-size: 15px; font-weight: 700; }
+
+/* Muted tone for date text */
+.violation-card__body .muted{ color: var(--muted); }
+
+/* Clamp long descriptions to keep cards even. Adjust lines if you want. */
+.violation-card__body .description{
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;                     /* show up to 3 lines */
+  overflow: hidden;
+}
+
+/* =========================================
+   Badges
+========================================= */
 .badge{
   display: inline-flex;
   align-items: center;
@@ -298,8 +343,7 @@ h2, h3{ margin: 0; }
   font-weight: 700;
   letter-spacing: .2px;
   border: 1px solid var(--border);
-  background: #fee2e2;
-  color: #7f1d1d;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
 }
 .badge-grave, .badge-Grave{
   background: #fee2e2; border-color: #fecaca; color: #7f1d1d;
@@ -311,9 +355,9 @@ h2, h3{ margin: 0; }
   background: #dcfce7; border-color: #bbf7d0; color: #065f46;
 }
 
-/* ------------------------------
-   Modal
----------------------------------*/
+/* =========================================
+   Modal (unchanged behavior, mobile-friendly)
+========================================= */
 .modal-backdrop{
   position: fixed;
   inset: 0;
@@ -331,7 +375,6 @@ h2, h3{ margin: 0; }
   transition: opacity .2s ease, transform .2s ease;
 }
 .modal .modal-content{
-  position: relative;                 /* <-- so the X positions on the card */
   width: min(960px, 92vw);
   max-height: 86vh;
   overflow: auto;
@@ -340,43 +383,38 @@ h2, h3{ margin: 0; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 16px;
-  padding-top: 52px;                  /* space for the X button */
 }
-@media (max-width: 640px){
+@media (max-width:640px){
   .modal .modal-content{
     width: 98vw;
     max-height: 90vh;
     padding: 14px;
-    padding-top: 50px;
     border-radius: 14px;
   }
 }
 .modal:not(.hidden),
 .modal-backdrop:not(.hidden){ opacity: 1; pointer-events: auto; }
 
-/* NEW: close button sits on the card’s top-right */
 .modal-close{
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 36px; height: 36px;
-  border-radius: 10px;
+  position: absolute; top: 14px; right: 14px;
+  width: 36px; height: 36px; border-radius: 10px;
   border: 1px solid var(--border);
   background: #f9fafb; color: var(--text);
   font-size: 18px; display: grid; place-items: center;
   cursor: pointer;
-  z-index: 1;                          /* ensure above injected HTML */
   transition: background .15s ease, transform .1s ease, box-shadow .2s ease;
 }
-.modal-close:hover{ background: #f3f4f6; box-shadow: var(--shadow-sm); }
+.modal-close:hover{ background: #f3f4f6; box-shadow: var(--shadow-xs); }
 .modal-close:active{ transform: scale(.98); }
 
 body.modal-open{ overflow: hidden; }
+/* Keep short strings (like "Sep 20, 2025 10:55 AM") on one line */
+.nowrap{ white-space: nowrap; }
 
-/* ------------------------------
-   Micro-tweaks for tiny screens
----------------------------------*/
-@media (max-width: 360px){
+/* =========================================
+   Tiny screens micro-tweaks
+========================================= */
+@media (max-width:360px){
   .card{ padding: 12px; }
   .facts-grid p{ padding: 8px 10px; }
   .actions{ gap: 6px; }

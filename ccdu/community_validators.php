@@ -10,7 +10,7 @@ $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error); 
+    die("Connection failed: " . $conn->connect_error);
 }
 
 /* ---- Status filter: Active by default ---- */
@@ -35,86 +35,67 @@ if (!$stmt->execute()) {
 }
 $result = $stmt->get_result();
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Community Service Validators</title>
-  <style>
-    .card-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      margin-top: 20px;
-    }
-    .card {
-      flex: 0 0 280px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 16px;
-      transition: transform 0.2s, box-shadow 0.2s;
-      cursor: pointer;
-      outline: none;
-    }
-    .card:hover, .card:focus {
-      transform: scale(1.02);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    .status.active {
-      color: green;
-      font-weight: bold;
-    }
-    .status.inactive {
-      color: red;
-      font-weight: bold;
-    }
-    .community_service_btns {
-      margin-bottom: 20px;
-    }
-  </style>
+  <link rel="stylesheet" href="../css/community_validators.css"/>
 </head>
+
 <body>
-  <h3>Community Service Validators</h3>
+  <main class="validators-page" aria-labelledby="page-title">
+    <div class="page-header">
+      <h1 id="page-title">Community Service Validators</h1>
 
-  <div class="community_service_btns">
-    <a href="add_validator.php">
-      <button>Create Account</button>
-    </a>
-  </div>
-
-  
-  <form method="get" style="display:flex; gap:8px; align-items:center;">
-    <label>
-      Status:
-      <select name="status">
-        <option value="active"   <?= $status==='active'?'selected':'' ?>>Active</option>
-        <option value="inactive" <?= $status==='inactive'?'selected':'' ?>>Inactive</option>
-      </select>
-    </label>
-    <button type="submit">Apply</button>
-    <a href="?status=active"><button type="button">Reset</button></a>
-  </form>
-
-  <div class="card-container">
-    <?php while ($row = $result->fetch_assoc()): ?>
-      <div class="card" 
-           role="link" 
-           tabindex="0"
-           data-href="validator_details.php?id=<?php echo $row['validator_id']; ?>">
-        <h3><?php echo htmlspecialchars($row['v_username']); ?></h3>
-        <p><b>Created:</b> <?php echo date("M d, Y", strtotime($row['created_at'])); ?></p>
-        <p><b>Designation:</b> <?php echo htmlspecialchars($row['designation']); ?></p>
-        <p>
-          <span class="status <?php echo $row['active'] ? 'active' : 'inactive'; ?>">
-            <?php echo $row['active'] ? "Active" : "Inactive"; ?>
-          </span>
-        </p>
+      <div class="page-actions">
+        <a href="add_validator.php" class="btn btn-primary">
+          Create Account
+        </a>
       </div>
-    <?php endwhile; ?>
-  </div>
+    </div>
+
+    <form method="get" class="filters" aria-label="Filters">
+      <label class="field">
+        <span class="field-label">Status</span>
+        <select name="status" class="select">
+          <option value="active"   <?= $status==='active'?'selected':'' ?>>Active</option>
+          <option value="inactive" <?= $status==='inactive'?'selected':'' ?>>Inactive</option>
+        </select>
+      </label>
+
+      <button type="submit" class="btn btn-outline">Apply</button>
+      <a href="?status=active" class="btn btn-ghost" role="button">Reset</a>
+    </form>
+
+    <section class="card-container" aria-live="polite">
+      <?php while ($row = $result->fetch_assoc()): ?>
+        <article class="card" role="link" tabindex="0"
+                 data-href="validator_details.php?id=<?php echo $row['validator_id']; ?>"
+                 aria-label="Open details for <?php echo htmlspecialchars($row['v_username']); ?>">
+          <header class="card-header">
+            <h3 class="card-title"><?php echo htmlspecialchars($row['v_username']); ?></h3>
+            <span class="status-chip <?php echo $row['active'] ? 'is-active' : 'is-inactive'; ?>">
+              <?php echo $row['active'] ? "Active" : "Inactive"; ?>
+            </span>
+          </header>
+
+          <dl class="meta">
+            <div class="meta-row">
+              <dt>Created</dt>
+              <dd><?php echo date("M d, Y", strtotime($row['created_at'])); ?></dd>
+            </div>
+
+            <div class="meta-row">
+              <dt>Designation</dt>
+              <dd><?php echo htmlspecialchars($row['designation']); ?></dd>
+            </div>
+          </dl>
+        </article>
+      <?php endwhile; ?>
+    </section>
+  </main>
 
   <script>
     // Click with mouse

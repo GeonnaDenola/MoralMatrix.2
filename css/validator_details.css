@@ -1,0 +1,249 @@
+/* =========================================
+   Validator Details — Clean Centered Red
+   Brand red: #971200 (no dark mode)
+   ========================================= */
+
+:root{
+  /* Base */
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --text: #0b1324;
+  --muted: #6b7280;
+  --border: #e6eaf2;
+
+  /* Brand / Accents */
+  --brand: #971200;       /* requested red */
+  --brand-600: #7d0f00;   /* hover/darken */
+  --success: #16a34a;
+  --secondary: #0ea5a4;
+
+  /* Radius & shadows */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --shadow-sm: 0 2px 8px rgba(10, 22, 50, .06);
+  --shadow-md: 0 12px 28px rgba(10, 22, 50, .08);
+
+  /* Focus ring */
+  --ring: 0 0 0 3px rgba(151, 18, 0, .22);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Page centering (works with your sidebar/topbar) ===== */
+.vd-page{
+  min-height: calc(100vh - 120px);    /* space for top bar */
+  display: grid;
+  place-items: center;                 /* perfectly centered */
+  padding: 28px 20px 48px;
+}
+
+.vd-wrap{
+  width: min(920px, 100%);
+}
+
+/* ===== Card ===== */
+.vd-card{
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  padding: clamp(22px, 3vw, 34px);
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+/* Brand accent bar */
+.vd-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--brand);   /* #971200 */
+}
+
+/* ===== Header ===== */
+.vd-card__header{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.vd-avatar{
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fde8e6;            /* soft red tint */
+  color: var(--brand);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: .2px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid #f4c9c3;
+}
+
+.vd-title{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vd-h1{
+  margin: 0;
+  font-weight: 800;
+  font-size: clamp(20px, 2.3vw, 28px);
+  letter-spacing: .1px;
+}
+
+/* Badges */
+.vd-badge{
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+}
+.vd-badge--success{
+  background: #eafff6;
+  color: #0f5132;
+  border-color: #a7f3d0;
+}
+.vd-badge--muted{
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* ===== Details (label/value rows) ===== */
+.vd-grid{
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: #fff;
+}
+
+.vd-row{
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  padding: 14px 16px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+}
+.vd-row:first-child{ border-top: none; }
+
+@media (max-width: 560px){
+  .vd-row{ grid-template-columns: 1fr; row-gap: 6px; }
+}
+
+dt{
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+dd{
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+/* Inline status pill */
+.vd-status{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+}
+.vd-status--on{
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+.vd-status--off{
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
+/* ===== Actions — CENTERED ===== */
+.vd-actions{
+  display: flex;
+  justify-content: center;      /* centered buttons */
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.vd-btn{
+  appearance: none;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-weight: 700;
+  padding: 11px 18px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: transform .05s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease, color .2s ease;
+  box-shadow: var(--shadow-sm);
+  min-width: 120px;             /* consistent width for nicer centering */
+  text-align: center;
+}
+.vd-btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.vd-btn:active{ transform: translateY(0); box-shadow: var(--shadow-sm); }
+.vd-btn:focus-visible{ outline: none; box-shadow: var(--ring); }
+
+/* Primary (Deactivate/Activate) uses brand red */
+.vd-btn--danger{
+  background: var(--brand);     /* #971200 */
+  border-color: var(--brand);
+  color: #fff;
+}
+.vd-btn--danger:hover{ background: var(--brand-600); border-color: var(--brand-600); }
+
+/* Success (Activate) if you use it */
+.vd-btn--success{
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.vd-btn--success:hover{ filter: brightness(1.04); }
+
+/* Secondary/Ghost (Back) */
+.vd-btn--ghost{
+  background: #fdf2ef;
+  border-color: #f6d2c9;
+  color: var(--brand);
+}
+.vd-btn--ghost:hover{ background: #fbe3dc; }
+
+/* ===== Footnote ===== */
+.vd-footnote{
+  text-align: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Light-only (no dark mode) */
+@media (prefers-color-scheme: dark){
+  body{ background: var(--bg); color: var(--text); }
+}

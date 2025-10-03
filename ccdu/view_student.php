@@ -89,8 +89,15 @@ $student = $result->fetch_assoc();
 $stmt->close();
 
 /* ==== FETCH VIOLATIONS ==== */
+/* ⬇⬇⬇ CHANGED: include `photo` so we can render card images */
 $violations = [];
-$sqlv = "SELECT violation_id, offense_category, offense_type, offense_details, description, reported_at
+$sqlv = "SELECT violation_id,
+                offense_category,
+                offense_type,
+                offense_details,
+                description,
+                reported_at,
+                photo
          FROM student_violation
          WHERE student_id = ?
          ORDER BY reported_at DESC, violation_id DESC";
@@ -205,6 +212,16 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
             $type = htmlspecialchars($v['offense_type']);
             $desc = htmlspecialchars($v['description'] ?? '');
             $date = date('M d, Y h:i A', strtotime($v['reported_at']));
+
+            /* CHANGED: build a reliable image path for this violation */
+            $photoRel = $selfDir . '/uploads/placeholder.png';
+            if (!empty($v['photo'])) {
+              $tryAbs = __DIR__ . '/uploads/' . $v['photo'];
+              if (is_file($tryAbs)) {
+                $photoRel = $selfDir . '/uploads/' . rawurlencode($v['photo']);
+              }
+            }
+
             $chips = [];
             if (!empty($v['offense_details'])) {
               $decoded = json_decode($v['offense_details'], true);
@@ -216,10 +233,11 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
           ?>
             <a class="violation-card" data-violation-link href="<?= $href ?>">
               <div class="violation-card__media">
-                <img src="<?= $selfDir ?>/violation_photo.php?id=<?= urlencode($v['violation_id']) ?>"
-                     alt="Evidence"
-                     loading="lazy"
-                     onerror="this.style.display='none'">
+                <!-- CHANGED: show actual image (or placeholder) directly -->
+                <img
+                  src="<?= htmlspecialchars($photoRel) ?>"
+                  alt="Evidence for violation #<?= (int)$v['violation_id'] ?>"
+                  loading="lazy">
               </div>
 
               <div class="violation-card__body">
@@ -233,7 +251,10 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
                   <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
                 <?php endif; ?>
 
-                <p class="muted"><strong>Reported:</strong> <?= $date ?></p>
+                <p class="muted">
+                  <strong>Reported:</strong>
+                  <span class="nowrap"><?= htmlspecialchars($date) ?></span>
+                </p>
 
                 <?php if ($desc): ?>
                   <p class="description"><strong>Description:</strong> <?= $desc ?></p>
