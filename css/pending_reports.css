@@ -1,0 +1,164 @@
+/* ---------- Layout tokens (tweak these to match your app) ---------- */
+:root{
+  --sidebar-width: 240px;   /* left nav width */
+  --top-spacing: 12px;      /* distance from your fixed header to the page title */
+  --gutter: 24px;           /* page side padding (desktop) */
+  --gutter-sm: 16px;        /* page side padding (mobile) */
+
+  --brand: #8b1d1d;
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --text: #0f1a2a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --positive: #16a34a;
+  --negative: #ef4444;
+
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md: 0 8px 20px rgba(17,24,39,.08);
+
+  --page-max-width: 1600px;
+}
+
+/* Ensure the light bg fills the screen (no stray white band) */
+html, body { height: 100%; background: var(--bg); }
+
+/* ---------- Page wrapper (no custom header added) ---------- */
+.pr-page{
+  box-sizing: border-box;
+  min-height: 100dvh;
+  background: var(--bg);
+
+  /* snug to top-left: tiny top padding, clear gutter, and space from sidebar */
+  padding: var(--gutter);
+  padding-top: var(--top-spacing);
+  margin-left: calc(var(--sidebar-width) + var(--gutter));
+
+  /* safe areas */
+  padding-left: max(var(--gutter), env(safe-area-inset-left));
+  padding-right: max(var(--gutter), env(safe-area-inset-right));
+}
+
+/* If your sidebar collapses on mobile */
+@media (max-width: 1024px){
+  .pr-page{
+    margin-left: 0;
+    padding: var(--gutter-sm);
+    padding-top: var(--top-spacing);
+  }
+}
+
+/* ---------- Page header ---------- */
+.pr-head{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: var(--page-max-width);
+  margin: 0;                /* keep right at the top */
+}
+.pr-title{
+  margin: 0;
+  font-size: clamp(22px, 2.2vw, 28px);
+  line-height: 1.2;
+  color: var(--text);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.pr-count{
+  display: inline-flex;
+  min-width: 34px; height: 26px; padding: 0 8px;
+  border-radius: 999px; background: var(--brand); color:#fff; font-weight: 700;
+  align-items: center; justify-content: center;
+}
+
+/* ---------- Grid ---------- */
+.pr-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  max-width: var(--page-max-width);
+  margin-top: 16px;         /* tight to the title */
+}
+
+/* ---------- Card ---------- */
+.pr-card{
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.pr-card:hover{ transform: translateY(-2px); box-shadow: var(--shadow-md); border-color:#e3e6ee; }
+
+/* Media keeps consistent height */
+.pr-media{ aspect-ratio: 16 / 9; background:#f3f4f6; overflow:hidden; }
+.pr-media img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* Body */
+.pr-body{ display:grid; grid-template-rows:auto auto 1fr auto; padding:14px 16px 16px; }
+.pr-name{ margin:2px 0 8px; font-size:18px; color:var(--text); font-weight:700; }
+
+/* Meta */
+.pr-meta{ display:grid; gap:8px; }
+.pr-meta-row{
+  display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+  border-bottom:1px dashed var(--border); padding-bottom:6px;
+}
+.pr-label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+.pr-value{ color:var(--text); font-weight:600; }
+
+/* Chips */
+.pr-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.pr-chip{
+  display:inline-flex; align-items:center; padding:6px 10px;
+  border-radius:999px; border:1px solid var(--border); background:#fafafa;
+  font-size:12px; font-weight:600; color:var(--text);
+}
+.pr-chip--category{ border-color:rgba(139,29,29,.25); background:rgba(139,29,29,.06); }
+.pr-chip--type{     border-color:rgba(17,24,39,.15);  background:rgba(17,24,39,.04); }
+
+.pr-desc{ margin:10px 0 0; color:var(--text); line-height:1.5; }
+.pr-submitted{ margin:10px 0 0; }
+
+/* Actions */
+.pr-actions{ display:grid; grid-auto-flow:column; gap:10px; margin-top:14px; }
+.pr-form{ margin:0; }
+.btn{
+  appearance:none; border:none; cursor:pointer; border-radius:12px;
+  padding:10px 12px; font-weight:700; font-size:14px; line-height:1;
+  transition: transform .05s ease, box-shadow .15s ease, filter .15s ease;
+  box-shadow: var(--shadow-sm);
+}
+.btn:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+.btn:active{ transform: translateY(1px); }
+.btn-approve{ background:var(--positive); color:#fff; }
+.btn-approve:hover{ filter:brightness(1.05); }
+.btn-reject{ background:var(--negative); color:#fff; }
+.btn-reject:hover{ filter:brightness(1.05); }
+
+/* ---------- Empty state (kept near the top under title) ---------- */
+.pr-empty{
+  max-width: 720px;
+  margin: 24px auto 0;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.pr-empty img{ width:120px; height:120px; margin-bottom:12px; opacity:.8; }
+.pr-empty h2{ margin:0 0 6px; color:var(--text); }
+.pr-empty p{ margin:0; color:var(--muted); }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 540px){
+  .pr-grid{ grid-template-columns: 1fr; }
+  .pr-actions{ grid-auto-flow: row; }
+  .btn{ width: 100%; }
+}
