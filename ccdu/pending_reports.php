@@ -47,72 +47,127 @@ ORDER BY sv.reported_at DESC";
 
 $result = $conn->query($sql)
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Pending Reports</title>
 
-    <style>
-  .violations { padding: 12px; max-width: 980px; margin: 0 auto; }
-  .card-link { text-decoration:none; color:inherit; display:block; }
-  .card {
-    border:1px solid #ddd; border-radius:10px; padding:12px; margin:10px 0;
-    display:flex; align-items:center; gap:18px; background:#fff;
-    transition:transform .12s, box-shadow .12s;
-  }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
-  .card .left { flex: 0 0 120px; text-align:center; }
-  .card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
-  .card .info { flex:1; }
-  .meta { color:#666; font-size:0.92rem; }
-  .debug { background:#fff7ed; border:1px solid #fed7aa; padding:8px 10px; border-radius:8px; margin:12px auto; max-width:980px; font-size:.9rem; }
-  .debug table { border-collapse:collapse; }
-  .debug th, .debug td { border:1px solid #ddd; padding:4px 8px; }
-    </style>
+    <!-- Page-specific styles only; no header/brand changes -->
+    <link rel="stylesheet" href="../css/pending_reports.css"/>
 </head>
 <body>
-    <h3>Pending Reports</h3>
-
-    
-    <?php if ($result->num_rows > 0): ?>
-        <div class="card-container">
-            <?php while ($row = $result->fetch_assoc()): ?>
-                <div class="card">
-                    <?php if (!empty($row['photo'])): ?>
-                        <img src="uploads/<?= htmlspecialchars($row['photo']) ?>" alt="Evidence">
-                    <?php else: ?>
-                        <img src="placeholder.png" alt="No Photo">
-                    <?php endif; ?>
-                   <h3><?php echo $row['student_first_name'] . " " . $row['student_last_name']; ?></h3>
-                    <p><strong>Student ID:</strong> <?php echo $row['student_id']; ?></p>
-                    <p><strong>Course:</strong> <?php echo $row['course'] . " " . $row['level'] . "-" . $row['section']; ?></p>
-                    <p><strong>Category:</strong> <?php echo ucfirst($row['offense_category']); ?></p>
-                    <p><strong>Type:</strong> <?php echo $row['offense_type']; ?></p>
-                    <p><strong>Description:</strong> <?php echo $row['description']; ?></p>
-                    <p><strong>Submitted by:</strong> <?php echo $row['submitter_name']; ?> (<?php echo ucfirst($row['submitted_role']); ?>)</p>
-
-                    
-                    <div class="actions">
-                        <form action="approve_violation.php" method="post" style="display:inline;">
-                            <input type="hidden" name="id" value="<?php echo $row['violation_id']; ?>">
-                            <button type="submit" class="btn-approve">Approve</button>
-                        </form>
-
-                        <form action="reject_report.php" method="post" style="display:inline;">
-                            <input type="hidden" name="id" value="<?php echo $row['violation_id']; ?>">
-                            <button type="submit" class="btn-reject">Reject</button>
-                        </form>
-                    </div>
-                </div>
-            <?php endwhile; ?>
+    <!--
+      This wrapper only manages spacing so the content doesn’t sit under your
+      site header or on top of your left sidebar. Adjust the CSS custom
+      properties in pending_reports.css if your layout uses different sizes.
+    -->
+    <main class="pr-page">
+        <div class="pr-head">
+            <h1 class="pr-title">Pending Reports</h1>
+            <?php if (isset($result) && $result instanceof mysqli_result): ?>
+                <span class="pr-count" aria-label="Total pending">
+                    <?= (int)$result->num_rows ?>
+                </span>
+            <?php endif; ?>
         </div>
-    <?php else: ?>
-        <p>No pending violations.</p>
-    <?php endif; ?>
 
+        <?php if (isset($result) && $result instanceof mysqli_result && $result->num_rows > 0): ?>
+            <div class="pr-grid">
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <?php
+                        // Sanitize everything we display
+                        $violationId     = (int)$row['violation_id'];
+                        $photo           = isset($row['photo']) ? trim($row['photo']) : '';
+                        $firstName       = htmlspecialchars($row['student_first_name'] ?? '', ENT_QUOTES, 'UTF-8');
+                        $lastName        = htmlspecialchars($row['student_last_name']  ?? '', ENT_QUOTES, 'UTF-8');
+                        $studentId       = htmlspecialchars($row['student_id']         ?? '', ENT_QUOTES, 'UTF-8');
+                        $course          = htmlspecialchars($row['course']            ?? '', ENT_QUOTES, 'UTF-8');
+                        $level           = htmlspecialchars($row['level']             ?? '', ENT_QUOTES, 'UTF-8');
+                        $section         = htmlspecialchars($row['section']           ?? '', ENT_QUOTES, 'UTF-8');
+                        $categoryRaw     = htmlspecialchars($row['offense_category']   ?? '', ENT_QUOTES, 'UTF-8');
+                        $category        = $categoryRaw !== '' ? ucfirst($categoryRaw) : '';
+                        $type            = htmlspecialchars($row['offense_type']       ?? '', ENT_QUOTES, 'UTF-8');
+                        $description     = htmlspecialchars($row['description']        ?? '', ENT_QUOTES, 'UTF-8');
+                        $submitter       = htmlspecialchars($row['submitter_name']     ?? '', ENT_QUOTES, 'UTF-8');
+                        $submittedRole   = htmlspecialchars($row['submitted_role']     ?? '', ENT_QUOTES, 'UTF-8');
+                        $courseLine      = trim($course . ' ' . $level . '-' . $section);
+                    ?>
+                    <article class="pr-card">
+                        <div class="pr-media">
+                            <?php if ($photo !== ''): ?>
+                                <img
+                                    src="uploads/<?= htmlspecialchars($photo, ENT_QUOTES, 'UTF-8') ?>"
+                                    alt="Evidence photo for <?= $firstName . ' ' . $lastName ?>"
+                                    loading="lazy"
+                                />
+                            <?php else: ?>
+                                <img
+                                    src="placeholder.png"
+                                    alt="No evidence photo provided"
+                                    loading="lazy"
+                                />
+                            <?php endif; ?>
+                        </div>
 
+                        <div class="pr-body">
+                            <h2 class="pr-name"><?= $firstName . ' ' . $lastName ?></h2>
+
+                            <div class="pr-meta">
+                                <div class="pr-meta-row">
+                                    <span class="pr-label">Student ID</span>
+                                    <span class="pr-value"><?= $studentId ?></span>
+                                </div>
+                                <div class="pr-meta-row">
+                                    <span class="pr-label">Course</span>
+                                    <span class="pr-value"><?= $courseLine ?></span>
+                                </div>
+                                <div class="pr-chips">
+                                    <?php if ($category): ?>
+                                        <span class="pr-chip pr-chip--category" title="Category">
+                                            <?= $category ?>
+                                        </span>
+                                    <?php endif; ?>
+                                    <?php if ($type): ?>
+                                        <span class="pr-chip pr-chip--type" title="Type">
+                                            <?= $type ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($description): ?>
+                                    <p class="pr-desc"><?= $description ?></p>
+                                <?php endif; ?>
+                                <p class="pr-submitted">
+                                    <span class="pr-label">Submitted by</span>
+                                    <span class="pr-value"><?= $submitter ?> (<?= ucfirst($submittedRole) ?>)</span>
+                                </p>
+                            </div>
+
+                            <div class="pr-actions">
+                                <form action="approve_violation.php" method="post" class="pr-form">
+                                    <?php csrf_field(); ?>
+                                    <input type="hidden" name="id" value="<?= $violationId ?>"/>
+                                    <button type="submit" class="btn btn-approve" aria-label="Approve report for <?= $firstName . ' ' . $lastName ?>">Approve</button>
+                                </form>
+
+                                <form action="reject_report.php" method="post" class="pr-form">
+                                    <?php csrf_field(); ?>
+                                    <input type="hidden" name="id" value="<?= $violationId ?>"/>
+                                    <button type="submit" class="btn btn-reject" aria-label="Reject report for <?= $firstName . ' ' . $lastName ?>">Reject</button>
+                                </form>
+                            </div>
+                        </div>
+                    </article>
+                <?php endwhile; ?>
+            </div>
+        <?php else: ?>
+            <section class="pr-empty">
+                <img src="empty-state.svg" alt="" aria-hidden="true"/>
+                <h2>No pending violations</h2>
+                <p>Everything looks clear for now. New reports will show up here as they come in.</p>
+            </section>
+        <?php endif; ?>
+    </main>
 </body>
 </html>
