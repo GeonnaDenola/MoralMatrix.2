@@ -12,7 +12,6 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-session_start(); // ✅ make sure session is started
 $recordId    = $_SESSION['record_id'] ?? null;
 $accountType = strtolower($_SESSION['account_type'] ?? ""); // normalize lowercase
 $message     = "";

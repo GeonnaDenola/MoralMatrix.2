@@ -49,6 +49,11 @@ if ($result && $result->num_rows === 1) {
     $_SESSION['first_name'] = $row['first_name'] ?? '';
 }
 
+   if ($_SESSION['actor_role'] === 'security') {
+    $_SESSION['security_id'] = $row['id_number'];  // So dashboard can use it
+    $_SESSION['first_name'] = $row['first_name'] ?? '';
+}
+
     // Otherwise, redirect by role
     switch ($_SESSION['actor_role']) {
       case 'super_admin':
