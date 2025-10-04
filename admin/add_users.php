@@ -91,10 +91,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // (Optional) Check duplicate id_number in accounts too
     if (empty($errorMsg)) {
-        $idNumber = trim($formValues[$idKey] ?? '');
+        $idNumberCheck = trim($formValues[$idKey] ?? '');
         $stmtCheckId = $conn->prepare("SELECT email FROM accounts WHERE id_number = ?");
         if ($stmtCheckId) {
-            $stmtCheckId->bind_param("s", $idNumber);
+            $stmtCheckId->bind_param("s", $idNumberCheck);
             $stmtCheckId->execute();
             $resId = $stmtCheckId->get_result();
             if ($resId && $resId->num_rows > 0) {
@@ -159,12 +159,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 break;
 
             case "ccdu":
+                // ✅ FIXED CCDU: no password column in ccdu_account, and photo can be NULL/filename
                 $stmt = $conn->prepare("INSERT INTO ccdu_account (ccdu_id, first_name, last_name, mobile, email, photo)
                                         VALUES (?, ?, ?, ?, ?, ?)");
                 if (!$stmt) { $errorMsg = "⚠️ Prepare failed: ".$conn->error; break; }
+                // If upload didn't happen, keep empty string or set NULL; both ok with schema. We'll send NULL for neatness.
+                $photoParam = ($photo === "") ? null : $photo;
                 $stmt->bind_param("ssssss",
                     $formValues['ccdu_id'], $formValues['first_name'], $formValues['last_name'], $formValues['mobile'],
-                    $formValues['email'], $photo
+                    $formValues['email'], $photoParam
                 );
                 $idNumber = $formValues['ccdu_id'];
                 break;
@@ -188,8 +191,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     if (empty($errorMsg) && $stmt) {
         if ($stmt->execute()) {
-            // Insert into accounts
-            $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
+            // Insert into accounts (use password_hash per your schema)
+            $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password_hash, account_type) VALUES (?, ?, ?, ?)");
             if (!$stmtAcc) {
                 $errorMsg = "⚠️ Prepare failed (accounts): ".$conn->error;
             } else {
@@ -573,7 +576,7 @@ $conn->close();
         </form>
     </section>
 
-    <!-- ========== CCDU ========== -->
+    <!-- ========== CCDU (FIXED) ========== -->
     <section id="ccduForm" class="card form-container">
         <h2 class="section-title">CCDU Staff Registration</h2>
         <form method="POST" enctype="multipart/form-data" class="form-grid">
@@ -615,11 +618,12 @@ $conn->close();
                     value="<?= htmlspecialchars($formValues['email'] ?? '') ?>" required />
             </div>
 
+            <!-- FIX: Password is auto-generated server-side. No name attribute, so it won't submit. -->
             <div class="field">
-                <label class="label">Password</label>
+                <label class="label">Password (auto-generated)</label>
                 <div class="with-btn">
-                    <input class="input" type="text" name="password" id="ccdu_password"
-                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" required />
+                    <input class="input" type="text" id="ccdu_password"
+                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" readonly />
                     <button type="button" class="btn btn-secondary" onclick="generatePass('ccdu_password')">Generate</button>
                 </div>
             </div>
