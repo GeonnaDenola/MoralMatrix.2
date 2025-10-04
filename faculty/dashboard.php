@@ -52,38 +52,11 @@ $result = $stmt->get_result();
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<<<<<<< HEAD
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Faculty — Approved Violations</title>
   <link rel="stylesheet" href="../css/faculty_dashboard.css">
-=======
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Faculty — Approved Violations</title>
-<link rel="stylesheet" href="/MoralMatrix/css/global.css">
-<style>
-/* tiny card styles (page-local) */
-.violations { padding: 12px; max-width: 980px; margin: 0 auto; }
-.card-link { text-decoration:none; color:inherit; display:block; }
-.card {
-  border:1px solid #ddd;
-  border-radius:10px;
-  padding:12px;
-  margin:10px 0;
-  display:flex;
-  align-items:center;
-  gap:18px;
-  transition:transform .12s, box-shadow .12s;
-  background:#fff;
-}
-.card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
-.card .left { flex: 0 0 120px; text-align:center; }
-.card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
-.card .info { flex:1; }
-.meta { color:#666; font-size:0.92rem; }
-</style>
->>>>>>> 6f84758ed57d6b35101077af008a06c758c22009
 </head>
 <body>
 
