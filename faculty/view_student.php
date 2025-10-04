@@ -1,6 +1,6 @@
 <?php
 include '../config.php';
-include '../includes/header.php';
+include '../includes/faculty_header.php';
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -38,17 +38,18 @@ $conn->close();
 
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Profile</title>
-  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+  <link rel="stylesheet" href="../css/faculty_view_student.css" />
 </head>
 <body>
 
-<!-- ======= LEFT Sidesheet trigger + panel (uses global.css) ======= -->
+<!-- ======= LEFT Sidesheet trigger + panel (uses your global.css) ======= -->
 <button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
 <div class="page-top-pad"></div>
 
@@ -61,37 +62,54 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
     <span>Menu</span>
     <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
   </div>
-
-  <div class="sidesheet-rail">
-    <div id="pageButtons" class="drawer-pages">
-      <?php include 'side_buttons.php'; ?>
-    </div>
-  </div>
+  <!-- Put your menu links here if needed -->
 </nav>
 <!-- ======= /LEFT Sidesheet ======= -->
 
+<!-- ======= Right content container (centered) ======= -->
 <div class="right-container">
-  <?php if($student): ?>
-    <div class="profile">
-      <img src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo']) : 'placeholder.png' ?>" alt="Profile">
-      <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
-      <h2><?= htmlspecialchars($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name']) ?></h2>
-      <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-      <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-      <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
-      <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-      <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?> (<?= htmlspecialchars($student['guardian_mobile']) ?>)</p>
-      <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-      <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
-    </div>
-  <?php else: ?>
-    <p>Student not found.</p>
-  <?php endif; ?>
+  <?php if ($student): ?>
+    <section class="profile" aria-labelledby="student-name">
+      <div class="avatar">
+        <img
+          src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo']) : 'placeholder.png' ?>"
+          alt="Student photo"
+          loading="lazy"
+        />
+      </div>
 
-  <div class="add-violation-btn">
-    <a class="btn" href="<?= htmlspecialchars($selfDir) ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">Add Violation</a>
-  </div>
+      <div class="profile-body">
+        <p class="student-id">
+          <span>Student ID</span>
+          <b><?= htmlspecialchars($student['student_id']) ?></b>
+        </p>
+
+        <h2 id="student-name" class="name">
+          <?= htmlspecialchars(trim($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name'])) ?>
+        </h2>
+
+        <div class="details">
+          <p><strong>Course</strong><span><?= htmlspecialchars($student['course']) ?></span></p>
+          <p><strong>Year Level</strong><span><?= htmlspecialchars($student['level']) ?></span></p>
+          <p><strong>Section</strong><span><?= htmlspecialchars($student['section']) ?></span></p>
+          <p><strong>Institute</strong><span><?= htmlspecialchars($student['institute']) ?></span></p>
+          <p><strong>Guardian</strong><span><?= htmlspecialchars($student['guardian']) ?> (<?= htmlspecialchars($student['guardian_mobile']) ?>)</span></p>
+          <p><strong>Email</strong><span><?= htmlspecialchars($student['email']) ?></span></p>
+          <p><strong>Mobile</strong><span><?= htmlspecialchars($student['mobile']) ?></span></p>
+        </div>
+
+        <div class="actions">
+          <a class="btn" href="<?= htmlspecialchars($selfDir) ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
+            Add Violation
+          </a>
+        </div>
+      </div>
+    </section>
+  <?php else: ?>
+    <p class="empty-state">Student not found.</p>
+  <?php endif; ?>
 </div>
+<!-- ======= /Right content container ======= -->
 
 <script>
 /* ======== LEFT Sidesheet: open/close + focus trap ======== */
@@ -157,7 +175,6 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
   scrim.addEventListener('click', closeSheet);
   document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeSheet(); });
 
-  // Optional: close when clicking a same-tab nav link
   sheet.addEventListener('click', (e)=>{
     const link = e.target.closest('a[href]');
     if (!link) return;

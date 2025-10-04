@@ -43,10 +43,11 @@ $result = $stmt->get_result();
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Community Service Validators</title>
-  <link rel="stylesheet" href="../css/community_validators.css"/>
+  <link rel="stylesheet" href="../css/community_validator.css"/>
 </head>
 
 <body>
+  <!-- Do NOT add another header—using your existing layout -->
   <main class="validators-page" aria-labelledby="page-title">
     <div class="page-header">
       <h1 id="page-title">Community Service Validators</h1>
@@ -71,32 +72,44 @@ $result = $stmt->get_result();
       <a href="?status=active" class="btn btn-ghost" role="button">Reset</a>
     </form>
 
-    <section class="card-container" aria-live="polite">
-      <?php while ($row = $result->fetch_assoc()): ?>
-        <article class="card" role="link" tabindex="0"
-                 data-href="validator_details.php?id=<?php echo $row['validator_id']; ?>"
-                 aria-label="Open details for <?php echo htmlspecialchars($row['v_username']); ?>">
-          <header class="card-header">
-            <h3 class="card-title"><?php echo htmlspecialchars($row['v_username']); ?></h3>
-            <span class="status-chip <?php echo $row['active'] ? 'is-active' : 'is-inactive'; ?>">
-              <?php echo $row['active'] ? "Active" : "Inactive"; ?>
-            </span>
-          </header>
+    <?php if ($result->num_rows === 0): ?>
+      <section class="empty-state" role="status" aria-live="polite">
+        <div class="empty-emoji" aria-hidden="true">👋</div>
+        <h2>No <?= htmlspecialchars($status) ?> validators</h2>
+        <p>There aren’t any validators to show with this filter.</p>
+        <div class="empty-actions">
+          <a class="btn btn-primary" href="add_validator.php">Create Account</a>
+          <a class="btn btn-ghost" href="?status=active">Back to Active</a>
+        </div>
+      </section>
+    <?php else: ?>
+      <section class="card-container" aria-live="polite">
+        <?php while ($row = $result->fetch_assoc()): ?>
+          <article class="card" role="link" tabindex="0"
+                  data-href="validator_details.php?id=<?php echo $row['validator_id']; ?>"
+                  aria-label="Open details for <?php echo htmlspecialchars($row['v_username']); ?>">
+            <header class="card-header">
+              <h3 class="card-title"><?php echo htmlspecialchars($row['v_username']); ?></h3>
+              <span class="status-chip <?php echo $row['active'] ? 'is-active' : 'is-inactive'; ?>">
+                <?php echo $row['active'] ? "Active" : "Inactive"; ?>
+              </span>
+            </header>
 
-          <dl class="meta">
-            <div class="meta-row">
-              <dt>Created</dt>
-              <dd><?php echo date("M d, Y", strtotime($row['created_at'])); ?></dd>
-            </div>
+            <dl class="meta">
+              <div class="meta-row">
+                <dt>Created</dt>
+                <dd><?php echo date("M d, Y", strtotime($row['created_at'])); ?></dd>
+              </div>
 
-            <div class="meta-row">
-              <dt>Designation</dt>
-              <dd><?php echo htmlspecialchars($row['designation']); ?></dd>
-            </div>
-          </dl>
-        </article>
-      <?php endwhile; ?>
-    </section>
+              <div class="meta-row">
+                <dt>Designation</dt>
+                <dd><?php echo htmlspecialchars($row['designation']); ?></dd>
+              </div>
+            </dl>
+          </article>
+        <?php endwhile; ?>
+      </section>
+    <?php endif; ?>
   </main>
 
   <script>

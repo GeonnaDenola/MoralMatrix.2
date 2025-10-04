@@ -24,7 +24,7 @@ body{
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
   color: var(--text-900);
-  background: #ffffff;
+  background: #F7F8FA;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -48,7 +48,8 @@ h1{
   width: 100%;
   max-width: 1200px;                /* aligns with app content width */
   margin: 0 auto 48px;              /* centered; tidy bottom space */
-  padding: 0 clamp(12px, 2vw, 24px);/* no extra top padding so the card sits close to the title */
+  padding: 0 clamp(12px, 2vw, 24px);
+  margin-left: 250px;/* no extra top padding so the card sits close to the title */
 }
 
 .card{

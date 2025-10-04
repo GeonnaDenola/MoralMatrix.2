@@ -1,0 +1,293 @@
+/* ======================================================
+   FACULTY DASHBOARD — LIGHT THEME (No dark mode)
+   - Polished cards
+   - Clear "View details" pill button
+   - Strong status colors (incl. PENDING)
+   - Safe, no-overflow layout & images
+   ====================================================== */
+
+:root {
+  /* Match your fixed left sidebar width */
+  --sidebar-w: 260px;
+
+  /* Layout */
+  --content-max: 1120px;
+  --page-pad: clamp(14px, 2vw, 24px);
+
+  /* Colors (brand red per app header) */
+  --brand: #b91c1c;
+  --brand-weak: #fde7e7;
+
+  --page-bg: #f6f8fc;
+  --card-bg: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: rgba(31, 41, 55, 0.12);
+  --border-strong: rgba(31, 41, 55, 0.18);
+
+  /* Status palettes */
+  --ok-bg: #e9f7ef;      --ok-text: #16794c;   --ok-bd: #c1ead7;
+  --warn-bg: #fff7e6;    --warn-text: #7a5a00; --warn-bd: #f9df9b;
+  --err-bg: #fdecea;     --err-text: #b00020;  --err-bd: #f5c6cb;
+  --info-bg: #ecf3ff;    --info-text: #224ca5; --info-bd: #cfe0ff;
+
+  /* Radii + elevation */
+  --radius-lg: 14px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --shadow-1: 0 2px 6px rgba(16, 24, 40, 0.06);
+  --shadow-2: 0 14px 28px rgba(16, 24, 40, 0.12);
+
+  /* Focus ring */
+  --ring: 0 0 0 3px rgba(185, 28, 28, 0.25);
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.45;
+}
+
+/* ---------------- Page wrapper ---------------- */
+.violations-page {
+  padding: 28px var(--page-pad) 64px;
+  margin-left: var(--sidebar-w);
+}
+.violations-page > * {
+  max-width: min(
+    var(--content-max),
+    calc(100vw - var(--sidebar-w) - (2 * var(--page-pad)))
+  );
+  margin-inline: auto;
+}
+
+/* Sidebar collapses on small screens */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 0px; }
+  .violations-page { margin-left: 0; }
+}
+
+/* ---------------- Title area ---------------- */
+.page-intro { margin-bottom: 18px; }
+.page-intro h1 {
+  margin: 0 0 6px 0;
+  line-height: 1.15;
+  font-size: clamp(22px, 2.4vw, 32px);
+  letter-spacing: -0.01em;
+}
+.page-intro .subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ---------------- Grid of cards ---------------- */
+.card-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+}
+
+/* ---------------- Card ---------------- */
+.violation-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 16px;
+  align-items: start;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+  will-change: transform;
+}
+.violation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-strong);
+}
+.violation-card:focus-within { box-shadow: var(--shadow-2); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .violation-card { transition: none; }
+  .violation-card:hover { transform: none; }
+}
+
+/* ---------------- Photo (always fits, no bleed) ---------------- */
+.vc-media { width: 76px; height: 76px; }
+.vc-media img,
+.avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: #eef2f7;
+  aspect-ratio: 1/1;
+  border: 1px solid rgba(0,0,0,.06);
+  font-size: 0;   /* hides alt-text paint if image fails */
+  color: transparent;
+}
+
+/* ---------------- Content ---------------- */
+.vc-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.vc-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;         /* prevents overflow with long names */
+}
+.muted {
+  color: var(--muted);
+  font-weight: 600;
+  display: block;                  /* student ID goes under the name */
+  margin-top: 2px;
+  font-size: 13.5px;
+}
+
+/* Status badges (includes PENDING) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.badge-approved { background: var(--ok-bg);   color: var(--ok-text);   border-color: var(--ok-bd); }
+.badge-pending  { background: var(--warn-bg); color: var(--warn-text); border-color: var(--warn-bd); }
+.badge-rejected { background: var(--err-bg);  color: var(--err-text);  border-color: var(--err-bd); }
+.badge-review,
+.badge-escalated { background: var(--info-bg); color: var(--info-text); border-color: var(--info-bd); }
+
+/* Tags */
+.vc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.tag {
+  background: var(--brand-weak);
+  border: 1px solid #f2c4c4;
+  color: #7a1a1a;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.tag-outline {
+  background: #f3f6fa;
+  border-color: #e3e9f2;
+  color: #3b4558;
+}
+.sep { color: #9aa4b2; }
+
+/* Description */
+.vc-desc {
+  margin: 6px 0 10px;
+  color: #374151;
+  line-height: 1.5;
+  overflow-wrap: anywhere;    /* prevents long words overflow */
+  font-size: 14.5px;
+}
+
+/* ---------------- Meta row ---------------- */
+.vc-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;            /* keeps elements inside container on small widths */
+}
+.when {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------- Buttons ---------------- */
+.btn {
+  appearance: none;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform .06s ease, box-shadow .12s ease, background-color .12s ease, color .12s ease, border-color .12s ease;
+  flex-shrink: 0;             /* avoids shrinking & overflow */
+}
+.btn:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+  border-color: #a01414;
+}
+.btn-primary:hover   { background: #9a1414; border-color: #8a1212; }
+.btn-primary:active  { transform: translateY(1px); }
+.btn-primary:disabled{ opacity: .6; cursor: not-allowed; }
+
+/* ---------------- Empty state ---------------- */
+.empty-state { padding: clamp(24px, 6vw, 48px) 0 64px; }
+.empty-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  width: min(760px, 100%);
+  margin-inline: auto;
+  padding: 28px;
+  text-align: center;
+}
+.empty-illustration { font-size: 44px; line-height: 1; margin-bottom: 8px; }
+.empty-card h2 { margin: 6px 0 6px; font-size: 20px; }
+.empty-card p  { margin: 0; color: var(--muted); font-size: 14px; }
+
+/* ---------------- Small screens ---------------- */
+@media (max-width: 520px) {
+  .violation-card {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  .vc-media,
+  .vc-media img,
+  .avatar {
+    width: 84px;
+    height: 84px;
+  }
+}
