@@ -136,11 +136,13 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Create Validator Account</title>
+  <link rel="stylesheet" href="../css/add_validator.css"/>
 </head>
 <body>
+
 <h1>Create Community Validator Account</h1>
 
 <?php if (!empty($errorMsg)): ?>
@@ -151,40 +153,64 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
 <script>alert("<?php echo addslashes($flashMsg); ?>");</script>
 <?php endif; ?>
 
-<form action="" method="post" autocomplete="off">
+<main class="page">
+  <section class="card">
+    <form action="" method="post" autocomplete="off" class="validator-form">
 
-<label>Validator Type:</label><br>
-<select name="validator_type" id="validator_type" required onchange="toggleExpiry()">
-  <option value="inside" <?php echo ($formValues['validator_type'] ?? '')==='inside'?'selected':''; ?>>Inside Campus</option>
-  <option value="outside" <?php echo ($formValues['validator_type'] ?? '')==='outside'?'selected':''; ?>>Outside Campus</option>
-</select><br><br>
+      <div class="field">
+        <label for="validator_type" class="label">Validator Type</label>
+        <select name="validator_type" id="validator_type" required onchange="toggleDesignation()" class="input">
+          <option value="inside" <?php echo ($formValues['validator_type'] ?? '')==='inside'?'selected':''; ?>>Inside Campus</option>
+          <option value="outside" <?php echo ($formValues['validator_type'] ?? '')==='outside'?'selected':''; ?>>Outside Campus</option>
+        </select>
+      </div>
 
-  <label>Designation (for inside validators):</label><br>
-  <input type="text" name="designation"
-         value="<?php echo htmlspecialchars($formValues['designation'] ?? ''); ?>"><br><br>
+      <div class="field" id="designation_field">
+        <label for="designation" class="label">
+          Designation <span class="hint">(for inside validators)</span>
+        </label>
+        <input type="text" id="designation" name="designation" class="input"
+               value="<?php echo htmlspecialchars($formValues['designation'] ?? ''); ?>"/>
+      </div>
 
-  <label>Username:</label><br>
-  <input type="text" name="username"
-         value="<?php echo htmlspecialchars($formValues['username']); ?>"
-         required><br><br>
+      <div class="field">
+        <label for="username" class="label">Username <span class="required">*</span></label>
+        <input type="text" id="username" name="username" class="input"
+               value="<?php echo htmlspecialchars($formValues['username'] ?? ''); ?>" required />
+      </div>
 
-    <label>Email:</label>
-    <input type="email" name="email" id="email">
+      <div class="field">
+        <label for="email" class="label">Email</label>
+        <input type="email" id="email" name="email" class="input"
+               value="<?php echo htmlspecialchars($formValues['email'] ?? ''); ?>" />
+      </div>
 
-  <label>Temporary Password:</label><br>
-  <input type="text" id="password" name="password"
-         value="<?php echo htmlspecialchars($formValues['password']); ?>"
-         required><br>
-  <button type="button" onclick="generatePass()">Generate Password</button><br><br>
+      <div class="field">
+        <label for="password" class="label">Temporary Password <span class="required">*</span></label>
+        <div class="input-group">
+          <input type="text" id="password" name="password" class="input" required
+                 value="<?php echo htmlspecialchars($formValues['password'] ?? ''); ?>" />
+          <button type="button" class="btn ghost" onclick="generatePass()" aria-label="Generate password">
+            Generate
+          </button>
+        </div>
+        <p class="assist">12 characters, mixed letters & numbers. Click “Generate”.</p>
+      </div>
 
-  <label>Status:</label><br>
-  <select name="active">
-    <option value="1" <?php echo $formValues['active']==='1'?'selected':''; ?>>Active</option>
-    <option value="0" <?php echo $formValues['active']==='0'?'selected':''; ?>>Inactive</option>
-  </select><br><br>
+      <div class="field">
+        <label for="active" class="label">Status</label>
+        <select name="active" id="active" class="input">
+          <option value="1" <?php echo ($formValues['active'] ?? '')==='1'?'selected':''; ?>>Active</option>
+          <option value="0" <?php echo ($formValues['active'] ?? '')==='0'?'selected':''; ?>>Inactive</option>
+        </select>
+      </div>
 
-  <button type="submit">Register Validator</button>
-</form>
+      <div class="actions">
+        <button type="submit" class="btn primary">Register Validator</button>
+      </div>
+    </form>
+  </section>
+</main>
 
 <script>
 function generatePass() {
@@ -199,6 +225,13 @@ function generatePass() {
   }
   document.getElementById('password').value = pass;
 }
+
+function toggleDesignation() {
+  const sel = document.getElementById('validator_type');
+  const field = document.getElementById('designation_field');
+  field.style.display = (sel.value === 'inside') ? '' : 'none';
+}
+document.addEventListener('DOMContentLoaded', toggleDesignation);
 </script>
 
 </body>

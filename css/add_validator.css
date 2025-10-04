@@ -1,0 +1,168 @@
+/* ===== Brand + tokens ===== */
+:root{
+  /* match your header color */
+  --brand-red: #8b1e1e;
+  --brand-red-hover: #761717;
+  --ring: rgba(139, 30, 30, 0.25);
+
+  --text-900: #0f172a;
+  --text-700: #374151;
+  --muted-500: #6b7280;
+  --border-200: #e5e7eb;
+  --border-300: #d1d5db;
+
+  /* header & spacing controls */
+  --app-header-height: 64px;  /* adjust if your top bar is taller/shorter */
+  --title-gap-below: 14px;    /* space between title and card */
+}
+
+/* ===== Base / reset ===== */
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+html, body{ overflow-x: hidden; }   /* remove horizontal scroll */
+body{
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+  color: var(--text-900);
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+img, svg, video{ display: block; max-width: 100%; }
+
+/* ===== Title (kept as your only header) ===== */
+h1{
+  /* push the title down from the fixed app header */
+  margin: calc(var(--app-header-height) + 12px) auto var(--title-gap-below);
+  padding: 0 16px;
+  max-width: 1200px;
+  text-align: center;
+  font-weight: 800;
+  font-size: clamp(22px, 2.4vw, 30px);
+  letter-spacing: -0.015em;
+  color: var(--text-900);
+}
+
+/* ===== Layout ===== */
+.page{
+  width: 100%;
+  max-width: 1200px;                /* aligns with app content width */
+  margin: 0 auto 48px;              /* centered; tidy bottom space */
+  padding: 0 clamp(12px, 2vw, 24px);/* no extra top padding so the card sits close to the title */
+}
+
+.card{
+  width: min(680px, 100%);
+  margin: 0 auto;                   /* centered right under the title */
+  background: #fff;
+  border: 1px solid var(--border-200);
+  border-radius: 16px;
+  padding: clamp(18px, 3.2vw, 28px);
+  box-shadow:
+    0 20px 40px rgba(2, 6, 23, 0.06),
+    0 2px 6px rgba(2, 6, 23, 0.04);
+  overflow: hidden;
+}
+
+/* ===== Form ===== */
+.validator-form{ width: 100%; }
+.field{ margin-bottom: 18px; }
+
+.label{
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-700);
+}
+
+.hint{ color: var(--muted-500); font-weight: 500; margin-left: 6px; }
+.required{ color: var(--brand-red); margin-left: 4px; }
+
+.input{
+  width: 100%;
+  max-width: 100%;
+  appearance: none;
+  border: 1px solid var(--border-300);
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.25;
+  outline: none;
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.input:hover{ border-color: var(--border-200); }
+.input:focus,
+.input:focus-visible{
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/* input + button inline */
+.input-group{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.assist{
+  margin: 8px 2px 0;
+  font-size: 13px;
+  color: var(--muted-500);
+}
+
+/* ===== Buttons ===== */
+.btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease;
+  user-select: none;
+  touch-action: manipulation;
+}
+.btn:active{ transform: translateY(1px); }
+
+.btn.primary{
+  color: #fff;
+  background: linear-gradient(180deg, var(--brand-red), var(--brand-red-hover));
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(139, 30, 30, 0.22), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.btn.primary:hover{
+  background: linear-gradient(180deg, #952121, var(--brand-red-hover));
+  box-shadow: 0 10px 24px rgba(139, 30, 30, 0.28), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.btn.primary:focus{ box-shadow: 0 0 0 4px var(--ring); }
+
+.btn.ghost{
+  color: var(--text-900);
+  background: #f7f7f7;
+  border-color: var(--border-200);
+}
+.btn.ghost:hover{
+  background: #efefef;
+  border-color: var(--border-300);
+}
+
+.actions{
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* ===== Compact on small screens ===== */
+@media (max-width: 480px){
+  .card{ padding: 18px; }
+  .btn{ width: 100%; }
+  .input-group{ grid-template-columns: 1fr; }
+  .actions{ justify-content: stretch; }
+}

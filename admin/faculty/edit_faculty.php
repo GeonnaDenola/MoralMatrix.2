@@ -1,5 +1,5 @@
 <?php
-include '../../includes/header.php';
+include '../../includes/admin_header.php';
 include '../../config.php';
 
 if(!isset($_GET['id'])){ die("No faculty ID provided."); }
@@ -40,7 +40,7 @@ $photoUrl = !empty($faculty['photo']) ? htmlspecialchars($faculty['photo']) : ''
   <title>Edit Faculty</title>
 
   <!-- Your global styles (optional) -->
-  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+
   <!-- Page styles -->
   <link rel="stylesheet" href="faculty-edit.css">
 </head>

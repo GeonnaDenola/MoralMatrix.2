@@ -1,8 +1,5 @@
 <?php
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+
 
 // Active link helper
 if (!isset($active)) { $active = basename($_SERVER['PHP_SELF']); }
@@ -16,7 +13,8 @@ if (!function_exists('activeClass')) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Moral Matrix</title>
-  <link rel="stylesheet" href="../css/header.css">
+  <link rel="stylesheet" href="/MoralMatrix/css/header.css">
+
 </head>
 <body>
 
@@ -57,8 +55,7 @@ if (!function_exists('activeClass')) {
   <div class="brand">
     <div class="brand-mark" aria-hidden="true">M</div>
     <div class="brand-text">
-      <span class="brand-title">CCDU</span>
-    
+      <span class="brand-title">MCC Admin</span>
     </div>
   </div>
 
@@ -71,24 +68,18 @@ if (!function_exists('activeClass')) {
       </span>
       <span class="nav-label">Dashboard</span>
     </a>
-
-    <a class="nav-item<?php echo activeClass('pending_reports.php'); ?>"
-       href="pending_reports.php"
-       <?php echo $active==='pending_reports.php'?'aria-current="page"':''; ?>>
-      <span class="nav-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16l4-4h10a2 2 0 0 0 2-2V8l-6-6zM13 9V3.5L18.5 9H13z"/></svg>
-      </span>
-      <span class="nav-label">Pending Reports</span>
-    </a>
-
-    <a class="nav-item<?php echo activeClass('community_validators.php'); ?>"
-       href="community_validators.php"
-       <?php echo $active==='community_validators.php'?'aria-current="page"':''; ?>>
-      <span class="nav-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05C16.18 13.6 18 14.53 18 16V20h4v-3.5c0-2.33-4.67-3.5-6-3.5z"/></svg>
-      </span>
-      <span class="nav-label">Community Service Validators</span>
-    </a>
+        <a class="nav-item<?php echo activeClass('add_users.php'); ?>"
+        href="add_users.php"
+        <?php echo $active==='add_users.php'?'aria-current="page"':''; ?>>
+        <span class="nav-ico" aria-hidden="true">
+            <!-- User + Plus icon -->
+            <svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" role="img" focusable="false">
+            <path d="M1 14s-1 0-1-1 1-4 7-4 7 3 7 4-1 1-1 1H1zm10-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+            <path fill-rule="evenodd" d="M16 8a.5.5 0 0 0-.5-.5H14V6a.5.5 0 0 0-1 0v1.5H11.5a.5.5 0 0 0 0 1H13V10a.5.5 0 0 0 1 0V8.5h1.5A.5.5 0 0 0 16 8z"/>
+            </svg>
+        </span>
+        <span class="nav-label">Add Users</span>
+        </a>
 
     <a class="nav-item<?php echo activeClass('summary_report.php'); ?>"
        href="summary_report.php"
