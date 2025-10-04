@@ -66,16 +66,7 @@ if (!empty($_GET['debug'])) {
 ?>
 
 
-<?php
-// ... your auth / db bootstrap above ...
 
-/**
- * Expecting:
- * - $result: mysqli_result of pending violations
- * - $debugRows: optional array for debug view (role/status counts)
- * - $faculty_id: current faculty user id
- */
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
