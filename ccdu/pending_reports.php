@@ -155,7 +155,7 @@ $result = $conn->query($sql);
                                     <button type="submit" class="btn btn-approve" aria-label="Approve report for <?= $firstName . ' ' . $lastName ?>">Approve</button>
                                 </form>
 
-                                <form action="handle_violation.php" method="post" class="pr-form">
+                                <form action="approve_violation.php" method="post" class="pr-form">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                     <input type="hidden" name="id" value="<?= $violationId ?>"/>
                                     <input type="hidden" name="action" value="reject"/>

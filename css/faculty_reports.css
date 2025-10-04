@@ -1,0 +1,171 @@
+
+:root{
+  --rail: 260px;            /* width of your fixed left sidebar */
+  --pv-max: 1080px;         /* max content width */
+  --pv-xpad: 16px;          /* horizontal page padding (mobile) */
+
+  --pv-bg: #f7f9fc;
+  --pv-card: #ffffff;
+  --pv-text: #0f172a;       /* slate-900 */
+  --pv-soft: #475569;       /* slate-600 */
+  --pv-border: #e5e7eb;     /* gray-200 */
+  --pv-shadow: 0 8px 24px rgba(15,23,42,.06);
+  --pv-radius: 14px;
+
+  --pv-green:#16a34a; --pv-amber:#d97706; --pv-blue:#2563eb;
+  --pv-red:#dc2626;  --pv-violet:#7c3aed; --pv-muted:#64748b;
+}
+
+html, body{ background: var(--pv-bg); color: var(--pv-text); }
+
+/* =========================================================
+   Centering logic
+   - On mobile/tablet (<=1023px) we just center like normal.
+   - On desktop (>=1024px) we subtract the rail and then center
+     inside the remaining space so it visually sits centered.
+   =======================================================*/
+.pv-page{
+  max-width: var(--pv-max);
+  margin: clamp(16px, 3vw, 32px) auto;
+  padding: 0 var(--pv-xpad) 40px;
+}
+
+@media (min-width:1024px){
+  .pv-page{
+    /* remaining width after sidebar */
+    --remain: calc(100vw - var(--rail));
+    /* horizontal gutters that keep the page centered inside the remaining area */
+    --gutter: max(24px, calc((var(--remain) - min(var(--pv-max), calc(var(--remain) - 48px)))/2));
+    margin-left: calc(var(--rail) + var(--gutter));
+    margin-right: var(--gutter);
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* =========================================================
+   Section header
+   =======================================================*/
+.pv-head{ text-align:center; margin-bottom:18px; }
+.pv-head h3{
+  font-size: clamp(20px, 2.4vw, 30px);
+  line-height: 1.22;
+  margin: 0 0 6px;
+}
+.pv-sub{ color: var(--pv-soft); margin: 0; }
+
+/* =========================================================
+   List & Cards
+   =======================================================*/
+.pv-list{
+  list-style:none; margin:0; padding:0;
+  display:grid; gap:16px;
+  grid-template-columns: 1fr;
+}
+
+.pv-card-link{ display:block; text-decoration:none; color:inherit; }
+
+.pv-card{
+  background: var(--pv-card);
+  border: 1px solid var(--pv-border);
+  border-radius: var(--pv-radius);
+  box-shadow: var(--pv-shadow);
+  display:grid; gap:16px;
+  grid-template-columns: 84px 1fr;
+  padding: 14px;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.pv-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(15,23,42,.08);
+  border-color:#d1d5db;
+}
+
+/* Media (image) */
+.pv-card__media{
+  width:84px;height:84px;border-radius:12px;overflow:hidden;
+  background:#f1f5f9; align-self:center;
+}
+.pv-card__media img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+/* Body */
+.pv-card__body{ min-width:0; display:grid; gap:6px; }
+.pv-row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+.pv-row--between{ justify-content:space-between; }
+
+.pv-title{ font-size:16.5px; line-height:1.3; margin:0; }
+.pv-id{ color:var(--pv-soft); margin-left:6px; font-weight:500; }
+
+.pv-meta{
+  margin:0; color:var(--pv-soft);
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.pv-chip{
+  font-size:12px; padding:4px 8px; border:1px solid var(--pv-border);
+  border-radius:999px; background:#fafafa; white-space:nowrap;
+}
+.pv-dot{ opacity:.6; }
+
+.pv-desc{
+  margin:2px 0 0; color:var(--pv-text);
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+}
+
+.pv-footer{ margin:6px 0 0; color:var(--pv-soft); font-size:13px; }
+
+/* Status pill */
+.pv-pill{
+  display:inline-block; font-weight:600; font-size:12px; line-height:1;
+  padding:7px 10px; border-radius:999px; border:1px solid currentColor; white-space:nowrap;
+}
+.pv-pill.status--approved,
+.pv-pill.status--resolved,
+.pv-pill.status--cleared{ color:var(--pv-green); }
+.pv-pill.status--pending,
+.pv-pill.status--awaiting-review,
+.pv-pill.status--pending-approval{ color:var(--pv-amber); }
+.pv-pill.status--open,
+.pv-pill.status--investigating{ color:var(--pv-blue); }
+.pv-pill.status--rejected,
+.pv-pill.status--dismissed{ color:var(--pv-red); }
+.pv-pill.status--escalated{ color:var(--pv-violet); }
+.pv-pill:not([class*="status--"]){ color:var(--pv-muted); }
+
+/* =========================================================
+   Empty state (centered block)
+   =======================================================*/
+.pv-empty{
+  text-align:center; background:var(--pv-card);
+  border:1px solid var(--pv-border); border-radius:var(--pv-radius);
+  box-shadow:var(--pv-shadow); padding:28px 20px;
+  max-width: 880px; margin: 12px auto 0;
+}
+.pv-empty h4{ margin:0 0 6px; font-size:18px; }
+.pv-subtle{ color:var(--pv-soft); }
+
+/* =========================================================
+   Debug table (optional)
+   =======================================================*/
+.pv-debug{
+  background:#fff; border:1px dashed #d7dde5; border-radius:12px;
+  padding:16px; margin-bottom:16px;
+}
+.pv-debug h4{ margin:0 0 10px; }
+.pv-debug__meta{ color:var(--pv-soft); margin-bottom:10px; }
+.pv-debug__tip{ color:var(--pv-soft); margin:10px 0 0; }
+.pv-table-wrap{ overflow:auto; -webkit-overflow-scrolling:touch; }
+.pv-table{ width:100%; border-collapse:collapse; font-size:14px; }
+.pv-table th,.pv-table td{ padding:8px 10px; border-bottom:1px solid var(--pv-border); text-align:left; }
+.pv-table thead th{ background:#f8fafc; position:sticky; top:0; }
+.t-right{ text-align:right; }
+
+/* =========================================================
+   Mobile tweaks
+   =======================================================*/
+@media (max-width:520px){
+  .pv-card{ grid-template-columns:64px 1fr; padding:12px; gap:12px; }
+  .pv-card__media{ width:64px; height:64px; border-radius:10px; }
+  .pv-title{ font-size:15.5px; }
+  .pv-chip{ font-size:11px; padding:3px 7px; }
+  .pv-pill{ font-size:11px; padding:6px 8px; }
+}

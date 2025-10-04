@@ -4,7 +4,7 @@ require '../auth.php';
 require_role('faculty');
 
 include '../config.php';
-include '../includes/header.php';
+include '../includes/faculty_header.php';
 
 // DB connect
 $servername = $database_settings['servername'];
@@ -22,14 +22,6 @@ $faculty_id = $_SESSION['actor_id'] ?? null;
 if (!$faculty_id) {
     die("No faculty id in session. Please login again.");
 }
-
-/*
-  Visibility rule:
-  - Faculty sees APPROVED violations for students in their INSTITUTE.
-  - This works even if Security submitted the violation.
-  If instead you want "violations the faculty submitted", replace the JOIN/WHERE
-  with: WHERE sv.submitted_by = ? AND sv.status='approved' and bind $faculty_id.
-*/
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -47,183 +39,105 @@ WHERE sv.submitted_by = ?
   AND sv.status = 'approved'
 ORDER BY sv.reported_at DESC, sv.violation_id DESC
 ";
-
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("Prepare failed: " . $conn->error);
 }
-
 $stmt->bind_param("s", $faculty_id);
 if (!$stmt->execute()) {
     die("Execute failed: " . $stmt->error);
 }
-
 $result = $stmt->get_result();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Faculty — Approved Violations</title>
-<link rel="stylesheet" href="/MoralMatrix/css/global.css">
-<style>
-/* tiny card styles (page-local) */
-.violations { padding: 12px; max-width: 980px; margin: 0 auto; }
-.card-link { text-decoration:none; color:inherit; display:block; }
-.card {
-  border:1px solid #ddd;
-  border-radius:10px;
-  padding:12px;
-  margin:10px 0;
-  display:flex;
-  align-items:center;
-  gap:18px;
-  transition:transform .12s, box-shadow .12s;
-  background:#fff;
-}
-.card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
-.card .left { flex: 0 0 120px; text-align:center; }
-.card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
-.card .info { flex:1; }
-.meta { color:#666; font-size:0.92rem; }
-</style>
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Faculty — Approved Violations</title>
+  <link rel="stylesheet" href="../css/faculty_dashboard.css">
 </head>
 <body>
 
-<!-- ======= LEFT Sidesheet trigger + panel (uses global.css) ======= -->
-<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
-<div class="page-top-pad"></div>
+<main class="violations-page" aria-labelledby="pageTitle">
+  <header class="page-intro">
+    <h1 id="pageTitle">Approved Violations</h1>
+    <p class="subtitle">These are the reports you submitted that have been approved.</p>
+  </header>
 
-<!-- Scrim -->
-<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
-
-<!-- LEFT Sidesheet (drawer) -->
-<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
-  <div class="sidesheet-header">
-    <span>Menu</span>
-    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
-  </div>
-
-  <div class="sidesheet-rail">
-    <div id="pageButtons" class="drawer-pages">
-      <?php include 'side_buttons.php'; ?>
-    </div>
-  </div>
-</nav>
-<!-- ======= /LEFT Sidesheet ======= -->
-
-<div class="violations">
   <?php if ($result && $result->num_rows > 0): ?>
-    <?php while ($row = $result->fetch_assoc()): ?>
-      <?php
-        $studentPhotoFile = $row['student_photo'] ?? '';
-        $studentPhotoSrc = $studentPhotoFile
-            ? '../admin/uploads/' . htmlspecialchars($studentPhotoFile)
-            : 'placeholder.png';
-        $violationId = urlencode($row['violation_id']);
-        $studentId = htmlspecialchars($row['student_id']);
-      ?>
-      <a class="card-link" href="view_violation_approved.php?id=<?= $violationId ?>">
-        <div class="card">
-          <div class="left">
-            <img src="<?= $studentPhotoSrc ?>" alt="Student photo" onerror="this.src='placeholder.png'">
+    <section class="card-grid" aria-label="Approved violation cards">
+      <?php while ($row = $result->fetch_assoc()): ?>
+        <?php
+          $studentPhotoFile = $row['student_photo'] ?? '';
+          $studentPhotoSrc = $studentPhotoFile
+              ? '../admin/uploads/' . htmlspecialchars($studentPhotoFile)
+              : 'placeholder.png';
+          $violationId = urlencode($row['violation_id']);
+          $studentId   = htmlspecialchars($row['student_id']);
+          $studentName = htmlspecialchars($row['first_name'] . ' ' . $row['last_name']);
+          $category    = htmlspecialchars($row['offense_category']);
+          $type        = htmlspecialchars($row['offense_type']);
+          $status      = strtolower($row['status'] ?? '');
+          $desc        = trim($row['description'] ?? '');
+          $reportedRaw = $row['reported_at'] ?? '';
+          $reportedAt  = $reportedRaw ? date('M j, Y g:i a', strtotime($reportedRaw)) : '';
+        ?>
+        <article class="violation-card" role="article">
+          <div class="vc-media">
+            <img
+              class="avatar"
+              src="<?= $studentPhotoSrc ?>"
+              alt="Photo of <?= $studentName ?>"
+              width="76"
+              height="76"
+              loading="lazy"
+              decoding="async"
+              onerror="this.onerror=null;this.src='placeholder.png';"
+            >
           </div>
-          <div class="info">
-            <h4><?= htmlspecialchars($row['first_name'] . ' ' . $row['last_name']) ?> (<?= $studentId ?>)</h4>
-            <p><strong>Category:</strong> <?= htmlspecialchars($row['offense_category']) ?> &nbsp; • &nbsp;
-               <strong>Type:</strong> <?= htmlspecialchars($row['offense_type']) ?></p>
-            <?php if (!empty($row['description'])): ?>
-              <p><?= nl2br(htmlspecialchars($row['description'])) ?></p>
+
+          <div class="vc-body">
+            <div class="vc-title-row">
+              <h3 class="vc-title">
+                <?= $studentName ?> <span class="muted">(<?= $studentId ?>)</span>
+              </h3>
+              <span class="badge badge-<?= htmlspecialchars($status) ?>"><?= htmlspecialchars($row['status']) ?></span>
+            </div>
+
+            <div class="vc-tags" aria-label="Tags">
+              <span class="tag"><?= $category ?></span>
+              <span class="sep" aria-hidden="true">•</span>
+              <span class="tag tag-outline"><?= $type ?></span>
+            </div>
+
+            <?php if (!empty($desc)): ?>
+              <p class="vc-desc"><?= nl2br(htmlspecialchars($desc)) ?></p>
             <?php endif; ?>
-            <p class="meta"><strong>Status:</strong> <?= htmlspecialchars($row['status']) ?> —
-               <em>Reported at <?= htmlspecialchars($row['reported_at']) ?></em></p>
+
+            <div class="vc-meta">
+              <span class="when" title="<?= htmlspecialchars($reportedRaw) ?>">Reported <?= htmlspecialchars($reportedAt) ?></span>
+              <a class="btn btn-primary" href="view_violation_approved.php?id=<?= $violationId ?>" aria-label="View details for <?= $studentName ?>">View details</a>
+            </div>
           </div>
-        </div>
-      </a>
-    <?php endwhile; ?>
+        </article>
+      <?php endwhile; ?>
+    </section>
   <?php else: ?>
-    <p>No approved violations found.</p>
+    <section class="empty-state" aria-label="No data">
+      <div class="empty-card">
+        <div class="empty-illustration" aria-hidden="true">📄</div>
+        <h2>No approved violations</h2>
+        <p>Once a report you submitted is approved, it will appear here.</p>
+      </div>
+    </section>
   <?php endif; ?>
-</div>
+</main>
 
 <?php
 $stmt->close();
 $conn->close();
 ?>
-
-<script>
-/* ======== LEFT Sidesheet: open/close + focus trap ======== */
-(function(){
-  const sheet   = document.getElementById('sideSheet');
-  const scrim   = document.getElementById('sheetScrim');
-  const openBtn = document.getElementById('openMenu');
-  const closeBtn= document.getElementById('closeMenu');
-
-  if (!sheet || !scrim || !openBtn || !closeBtn) return;
-
-  let lastFocusedEl = null;
-
-  function trapFocus(container, e){
-    const focusables = container.querySelectorAll(
-      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-    );
-    if (!focusables.length) return;
-    const first = focusables[0];
-    const last  = focusables[focusables.length - 1];
-
-    if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault(); last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault(); first.focus();
-      }
-    }
-  }
-  const focusTrapHandler = (e)=>trapFocus(sheet, e);
-
-  function openSheet(){
-    lastFocusedEl = document.activeElement;
-    sheet.classList.add('open');
-    scrim.classList.add('open');
-    sheet.setAttribute('aria-hidden','false');
-    scrim.setAttribute('aria-hidden','false');
-    openBtn.setAttribute('aria-expanded','true');
-    document.body.classList.add('no-scroll');
-
-    setTimeout(()=>{
-      const f = sheet.querySelector('#pageButtons a, #pageButtons button, [tabindex]:not([tabindex="-1"])');
-      (f || sheet).focus();
-    }, 10);
-
-    sheet.addEventListener('keydown', focusTrapHandler);
-  }
-
-  function closeSheet(){
-    sheet.classList.remove('open');
-    scrim.classList.remove('open');
-    sheet.setAttribute('aria-hidden','true');
-    scrim.setAttribute('aria-hidden','true');
-    openBtn.setAttribute('aria-expanded','false');
-    document.body.classList.remove('no-scroll');
-
-    sheet.removeEventListener('keydown', focusTrapHandler);
-    if (lastFocusedEl) lastFocusedEl.focus();
-  }
-
-  openBtn.addEventListener('click', openSheet);
-  closeBtn.addEventListener('click', closeSheet);
-  scrim.addEventListener('click', closeSheet);
-  document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeSheet(); });
-
-  // Optional: close on same-tab nav
-  sheet.addEventListener('click', (e)=>{
-    const link = e.target.closest('a[href]');
-    if (!link) return;
-    const sameTab = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
-    if (sameTab) closeSheet();
-  });
-})();
-</script>
 </body>
 </html>
