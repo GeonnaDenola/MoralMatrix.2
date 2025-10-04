@@ -1,8 +1,14 @@
 <?php
+session_start();
 include '../includes/header.php';
 include '../config.php';
-
 include 'page_buttons.php';
+include __DIR__ . '/_scanner.php';
+
+// Generate CSRF token if not already set
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -42,8 +48,7 @@ LEFT JOIN security_account se
 WHERE sv.status = 'pending'
 ORDER BY sv.reported_at DESC";
 
-
-$result = $conn->query($sql)
+$result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,31 +56,34 @@ $result = $conn->query($sql)
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Pending Reports</title>
-
-    <!-- Page-specific styles only; no header/brand changes -->
     <link rel="stylesheet" href="../css/pending_reports.css"/>
 </head>
 <body>
-    <!--
-      This wrapper only manages spacing so the content doesn’t sit under your
-      site header or on top of your left sidebar. Adjust the CSS custom
-      properties in pending_reports.css if your layout uses different sizes.
-    -->
     <main class="pr-page">
         <div class="pr-head">
             <h1 class="pr-title">Pending Reports</h1>
-            <?php if (isset($result) && $result instanceof mysqli_result): ?>
+            <?php if ($result instanceof mysqli_result): ?>
                 <span class="pr-count" aria-label="Total pending">
                     <?= (int)$result->num_rows ?>
                 </span>
             <?php endif; ?>
         </div>
 
-        <?php if (isset($result) && $result instanceof mysqli_result && $result->num_rows > 0): ?>
+        <!-- Success/error banner -->
+        <?php if (isset($_GET['msg'])): ?>
+            <div class="pr-banner">
+                <?php if ($_GET['msg'] === 'approved'): ?>
+                    ✅ Report approved successfully.
+                <?php elseif ($_GET['msg'] === 'rejected'): ?>
+                    ❌ Report rejected successfully.
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($result instanceof mysqli_result && $result->num_rows > 0): ?>
             <div class="pr-grid">
                 <?php while ($row = $result->fetch_assoc()): ?>
                     <?php
-                        // Sanitize everything we display
                         $violationId     = (int)$row['violation_id'];
                         $photo           = isset($row['photo']) ? trim($row['photo']) : '';
                         $firstName       = htmlspecialchars($row['student_first_name'] ?? '', ENT_QUOTES, 'UTF-8');
@@ -123,14 +131,10 @@ $result = $conn->query($sql)
                                 </div>
                                 <div class="pr-chips">
                                     <?php if ($category): ?>
-                                        <span class="pr-chip pr-chip--category" title="Category">
-                                            <?= $category ?>
-                                        </span>
+                                        <span class="pr-chip pr-chip--category"><?= $category ?></span>
                                     <?php endif; ?>
                                     <?php if ($type): ?>
-                                        <span class="pr-chip pr-chip--type" title="Type">
-                                            <?= $type ?>
-                                        </span>
+                                        <span class="pr-chip pr-chip--type"><?= $type ?></span>
                                     <?php endif; ?>
                                 </div>
                                 <?php if ($description): ?>
@@ -143,15 +147,18 @@ $result = $conn->query($sql)
                             </div>
 
                             <div class="pr-actions">
-                                <form action="approve_violation.php" method="post" class="pr-form">
-                                    <?php csrf_field(); ?>
+                                <!-- One handler file -->
+                                <form action="handle_violation.php" method="post" class="pr-form">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                     <input type="hidden" name="id" value="<?= $violationId ?>"/>
+                                    <input type="hidden" name="action" value="approve"/>
                                     <button type="submit" class="btn btn-approve" aria-label="Approve report for <?= $firstName . ' ' . $lastName ?>">Approve</button>
                                 </form>
 
-                                <form action="reject_report.php" method="post" class="pr-form">
-                                    <?php csrf_field(); ?>
+                                <form action="handle_violation.php" method="post" class="pr-form">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                     <input type="hidden" name="id" value="<?= $violationId ?>"/>
+                                    <input type="hidden" name="action" value="reject"/>
                                     <button type="submit" class="btn btn-reject" aria-label="Reject report for <?= $firstName . ' ' . $lastName ?>">Reject</button>
                                 </form>
                             </div>

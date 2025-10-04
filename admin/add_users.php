@@ -4,6 +4,8 @@ include '../includes/admin_header.php';
 require '../config.php';
 
 require_once __DIR__.'/../vendor/autoload.php';
+require_once __DIR__ . '/../lib/email_lib.php'; // has moralmatrix_mailer()
+
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 

@@ -3,6 +3,8 @@ include '../includes/header.php';
 include '../config.php';
 include 'page_buttons.php';
 
+include __DIR__ . '/_scanner.php';
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
