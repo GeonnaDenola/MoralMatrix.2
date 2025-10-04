@@ -1,8 +1,4 @@
-/* =========================
-   Moral Matrix – Admin UI (Responsive)
-   ========================= */
 
-/* ------ Layout Tokens ------ */
 :root{
   /* Defaults; JS will set --sidebar-detected dynamically */
   --sidebar-wide: 260px;          /* fallback desktop sidebar width */

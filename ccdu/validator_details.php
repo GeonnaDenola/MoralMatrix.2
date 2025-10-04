@@ -1,5 +1,5 @@
 <?php
-// Start output buffering to prevent "headers already sent" issues
+// Start output buffering BEFORE anything else so redirects work
 ob_start();
 
 require_once '../config.php';
@@ -22,7 +22,7 @@ if ($validator_id <= 0) {
     die("Invalid validator ID.");
 }
 
-/* --- Handle status toggle BEFORE any output or includes --- */
+/* --- Handle status toggle BEFORE any output --- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_status'])) {
     $sql = "UPDATE validator_account SET active = NOT active WHERE validator_id = ?";
     $stmt = $conn->prepare($sql);
@@ -34,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_status'])) {
     $stmt->execute();
     $stmt->close();
 
-    // Redirect back to the same page (safe: no prior output)
     header("Location: validator_details.php?id=" . $validator_id);
     exit;
 }
@@ -70,6 +69,11 @@ $expiresRaw = trim((string)$validator['expires_at']);
 $expiresDisplay = ($expiresRaw && $expiresRaw !== '0000-00-00 00:00:00')
     ? date("M d, Y h:i A", strtotime($expiresRaw))
     : '—';
+
+// Include your existing layout bits (keeps your own header + sidebar)
+// NOTE: these are included AFTER logic so redirects always work.
+include '../includes/header.php';
+include 'page_buttons.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -77,34 +81,26 @@ $expiresDisplay = ($expiresRaw && $expiresRaw !== '0000-00-00 00:00:00')
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Validator Details • <?php echo htmlspecialchars($validator['v_username']); ?></title>
-  <link rel="stylesheet" href="../css/validator_details.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/validator.css">
 </head>
 <body>
-  <?php
-    // Include your header/sidebar AFTER handling redirects
-    include '../includes/header.php';
-    include 'page_buttons.php';
-  ?>
-
-  <main class="vd-page">
+  <main class="vd-page" aria-labelledby="pageTitle">
     <div class="vd-wrap">
-      <div class="vd-card">
+      <div class="vd-card" role="region" aria-label="Validator profile" style = "margin-left: 200px;">
         <header class="vd-card__header">
           <div class="vd-avatar" aria-hidden="true">
             <?php echo strtoupper(substr($validator['v_username'], 0, 1)); ?>
           </div>
           <div class="vd-title">
-            <h1 class="vd-h1"><?php echo htmlspecialchars($validator['v_username']); ?></h1>
+            <h1 id="pageTitle" class="vd-h1"><?php echo htmlspecialchars($validator['v_username']); ?></h1>
             <span class="vd-badge <?php echo $isActive ? 'vd-badge--success' : 'vd-badge--muted'; ?>">
+              <span class="vd-dot" aria-hidden="true"></span>
               <?php echo $isActive ? 'Active' : 'Inactive'; ?>
             </span>
           </div>
         </header>
 
-        <div class="vd-grid">
+        <dl class="vd-grid">
           <div class="vd-row">
             <dt>Email</dt>
             <dd><?php echo htmlspecialchars($validator['email']); ?></dd>
@@ -129,13 +125,14 @@ $expiresDisplay = ($expiresRaw && $expiresRaw !== '0000-00-00 00:00:00')
             <dt>Status</dt>
             <dd>
               <span class="vd-status <?php echo $isActive ? 'vd-status--on' : 'vd-status--off'; ?>">
+                <span class="vd-dot" aria-hidden="true"></span>
                 <?php echo $isActive ? "Active" : "Inactive"; ?>
               </span>
             </dd>
           </div>
-        </div>
+        </dl>
 
-        <form method="post" class="vd-actions">
+        <form method="post" class="vd-actions" aria-label="Actions">
           <input type="hidden" name="id" value="<?php echo (int)$validator['validator_id']; ?>" />
           <button
             type="submit"
@@ -149,7 +146,7 @@ $expiresDisplay = ($expiresRaw && $expiresRaw !== '0000-00-00 00:00:00')
         </form>
       </div>
 
-      <p class="vd-footnote">ID: <?php echo (int)$validator['validator_id']; ?></p>
+      <p class="vd-footnote" style = "margin-left: 200px;">ID: <?php echo (int)$validator['validator_id']; ?></p>
     </div>
   </main>
 

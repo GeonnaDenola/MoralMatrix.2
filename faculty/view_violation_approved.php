@@ -3,8 +3,8 @@ require '../auth.php';
 require_role('faculty');
 require '../config.php';
 
-include '../includes/header.php';
-include 'side_buttons.php';
+include '../includes/faculty_header.php';
+
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -34,32 +34,73 @@ $stmt->execute();
 $result = $stmt->get_result();
 $violation = $result->fetch_assoc();
 ?>
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Violation Details</title>
+    <link rel="stylesheet" href="../css/faculty_view_violation.css">
 </head>
-<body>
+<body class="violation-page">
 <?php if ($violation): ?>
-    <h2>Violation Report</h2>
-    <p><strong>Student:</strong> <?= htmlspecialchars($violation['first_name']." ".$violation['last_name']) ?></p>
-    <p><strong>Category:</strong> <?= htmlspecialchars($violation['offense_category']) ?></p>
-    <p><strong>Type:</strong> <?= htmlspecialchars($violation['offense_type']) ?></p>
-    <p><strong>Description:</strong> <?= htmlspecialchars($violation['description']) ?></p>
-    <p><strong>Status:</strong> <?= htmlspecialchars($violation['status']) ?></p>
-    <p><em>Reported at: <?= htmlspecialchars($violation['reported_at']) ?></em></p>
+    <main class="layout" role="main" aria-labelledby="violation-title">
+        <section class="violation-card" role="region">
+            <div class="card-header">
+                <h2 id="violation-title">Violation Report</h2>
+                <span
+                    class="status-badge <?= strtolower(str_replace(' ', '-', $violation['status'])) ?>">
+                    <?= htmlspecialchars($violation['status']) ?>
+                </span>
+            </div>
 
-    <?php if (!empty($violation['photo'])): ?>
-        <p><strong>Photo Evidence:</strong></p>
-        <img src="../uploads/<?= htmlspecialchars($violation['photo']) ?>" 
-             alt="Evidence" 
-             style="max-width:400px; height:auto; border:1px solid #ccc; border-radius:6px;">
-    <?php else: ?>
-        <p><em>No photo evidence uploaded.</em></p>
-    <?php endif; ?>
+            <dl class="details">
+                <div class="row">
+                    <dt>Student</dt>
+                    <dd><?= htmlspecialchars($violation['first_name']." ".$violation['last_name']) ?></dd>
+                </div>
 
+                <div class="row">
+                    <dt>Category</dt>
+                    <dd><?= htmlspecialchars($violation['offense_category']) ?></dd>
+                </div>
+
+                <div class="row">
+                    <dt>Type</dt>
+                    <dd><?= htmlspecialchars($violation['offense_type']) ?></dd>
+                </div>
+
+                <div class="row">
+                    <dt>Description</dt>
+                    <dd><?= htmlspecialchars($violation['description']) ?></dd>
+                </div>
+            </dl>
+
+            <?php if (!empty($violation['photo'])): ?>
+                <figure class="evidence">
+                    <img
+                        src="../uploads/<?= htmlspecialchars($violation['photo']) ?>"
+                        alt="Photo evidence for <?= htmlspecialchars($violation['first_name'].' '.$violation['last_name']) ?>"
+                        loading="lazy">
+                    <figcaption>Photo evidence</figcaption>
+                </figure>
+            <?php else: ?>
+                <p class="muted no-photo"><em>No photo evidence uploaded.</em></p>
+            <?php endif; ?>
+
+            <div class="meta">
+                <small>Reported at: <?= htmlspecialchars($violation['reported_at']) ?></small>
+            </div>
+        </section>
+    </main>
 <?php else: ?>
-    <p>Violation not found.</p>
+    <main class="layout">
+        <section class="empty-state">
+            <h2>Violation not found</h2>
+            <p class="muted">The report you’re looking for doesn’t exist or was removed.</p>
+        </section>
+    </main>
 <?php endif; ?>
 </body>
 </html>

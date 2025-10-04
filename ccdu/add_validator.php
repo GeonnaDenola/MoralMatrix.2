@@ -144,7 +144,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
 </head>
 <body>
 
-<h1>Create Community Validator Account</h1>
+<h1 style="margin-left:250px;">Create Community Validator Account</h1>
 
 <?php if (!empty($errorMsg)): ?>
 <script>alert("<?php echo addslashes($errorMsg); ?>");</script>
