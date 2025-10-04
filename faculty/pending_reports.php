@@ -6,7 +6,7 @@ require '../auth.php';
 require_role('faculty');
 
 include '../config.php';
-include '../includes/header.php';
+include '../includes/faculty_header.php';
 
 // --- DB connect ---
 $servername = $database_settings['servername'];
@@ -64,137 +64,151 @@ if (!empty($_GET['debug'])) {
   $d->close();
 }
 ?>
+
+
+<?php
+// ... your auth / db bootstrap above ...
+
+/**
+ * Expecting:
+ * - $result: mysqli_result of pending violations
+ * - $debugRows: optional array for debug view (role/status counts)
+ * - $faculty_id: current faculty user id
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Faculty — My Pending Violations</title>
-<link rel="stylesheet" href="/MoralMatrix/css/global.css">
-<style>
-  .violations { padding: 12px; max-width: 980px; margin: 0 auto; }
-  .card-link { text-decoration:none; color:inherit; display:block; }
-  .card {
-    border:1px solid #ddd; border-radius:10px; padding:12px; margin:10px 0;
-    display:flex; align-items:center; gap:18px; background:#fff;
-    transition:transform .12s, box-shadow .12s;
-  }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
-  .card .left { flex: 0 0 120px; text-align:center; }
-  .card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
-  .card .info { flex:1; }
-  .meta { color:#666; font-size:0.92rem; }
-  .debug { background:#fff7ed; border:1px solid #fed7aa; padding:8px 10px; border-radius:8px; margin:12px auto; max-width:980px; font-size:.9rem; }
-  .debug table { border-collapse:collapse; }
-  .debug th, .debug td { border:1px solid #ddd; padding:4px 8px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Faculty — My Pending Violations</title>
+
+<link rel="stylesheet" href="../css/faculty_reports.css">
 </head>
 <body>
 
-<!-- Optional menu like on your dashboard -->
-<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
-<div class="page-top-pad"></div>
-<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
-<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
-  <div class="sidesheet-header">
-    <span>Menu</span>
-    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
-  </div>
-  <div class="sidesheet-rail">
-    <div id="pageButtons" class="drawer-pages">
-      <?php include 'side_buttons.php'; ?>
-    </div>
-  </div>
-</nav>
+<main class="pv-page">
+  <?php if (!empty($debugRows)): ?>
+    <section class="pv-debug" aria-label="Debug data">
+      <h4>Debug (per-role/status for your submissions)</h4>
+      <div class="pv-debug__meta">actor_id:
+        <code><?= htmlspecialchars((string)$faculty_id) ?></code>
+      </div>
 
-<?php if ($debugRows): ?>
-  <div class="debug">
-    <strong>Debug (per-role/status for your submissions)</strong>
-    <div>actor_id: <code><?= htmlspecialchars((string)$faculty_id) ?></code></div>
-    <table>
-      <tr><th>submitted_role</th><th>status (normalized)</th><th>count</th></tr>
-      <?php foreach ($debugRows as $r): ?>
-        <tr>
-          <td><?= htmlspecialchars($r['role']) ?></td>
-          <td><?= htmlspecialchars($r['status_norm']) ?></td>
-          <td style="text-align:right"><?= (int)$r['c'] ?></td>
-        </tr>
-      <?php endforeach; ?>
-    </table>
-    <div>Tip: If you see statuses like <em>pending approval</em> or roles not equal to <em>faculty</em>, that explains empty results.</div>
-  </div>
-<?php endif; ?>
+      <div class="pv-table-wrap">
+        <table class="pv-table">
+          <thead>
+            <tr><th>submitted_role</th><th>status (normalized)</th><th class="t-right">count</th></tr>
+          </thead>
+          <tbody>
+          <?php foreach ($debugRows as $r): ?>
+            <tr>
+              <td><?= htmlspecialchars($r['role']) ?></td>
+              <td><?= htmlspecialchars($r['status_norm']) ?></td>
+              <td class="t-right"><?= (int)$r['c'] ?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
 
-<div class="violations">
-  <h3>My Pending Violations</h3>
-
-  <?php if ($result && $result->num_rows > 0): ?>
-    <?php while ($row = $result->fetch_assoc()): ?>
-      <?php
-        $studentPhotoFile = $row['student_photo'] ?? '';
-        $studentPhotoSrc = $studentPhotoFile
-            ? '../admin/uploads/' . htmlspecialchars($studentPhotoFile)
-            : 'placeholder.png';
-        $violationId = (int)$row['violation_id'];
-        $studentId = htmlspecialchars($row['student_id']);
-      ?>
-      <a class="card-link" href="view_violation_pending.php?id=<?= $violationId ?>">
-        <div class="card">
-          <div class="left">
-            <img src="<?= $studentPhotoSrc ?>" alt="Student photo" onerror="this.src='placeholder.png'">
-          </div>
-          <div class="info">
-            <h4><?= htmlspecialchars($row['first_name'].' '.$row['last_name']) ?> (<?= $studentId ?>)</h4>
-            <p><strong>Category:</strong> <?= htmlspecialchars($row['offense_category']) ?> &nbsp; • &nbsp;
-               <strong>Type:</strong> <?= htmlspecialchars($row['offense_type']) ?></p>
-            <?php if (!empty($row['description'])): ?>
-              <p><?= nl2br(htmlspecialchars($row['description'])) ?></p>
-            <?php endif; ?>
-            <p class="meta"><strong>Status:</strong> <?= htmlspecialchars($row['status']) ?> —
-               <em>Reported at <?= htmlspecialchars($row['reported_at']) ?></em></p>
-          </div>
-        </div>
-      </a>
-    <?php endwhile; ?>
-  <?php else: ?>
-    <p>No pending violations found.</p>
-    <p class="meta">If you expect items here, try <a href="?debug=1">debug view</a> to see actual statuses/roles stored.</p>
+      <p class="pv-debug__tip">
+        Tip: If you see statuses like <em>pending approval</em> or roles not equal to <em>faculty</em>,
+        that explains empty results.
+      </p>
+    </section>
   <?php endif; ?>
-</div>
+
+  <section class="pv-section" aria-labelledby="pv-title">
+    <header class="pv-head">
+      <h3 id="pv-title">My Pending Violations</h3>
+      <p class="pv-sub">Only items you submitted that are still unresolved.</p>
+    </header>
+
+    <?php if ($result && $result->num_rows > 0): ?>
+      <ul class="pv-list" role="list">
+        <?php while ($row = $result->fetch_assoc()): ?>
+          <?php
+            $first = $row['first_name'] ?? '';
+            $last  = $row['last_name'] ?? '';
+            $studentName = trim($first . ' ' . $last);
+            $studentId   = htmlspecialchars($row['student_id'] ?? '');
+            $studentPhotoFile = $row['student_photo'] ?? '';
+            $studentPhotoSrc = $studentPhotoFile
+              ? '../admin/uploads/' . htmlspecialchars($studentPhotoFile)
+              : 'placeholder.png';
+            $violationId = (int)($row['violation_id'] ?? 0);
+            $category = htmlspecialchars($row['offense_category'] ?? '');
+            $type     = htmlspecialchars($row['offense_type'] ?? '');
+            $desc     = $row['description'] ?? '';
+            $status   = trim((string)($row['status'] ?? ''));
+            // slugify status for pill color class
+            $statusClass = 'status--' . preg_replace('/[^a-z0-9]+/','-', strtolower($status));
+            $reportedAt  = htmlspecialchars($row['reported_at'] ?? '');
+            $reportedISO = $row['reported_at'] ? date('c', strtotime($row['reported_at'])) : '';
+          ?>
+          <li class="pv-item">
+            <a class="pv-card-link" href="view_violation_approved.php?id=<?= $violationId ?>">
+              <article class="pv-card">
+                <div class="pv-card__media">
+                  <img
+                    src="<?= $studentPhotoSrc ?>"
+                    alt="Photo of <?= htmlspecialchars($studentName ?: 'student') ?>"
+                    onerror="this.src='placeholder.png'">
+                </div>
+
+                <div class="pv-card__body">
+                  <div class="pv-row pv-row--between">
+                    <h4 class="pv-title">
+                      <?= htmlspecialchars($studentName) ?>
+                      <?php if ($studentId !== ''): ?>
+                        <span class="pv-id">(<?= $studentId ?>)</span>
+                      <?php endif; ?>
+                    </h4>
+                    <?php if ($status !== ''): ?>
+                      <span class="pv-pill <?= $statusClass ?>">
+                        <?= htmlspecialchars($status) ?>
+                      </span>
+                    <?php endif; ?>
+                  </div>
+
+                  <p class="pv-meta">
+                    <span class="pv-chip"><?= $category ?></span>
+                    <span class="pv-dot" aria-hidden="true">•</span>
+                    <span class="pv-chip"><?= $type ?></span>
+                  </p>
+
+                  <?php if (!empty($desc)): ?>
+                    <p class="pv-desc"><?= nl2br(htmlspecialchars($desc)) ?></p>
+                  <?php endif; ?>
+
+                  <?php if ($reportedAt !== ''): ?>
+                    <p class="pv-footer">
+                      <strong>Reported:</strong>
+                      <time datetime="<?= $reportedISO ?>"><?= $reportedAt ?></time>
+                    </p>
+                  <?php endif; ?>
+                </div>
+              </article>
+            </a>
+          </li>
+        <?php endwhile; ?>
+      </ul>
+    <?php else: ?>
+      <div class="pv-empty" role="status" aria-live="polite">
+        <h4>No pending violations found</h4>
+        <p class="pv-subtle">
+          If you expect items here, try <a href="?debug=1">debug view</a> to see actual statuses/roles stored.
+        </p>
+      </div>
+    <?php endif; ?>
+  </section>
+</main>
 
 <?php
-$stmt->close();
-$conn->close();
+// Close resources
+if (isset($stmt) && $stmt instanceof mysqli_stmt) { $stmt->close(); }
+if (isset($conn) && $conn instanceof mysqli)     { $conn->close(); }
 ?>
-
-<script>
-// same sidesheet JS as your dashboard (optional)
-(function(){
-  const sheet=document.getElementById('sideSheet'),scrim=document.getElementById('sheetScrim'),
-        openBtn=document.getElementById('openMenu'),closeBtn=document.getElementById('closeMenu');
-  if(!sheet||!scrim||!openBtn||!closeBtn) return;
-  let last=null;
-  function trap(c,e){
-    const f=c.querySelectorAll('a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])');
-    if(!f.length) return; const first=f[0], lastf=f[f.length-1];
-    if(e.key==='Tab'){ if(e.shiftKey&&document.activeElement===first){e.preventDefault();lastf.focus();}
-    else if(!e.shiftKey&&document.activeElement===lastf){e.preventDefault();first.focus();}}
-  }
-  const handler=e=>trap(sheet,e);
-  function open(){ last=document.activeElement; sheet.classList.add('open'); scrim.classList.add('open');
-    sheet.setAttribute('aria-hidden','false'); scrim.setAttribute('aria-hidden','false');
-    openBtn.setAttribute('aria-expanded','true'); document.body.classList.add('no-scroll');
-    setTimeout(()=>{ (sheet.querySelector('#pageButtons a, #pageButtons button, [tabindex]:not([tabindex="-1"])')||sheet).focus(); },10);
-    sheet.addEventListener('keydown',handler);}
-  function close(){ sheet.classList.remove('open'); scrim.classList.remove('open');
-    sheet.setAttribute('aria-hidden','true'); scrim.setAttribute('aria-hidden','true');
-    openBtn.setAttribute('aria-expanded','false'); document.body.classList.remove('no-scroll');
-    sheet.removeEventListener('keydown',handler); if(last) last.focus(); }
-  openBtn.addEventListener('click',open); closeBtn.addEventListener('click',close); scrim.addEventListener('click',close);
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
-  sheet.addEventListener('click',e=>{ const link=e.target.closest('a[href]'); if(!link) return;
-    const sameTab=!(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0); if(sameTab) close(); });
-})();
-</script>
 </body>
 </html>
