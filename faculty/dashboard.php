@@ -23,7 +23,13 @@ if (!$faculty_id) {
     die("No faculty id in session. Please login again.");
 }
 
-// query
+/*
+  Visibility rule:
+  - Faculty sees APPROVED violations for students in their INSTITUTE.
+  - This works even if Security submitted the violation.
+  If instead you want "violations the faculty submitted", replace the JOIN/WHERE
+  with: WHERE sv.submitted_by = ? AND sv.status='approved' and bind $faculty_id.
+*/
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -81,7 +87,6 @@ $result = $stmt->get_result();
 .card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
 .card .info { flex:1; }
 .meta { color:#666; font-size:0.92rem; }
-
 </style>
 </head>
 <body>

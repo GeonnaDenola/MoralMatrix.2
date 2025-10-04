@@ -148,7 +148,7 @@ $result = $conn->query($sql);
 
                             <div class="pr-actions">
                                 <!-- One handler file -->
-                                <form action="handle_violation.php" method="post" class="pr-form">
+                                <form action="approve_violation.php" method="post" class="pr-form">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                                     <input type="hidden" name="id" value="<?= $violationId ?>"/>
                                     <input type="hidden" name="action" value="approve"/>
