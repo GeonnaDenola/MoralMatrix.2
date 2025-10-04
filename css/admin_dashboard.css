@@ -1,0 +1,378 @@
+/* =========================
+   Moral Matrix – Admin UI (Responsive)
+   ========================= */
+
+/* ------ Layout Tokens ------ */
+:root{
+  /* Defaults; JS will set --sidebar-detected dynamically */
+  --sidebar-wide: 260px;          /* fallback desktop sidebar width */
+  --sidebar-compact: 88px;        /* your icon-only width (tablet) */
+  --sidebar-detected: var(--sidebar-wide);
+  --sidebar-current: var(--sidebar-detected);
+
+  --content-gutter: 24px;         /* space beside content card */
+  --header-gap: 24px;             /* space below your red header */
+
+  --brand: #a32014;
+  --brand-600: #951c10;
+
+  --bg: #ffffff;
+  --bg-soft: #f6f7fb;
+  --text: #1f2937;
+  --muted: #6b7280;
+
+  --border: #e5e7eb;
+  --ring: #2b6ef7;
+
+  --radius-lg: 14px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+
+  --shadow-1: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-2: 0 10px 20px rgba(0,0,0,.08), 0 3px 6px rgba(0,0,0,.06);
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { height: 100%; background: var(--bg-soft); }
+
+body{
+  margin: 0;
+  color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===================== Main Page Area (respects sidebar) ===================== */
+.page{
+  width: min(1400px, calc(100vw - var(--sidebar-current) - (2 * var(--content-gutter))));
+  margin-left: calc(var(--sidebar-current) + var(--content-gutter));
+  margin-right: var(--content-gutter);
+  margin-top: var(--header-gap);
+  margin-bottom: 32px;
+}
+
+@supports (padding: max(0px)) {
+  .page { padding-left: max(0px, env(safe-area-inset-left)); padding-right: max(0px, env(safe-area-inset-right)); }
+}
+
+.canvas{
+  max-width: 1120px;
+  margin-inline: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: 24px clamp(16px, 3vw, 28px);
+}
+
+/* ---------- Sidebar modes by breakpoint ---------- */
+/* Tablet: treat sidebar as compact if your app collapses it here */
+@media (max-width: 1200px){
+  :root{ --sidebar-current: var(--sidebar-compact); }
+}
+
+/* Phone: overlay sidebar — content uses full width */
+@media (max-width: 768px){
+  :root{
+    --sidebar-current: 0px;
+    --content-gutter: 12px;
+    --header-gap: 16px;
+  }
+  .page{
+    width: 100%;
+    margin: var(--header-gap) auto 24px;
+  }
+}
+
+/* ===================== Accessibility helpers ===================== */
+.sr-only{
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
+/* ===================== Typography ===================== */
+.welcome-admin-title{
+  margin: 0 0 12px;
+  font-weight: 800;
+  font-size: clamp(22px, 3.8vw, 34px);
+  letter-spacing: .2px;
+  text-wrap: balance;
+}
+
+.section-title{
+  margin: 0;
+  font-size: clamp(16px, 2.6vw, 20px);
+  font-weight: 800;
+}
+
+.sub-title{
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ===================== Toolbar ===================== */
+.toolbar{
+  display: flex;
+  justify-content: flex-start;
+  margin: 6px 0 18px;
+}
+
+.add-user-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+  transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+}
+.add-user-btn svg{ width: 20px; height: 20px; }
+.add-user-btn:hover{ background: var(--brand-600); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.add-user-btn:active{ transform: translateY(0); }
+.add-users-link{ text-decoration: none; }
+
+/* ===================== Panel ===================== */
+.panel{
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.panel__header{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+.panel__content{
+  padding: 14px 16px 18px;
+}
+
+.filter-stack{
+  display: grid;
+  gap: 6px;
+  min-width: min(340px, 45vw);
+}
+.filter-stack label{
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===================== Select ===================== */
+.filter-select{
+  appearance: none;
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #c9d6ff;
+  border-radius: 12px;
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    radial-gradient(#0000, #0000) border-box,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none' stroke='%231b48e3' stroke-width='2'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 10px center / 20px 20px;
+}
+.filter-select:focus-visible{ outline: 2px solid var(--ring); outline-offset: 2px; }
+
+@media (max-width: 540px){
+  .panel__header{ grid-template-columns: 1fr; align-items: stretch; }
+  .filter-stack{ min-width: 0; }
+}
+
+/* ===================== Cards / List ===================== */
+.cards-wrap{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.card{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: #fff;
+  box-shadow: var(--shadow-1);
+  transition: box-shadow .2s ease, transform .08s ease;
+}
+.card:hover{ box-shadow: var(--shadow-2); transform: translateY(-1px); }
+
+.card .left{
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.card .left:focus{ outline: none; }
+.card .left:focus-visible{ outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.card img{
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: #fafafa;
+}
+
+.card .info{ min-width: 0; }
+.card .name{
+  font-weight: 900;
+  font-size: 16px;
+  line-height: 1.2;
+  margin: 2px 0 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.card .muted{
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.card .actions{
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 6px;
+}
+
+.btn{
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .06s ease;
+  min-width: 92px;
+}
+.btn:hover{ background: #f9fafb; }
+.btn:active{ transform: translateY(1px); }
+.btn:focus-visible{ outline: 2px solid var(--ring); outline-offset: 1px; }
+
+.btn.edit{
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+  background: color-mix(in srgb, var(--brand) 7%, #fff);
+  color: #6b1a12;
+}
+.btn.edit:hover{ background: color-mix(in srgb, var(--brand) 12%, #fff); }
+
+.btn.delete{
+  border-color: #f2b6b2;
+  background: #fff5f5;
+  color: #a11a11;
+}
+.btn.delete:hover{ background: #ffecec; }
+
+/* Empty state */
+.empty{
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  color: var(--muted);
+  background: #fff;
+}
+
+/* ===================== Modal ===================== */
+.account-modal{
+  position: fixed;
+  inset: 0;
+  background: rgba(17,24,39,.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 1000;
+}
+.account-modal.show{ display: flex; }
+
+.dialog{
+  width: min(980px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  display: grid;
+  margin-left: 200px;
+  margin-top: 20px;
+  grid-template-rows: auto minmax(360px, 74vh);
+}
+
+.dialog__header{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+.dialog .title{ font-size: 18px; font-weight: 900; }
+
+.dialog .close{
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #6b7280;
+  border-radius: 8px;
+}
+.dialog .close:hover{ background: #f3f4f6; color: #111827; }
+.dialog .close:focus-visible{ outline: 2px solid var(--ring); outline-offset: 2px; }
+
+#accountFrame{
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+}
+
+/* Small-screen modal becomes a bottom sheet for ergonomics */
+@media (max-width: 540px){
+  .dialog{
+    width: 100%;
+    height: 84vh;
+    border-radius: 14px 14px 0 0;
+    align-self: end;
+    grid-template-rows: auto 1fr;
+  }
+  .card{ grid-template-columns: 1fr; gap: 10px; }
+  .card .actions{ grid-auto-flow: column; grid-template-columns: 1fr 1fr; }
+  .btn{ width: 100%; min-width: 0; }
+  .card .left{ grid-template-columns: 48px 1fr; }
+  .card img{ width: 48px; height: 48px; }
+}
