@@ -9,32 +9,43 @@ function moralmatrix_mailer(): PHPMailer {
     $mail->CharSet = 'UTF-8';
     $mail->isSMTP();
 
-    $host = getenv('MORALMATRIX_SMTP_HOST') ?: 'smtp.gmail.com';
-    $port = (int) (getenv('MORALMATRIX_SMTP_PORT') ?: 587);
+    // Prefer config.php's $smtp array; fall back to getenv()
+    $cfg  = $GLOBALS['smtp'] ?? [];
+    $host = $cfg['host']      ?? (getenv('MORALMATRIX_SMTP_HOST') ?: 'smtp.gmail.com');
+    $port = (int)($cfg['port']?? (getenv('MORALMATRIX_SMTP_PORT') ?: 587));
+    $user = $cfg['user']      ??  getenv('MORALMATRIX_SMTP_USER');
+    $pass = $cfg['pass']      ??  getenv('MORALMATRIX_SMTP_PASS');
 
-    $mail->Host       = $host;
-    $mail->SMTPAuth   = true;
-    $mail->Username   = getenv('MORALMATRIX_SMTP_USER') ?: 'moralmatrix01@gmail.com';
-    $mail->Password   = getenv('MORALMATRIX_SMTP_PASS') ?: 'ikwbepbmlbgiwmof'; // ← avoid hardcoding fallback secrets
+    $mail->Host     = $host;
+    $mail->SMTPAuth = true;
+    $mail->Username = (string)$user;
+    $mail->Password = (string)$pass; // no hardcoded fallback
 
-    // Pick TLS mode based on port
     $mail->SMTPSecure = ($port === 465) ? PHPMailer::ENCRYPTION_SMTPS
                                         : PHPMailer::ENCRYPTION_STARTTLS;
     $mail->Port       = $port;
 
-    $fromEmail = getenv('MORALMATRIX_FROM_EMAIL') ?: $mail->Username;
-    $fromName  = getenv('MORALMATRIX_FROM_NAME')  ?: 'Moral Matrix';
+    $fromEmail = $cfg['from']      ?? (getenv('MORALMATRIX_FROM_EMAIL') ?: $mail->Username);
+    $fromName  = $cfg['from_name'] ?? (getenv('MORALMATRIX_FROM_NAME')  ?: 'Moral Matrix');
     $mail->setFrom($fromEmail, $fromName);
 
-    // Optional: Reply-To
-    if ($reply = getenv('MORALMATRIX_REPLY_TO')) {
-        $mail->addReplyTo($reply, getenv('MORALMATRIX_REPLY_TO_NAME') ?: $fromName);
+    if (!empty($cfg['reply_to'])) {
+        $mail->addReplyTo($cfg['reply_to'], $cfg['reply_to_name'] ?? $fromName);
     }
 
-    // Optional: enable debug via env while testing (0,1,2)
-    $debug = (int)(getenv('MORALMATRIX_SMTP_DEBUG') ?: 0);
-    if ($debug) $mail->SMTPDebug = $debug;
+    // Optional debug to error_log while testing
+    $debug = (int)($cfg['debug'] ?? (getenv('MORALMATRIX_SMTP_DEBUG') ?: 0));
+    if ($debug) {
+        $mail->SMTPDebug = $debug; // 2 = verbose
+        $mail->Debugoutput = function($str, $level){ error_log("SMTP[$level] $str"); };
+    }
 
     $mail->isHTML(true);
+
+    if ($mail->Username === '' || $mail->Password === '') {
+        error_log('SMTP user/password missing. Set in config.php ($smtp) or environment.');
+    }
+
     return $mail;
 }
+?>
