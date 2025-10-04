@@ -186,6 +186,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     /* ========= end QR block ========= */
 
                     $flashMsg = "✅ Account added successfully!";
+
+                    /*====mailing======*/
+                    // After successful inserts / QR generation
+                    try {
+                        $mail = moralmatrix_mailer(); // your existing helper
+
+                        // Recipient
+                        $toEmail = $formValues['email'];
+                        $toName  = trim(($formValues['first_name'] ?? '').' '.($formValues['last_name'] ?? '')) ?: $toEmail;
+                        $mail->addAddress($toEmail, $toName);
+
+                        // Subject + body
+                        $subject = 'Welcome to MoralMatrix';
+                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+                        $loginUrl = $scheme.'://'.$host.$base.'/../login.php';
+
+                        $idLabel = ['student'=>'Student ID','faculty'=>'Faculty ID','ccdu'=>'CCDU ID','security'=>'Security ID'][$account_type] ?? 'ID';
+                        $html = '
+                        <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
+                            <h2>Welcome, '.htmlspecialchars($toName).'</h2>
+                            <p>Your account has been created.</p>
+                            <p><strong>'.$idLabel.':</strong> '.htmlspecialchars($idNumber).'</p>
+                            <p>Sign in here: <a href="'.htmlspecialchars($loginUrl).'">'.htmlspecialchars($loginUrl).'</a></p>'.
+                            ($account_type==='student' ? '<p>Your QR code is attached (SVG).</p>' : '').
+                        '</div>';
+                        $mail->Subject = $subject;
+                        $mail->Body    = $html;
+                        $mail->AltBody = strip_tags(str_replace(['<br>','<br/>','<br />'], "\n", $html));
+
+                        // Attach student QR if present
+                        if ($account_type === 'student') {
+                            $qrFile = dirname(__DIR__) . '/uploads/qrcodes/' . $idNumber . '.svg';
+                            if (is_file($qrFile)) {
+                                $mail->addAttachment($qrFile);
+                            }
+                        }
+
+                        // Send (don’t change user-facing flash message on failure)
+                        @$mail->send();
+                    } catch (Throwable $e) {
+                        error_log('Welcome email error: '.$e->getMessage());
+                    }
+
+/*===========================*/
                     $formValues = array_map(fn($v) => '', $formValues);
 
                 } else {
