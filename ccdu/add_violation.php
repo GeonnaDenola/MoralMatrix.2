@@ -6,6 +6,8 @@ session_start();
 
 require_once '../config.php';
 
+include __DIR__ . '/_scanner.php';
+
 /* ---------- STUDENT ID FROM GET OR POST ---------- */
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
 if (!$studentId && ($_SERVER['REQUEST_METHOD'] !== 'POST')) {
