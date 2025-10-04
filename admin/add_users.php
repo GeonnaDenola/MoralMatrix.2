@@ -213,303 +213,458 @@ if (empty($formValues['password'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register Accounts</title>
-    <style>
-    .form-container { display:none; margin-bottom:20px; }
-    </style>
-    <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Add User Accounts</title>
+    <link rel="stylesheet" href="../css/add_users.css"/>
 </head>
 <body>
-    <a href="dashboard.php"><button>Return to Dashboard</button></a>
-    <h1>Add New User Accounts</h1>
+
+<main class="au-wrap"><!-- centered container that plays nice with your header/sidebar -->
+    <!-- Top row: title left, button right -->
+    <div class="au-header">
+        <h1 class="page-title">Add New User Accounts</h1>
+        <a class="btn btn-outline" href="dashboard.php">Return to Dashboard</a>
+    </div>
 
     <?php if (!empty($errorMsg)): ?>
-        <script>alert("<?php echo addslashes($errorMsg); ?>");</script>
+        <div class="notice notice-error"><?= htmlspecialchars($errorMsg) ?></div>
     <?php endif; ?>
-
     <?php if (!empty($flashMsg)): ?>
-        <script>alert("<?php echo addslashes($flashMsg); ?>");</script>
+        <div class="notice notice-success"><?= htmlspecialchars($flashMsg) ?></div>
     <?php endif; ?>
 
-    <label>Account Type:</label>
-    <select id="account_type" onchange="toggleForms()" required>
-        <option value="">--Select--</option>
-        <option value="student" <?php echo $formValues['account_type']=='student'?'selected':''; ?>>Student</option>
-        <option value="faculty" <?php echo $formValues['account_type']=='faculty'?'selected':''; ?>>Faculty</option>
-        <option value="ccdu" <?php echo $formValues['account_type']=='ccdu'?'selected':''; ?>>CCDU Staff</option>
-        <option value="security" <?php echo $formValues['account_type']=='security'?'selected':''; ?>>Security</option>
-    </select>
+    <!-- Account type chooser -->
+    <section class="card">
+        <div class="field-row">
+            <label for="account_type" class="label">Account Type</label>
+            <select id="account_type" class="select" onchange="toggleForms()" required>
+                <option value="">-- Select --</option>
+                <option value="student"  <?= ($formValues['account_type'] ?? '')==='student'  ? 'selected' : '' ?>>Student</option>
+                <option value="faculty"  <?= ($formValues['account_type'] ?? '')==='faculty'  ? 'selected' : '' ?>>Faculty</option>
+                <option value="ccdu"     <?= ($formValues['account_type'] ?? '')==='ccdu'     ? 'selected' : '' ?>>CCDU Staff</option>
+                <option value="security" <?= ($formValues['account_type'] ?? '')==='security' ? 'selected' : '' ?>>Security</option>
+            </select>
+        </div>
+    </section>
 
-<!-- STUDENT FORM -->
-    <div id="studentForm" class="form-container">
-    <h3>Student Registration</h3>
-        <form method="POST" enctype="multipart/form-data">
+    <!-- ========== STUDENT ========== -->
+    <section id="studentForm" class="card form-container">
+        <h2 class="section-title">Student Registration</h2>
+        <form method="POST" enctype="multipart/form-data" class="form-grid">
+            <input type="hidden" name="account_type" value="student" />
 
-            <input type="hidden" name="account_type" value="student">
-            
-            <label>Student ID:</label>
-            <input type="text" name="student_id" value="<?php echo htmlspecialchars($formValues['student_id']); ?>" 
-                maxlength="9" 
-                title="Format: YYYY-NNNN (e.g. 2023-0001)" 
-                pattern="^[0-9]{4}-[0-9]{4}$" 
-                oninput="this.value = this.value.replace(/[^0-9-]/g, '')"
-            required><br>
+            <div class="field">
+                <label class="label">Student ID</label>
+                <input class="input" type="text" name="student_id"
+                    value="<?= htmlspecialchars($formValues['student_id'] ?? '') ?>"
+                    maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)"
+                    pattern="^[0-9]{4}-[0-9]{4}$"
+                    oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required />
+            </div>
 
-            <label>First Name:</label>
-            <input type="text" name="first_name" value="<?php echo htmlspecialchars($formValues['first_name']); ?>" required><br>
+            <div class="field">
+                <label class="label">First Name</label>
+                <input class="input" type="text" name="first_name"
+                    value="<?= htmlspecialchars($formValues['first_name'] ?? '') ?>" required />
+            </div>
 
-            <label>Middle Name:</label>
-            <input type="text" name="middle_name" value="<?php echo htmlspecialchars($formValues['middle_name']); ?>" required><br>
-            
-            <label>Last Name:</label>
-            <input type="text" name="last_name" value="<?php echo htmlspecialchars($formValues['last_name']); ?>" required><br>
+            <div class="field">
+                <label class="label">Middle Name</label>
+                <input class="input" type="text" name="middle_name"
+                    value="<?= htmlspecialchars($formValues['middle_name'] ?? '') ?>" required />
+            </div>
 
-            <label>Mobile:</label>
-            <input type="text" name="mobile" value="<?php echo htmlspecialchars($formValues['mobile']); ?>" 
-                maxlength="11"
-                placeholder="09XXXXXXXXX"
-                pattern="^09[0-9]{9}$"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-            required><br>
+            <div class="field">
+                <label class="label">Last Name</label>
+                <input class="input" type="text" name="last_name"
+                    value="<?= htmlspecialchars($formValues['last_name'] ?? '') ?>" required />
+            </div>
 
-            <label>Email:</label>
-            <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>"  required><br>
-
-            <label>Institute:</label>
-            <select name="institute" id="student_institute" onchange="loadCourses('student')" required>
-                <option value="" disabled selected>--Select--</option>
-                <option value="IBCE" <?php echo $formValues['institute']=='IBCE'?'selected':''; ?>>Institute of Computing and Business Education</option>
-                <option value="IHTM" <?php echo $formValues['institute']=='IHTM'?'selected':''; ?>>Institute of Hospitality Management</option>
-                <option value="IAS" <?php echo $formValues['institute']=='IAS'?'selected':''; ?>>Institute of Arts and Sciences</option>
-                <option value="ITE" <?php echo $formValues['institute']=='ITE'?'selected':''; ?>>Institute of Teaching Education</option>
-            </select><br>
-
-            <label>Course:</label>
-            <select name="course" id="student_course" required>
-                <option value="<?php echo htmlspecialchars($formValues['course']); ?>"><?php echo htmlspecialchars($formValues['course']); ?></option>
-            </select><br>
-
-            <label>Year Level:</label>
-            <select name="level" required>
-                <option value="<?php echo htmlspecialchars($formValues['level']); ?>"><?php echo htmlspecialchars($formValues['level']); ?>--SELECT--</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select><br>
-
-            <label>Section:</label>
-            <select name="section" required>
-                <option value="<?php echo htmlspecialchars($formValues['section']); ?>"><?php echo htmlspecialchars($formValues['section']); ?>--SELECT--</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-            </select><br>
-
-        <h3>Guardian Contact</h3>
-
-            <label>Guardian Name:</label>
-            <input type="text" name="guardian" value="<?php echo htmlspecialchars($formValues['guardian']); ?>" required><br>
-
-            <label>Guardian Mobile:</label>
-            <input type="text" name="guardian_mobile" value="<?php echo htmlspecialchars($formValues['guardian_mobile']); ?>" 
-                maxlength="11"
-                placeholder="09XXXXXXXXX"
-                pattern="^09[0-9]{9}$"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-            required><br>
-
-            <label>Temporary Password:</label>
-            <input type="text" name="password" id="student_password" value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-            <button type="button" onclick="generatePass('student_password')">Generate</button><br>
-
-            <label>Photo:</label>
-            <input type="file" name="photo" onchange="previewPhoto(this,'studentPreview')">
-            <img id="studentPreview" width="100"><br>
-
-            <button type="submit">Register Student</button>
-
-        </form>
-    </div>
-
-<!-- FACULTY, CCDU, SECURITY forms are similar, just adjust IDs and names -->
-
-    <div id="facultyForm" class="form-container">
-    <h3>Faculty Registration</h3>
-        <form method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="account_type" value="faculty">
-
-            <label>ID Number:</label>
-            <input type="text" name="faculty_id" value="<?php echo htmlspecialchars($formValues['faculty_id']); ?>" 
-                maxlength="9" 
-                title="Format: YYYY-NNNN (e.g. 2023-0001)" 
-                pattern="^[0-9]{4}-[0-9]{4}$" 
-                oninput="this.value = this.value.replace(/[^0-9-]/g, '')" 
-            required><br>
-
-            <label>First Name:</label>
-            <input type="text" name="first_name" value="<?php echo htmlspecialchars($formValues['first_name']); ?>" required><br>
-
-            <label>Last Name:</label>
-            <input type="text" name="last_name" value="<?php echo htmlspecialchars($formValues['last_name']); ?>" required><br>
-
-            <label>Mobile:</label>
-            <input type="text" name="mobile" value="<?php echo htmlspecialchars($formValues['mobile']); ?>" 
-                maxlength="11"
-                placeholder="09XXXXXXXXX"
-                pattern="^09[0-9]{9}$"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-            required><br>
-
-            <label>Email:</label>
-            <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required><br>
-
-            <label>Institute:</label>
-            <select name="institute" required>
-                <option value="" disabled selected>--Select--</option>
-                <option value="IBCE" <?php echo $formValues['institute']=='IBCE'?'selected':''; ?>>Institute of Business and Computing Education</option>
-                <option value="IHTM" <?php echo $formValues['institute']=='IHTM'?'selected':''; ?>>Institute of Hospitality Management</option>
-                <option value="IAS" <?php echo $formValues['institute']=='IAS'?'selected':''; ?>>Institute of Arts and Sciences</option>
-                <option value="ITE" <?php echo $formValues['institute']=='ITE'?'selected':''; ?>>Institute of Teaching Education</option>
-            </select><br>
-
-            <label>Password:</label><input type="text" name="password" id="faculty_password" value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-            <button type="button" onclick="generatePass('faculty_password')">Generate</button><br>
-
-            <label>Photo:</label><input type="file" name="photo" onchange="previewPhoto(this,'facultyPreview')">
-            <img id="facultyPreview" width="100"><br>
-
-            <button type="submit">Register Faculty</button>
-
-        </form>
-    </div>
-
-<!-- CCDU -->
-    <div id="ccduForm" class="form-container">
-    <h3>CCDU Staff Registration</h3>
-        <form method="POST" enctype="multipart/form-data">
-
-            <input type="hidden" name="account_type" value="ccdu">
-
-            <label>ID Number:</label>
-            <input type="text" name="ccdu_id" value="<?php echo htmlspecialchars($formValues['ccdu_id']); ?>" 
-                maxlength="9" 
-                title="Format: YYYY-NNNN (e.g. 2023-0001)" 
-                pattern="^[0-9]{4}-[0-9]{4}$" 
-                oninput="this.value = this.value.replace(/[^0-9-]/g, '')" 
-            required><br>
-
-            <label>First Name:</label>
-            <input type="text" name="first_name" value="<?php echo htmlspecialchars($formValues['first_name']); ?>" required><br>
-
-            <label>Last Name:</label>
-            <input type="text" name="last_name" value="<?php echo htmlspecialchars($formValues['last_name']); ?>" required><br>
-
-            <label>Mobile:</label>
-            <input type="text" name="mobile" value="<?php echo htmlspecialchars($formValues['mobile']); ?>" maxlength="11"
-                    placeholder="09XXXXXXXXX"
+            <div class="field">
+                <label class="label">Mobile</label>
+                <input class="input" type="text" name="mobile"
+                    value="<?= htmlspecialchars($formValues['mobile'] ?? '') ?>"
+                    maxlength="11" placeholder="09XXXXXXXXX"
                     pattern="^09[0-9]{9}$"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-            required><br>
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
+            </div>
 
-            <label>Email:</label>
-            <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required><br>
+            <div class="field">
+                <label class="label">Email</label>
+                <input class="input" type="email" name="email"
+                    value="<?= htmlspecialchars($formValues['email'] ?? '') ?>" required />
+            </div>
 
-            <label>Password:</label>
-            <input type="text" name="password" id="ccdu_password" value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-            <button type="button" onclick="generatePass('ccdu_password')">Generate</button><br>
+            <div class="field">
+                <label class="label">Institute</label>
+                <select class="select" name="institute" id="student_institute" onchange="loadCourses('student')" required>
+                    <option value="" disabled <?= empty($formValues['institute']) ? 'selected' : '' ?>>-- Select --</option>
+                    <option value="IBCE" <?= ($formValues['institute'] ?? '')==='IBCE' ? 'selected' : '' ?>>Institute of Computing and Business Education</option>
+                    <option value="IHTM" <?= ($formValues['institute'] ?? '')==='IHTM' ? 'selected' : '' ?>>Institute of Hospitality Management</option>
+                    <option value="IAS"  <?= ($formValues['institute'] ?? '')==='IAS'  ? 'selected' : '' ?>>Institute of Arts and Sciences</option>
+                    <option value="ITE"  <?= ($formValues['institute'] ?? '')==='ITE'  ? 'selected' : '' ?>>Institute of Teaching Education</option>
+                </select>
+            </div>
 
-            <label>Photo:</label><input type="file" name="photo" onchange="previewPhoto(this,'ccduPreview')">
-            <img id="ccduPreview" width="100"><br>
+            <div class="field">
+                <label class="label">Course</label>
+                <select class="select" name="course" id="student_course" data-selected="<?= htmlspecialchars($formValues['course'] ?? '') ?>" required>
+                    <option value="" disabled selected>-- Select --</option>
+                </select>
+            </div>
 
-            <button type="submit">Register CCDU</button>
+            <div class="field">
+                <label class="label">Year Level</label>
+                <select class="select" name="level" required>
+                    <option value="" disabled <?= empty($formValues['level']) ? 'selected' : '' ?>>-- Select --</option>
+                    <option value="1" <?= ($formValues['level'] ?? '')==='1' ? 'selected' : '' ?>>1</option>
+                    <option value="2" <?= ($formValues['level'] ?? '')==='2' ? 'selected' : '' ?>>2</option>
+                    <option value="3" <?= ($formValues['level'] ?? '')==='3' ? 'selected' : '' ?>>3</option>
+                    <option value="4" <?= ($formValues['level'] ?? '')==='4' ? 'selected' : '' ?>>4</option>
+                </select>
+            </div>
 
+            <div class="field">
+                <label class="label">Section</label>
+                <select class="select" name="section" required>
+                    <option value="" disabled <?= empty($formValues['section']) ? 'selected' : '' ?>>-- Select --</option>
+                    <option value="A" <?= ($formValues['section'] ?? '')==='A' ? 'selected' : '' ?>>A</option>
+                    <option value="B" <?= ($formValues['section'] ?? '')==='B' ? 'selected' : '' ?>>B</option>
+                    <option value="C" <?= ($formValues['section'] ?? '')==='C' ? 'selected' : '' ?>>C</option>
+                </select>
+            </div>
+
+            <div class="divider span-2">Guardian Contact</div>
+
+            <div class="field">
+                <label class="label">Guardian Name</label>
+                <input class="input" type="text" name="guardian"
+                    value="<?= htmlspecialchars($formValues['guardian'] ?? '') ?>" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Guardian Mobile</label>
+                <input class="input" type="text" name="guardian_mobile"
+                    value="<?= htmlspecialchars($formValues['guardian_mobile'] ?? '') ?>"
+                    maxlength="11" placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Temporary Password</label>
+                <div class="with-btn">
+                    <input class="input" type="text" name="password" id="student_password"
+                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" required />
+                    <button type="button" class="btn btn-secondary" onclick="generatePass('student_password')">Generate</button>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">Photo</label>
+                <label class="file">
+                    <input type="file" name="photo" accept="image/*"
+                           onchange="previewPhoto(this,'studentPreview')" />
+                    <span>Choose file</span>
+                </label>
+            </div>
+
+            <!-- Large, centered preview at the very bottom -->
+            <div class="photo-preview-row span-2">
+                <img id="studentPreview" class="preview preview-lg" alt="Preview" />
+            </div>
+
+            <div class="actions span-2">
+                <button type="submit" class="btn btn-primary">Register Student</button>
+            </div>
         </form>
-    </div>
+    </section>
 
-<!-- SECURITY -->
-    <div id="securityForm" class="form-container">
-    <h3>Security Registration</h3>
-        <form method="POST" enctype="multipart/form-data">
+    <!-- ========== FACULTY ========== -->
+    <section id="facultyForm" class="card form-container">
+        <h2 class="section-title">Faculty Registration</h2>
+        <form method="POST" enctype="multipart/form-data" class="form-grid">
+            <input type="hidden" name="account_type" value="faculty" />
 
-            <input type="hidden" name="account_type" value="security">
+            <div class="field">
+                <label class="label">ID Number</label>
+                <input class="input" type="text" name="faculty_id"
+                    value="<?= htmlspecialchars($formValues['faculty_id'] ?? '') ?>"
+                    maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)"
+                    pattern="^[0-9]{4}-[0-9]{4}$"
+                    oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required />
+            </div>
 
-            <label>ID Number:</label>
-            <input type="text" name="security_id" value="<?php echo htmlspecialchars($formValues['security_id']); ?>"  maxlength="9" 
-                title="Format: YYYY-NNNN (e.g. 2023-0001)" 
-                pattern="^[0-9]{4}-[0-9]{4}$" 
-                oninput="this.value = this.value.replace(/[^0-9-]/g, '')" 
-            required><br>
+            <div class="field">
+                <label class="label">First Name</label>
+                <input class="input" type="text" name="first_name"
+                    value="<?= htmlspecialchars($formValues['first_name'] ?? '') ?>" required />
+            </div>
 
-            <label>First Name:</label><input type="text" name="first_name" value="<?php echo htmlspecialchars($formValues['first_name']); ?>" required><br>
+            <div class="field">
+                <label class="label">Last Name</label>
+                <input class="input" type="text" name="last_name"
+                    value="<?= htmlspecialchars($formValues['last_name'] ?? '') ?>" required />
+            </div>
 
-            <label>Last Name:</label><input type="text" name="last_name" value="<?php echo htmlspecialchars($formValues['last_name']); ?>" required><br>
+            <div class="field">
+                <label class="label">Mobile</label>
+                <input class="input" type="text" name="mobile"
+                    value="<?= htmlspecialchars($formValues['mobile'] ?? '') ?>"
+                    maxlength="11" placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
+            </div>
 
-            <label>Mobile:</label><input type="text" name="mobile" value="<?php echo htmlspecialchars($formValues['mobile']); ?>" 
-                maxlength="11"
-                placeholder="09XXXXXXXXX"
-                pattern="^09[0-9]{9}$"
-                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-            required><br>
+            <div class="field">
+                <label class="label">Email</label>
+                <input class="input" type="email" name="email"
+                    value="<?= htmlspecialchars($formValues['email'] ?? '') ?>" required />
+            </div>
 
-            <label>Email:</label><input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required><br>
+            <div class="field">
+                <label class="label">Institute</label>
+                <select class="select" name="institute" required>
+                    <option value="" disabled <?= empty($formValues['institute']) ? 'selected' : '' ?>>-- Select --</option>
+                    <option value="IBCE" <?= ($formValues['institute'] ?? '')==='IBCE' ? 'selected' : '' ?>>Institute of Business and Computing Education</option>
+                    <option value="IHTM" <?= ($formValues['institute'] ?? '')==='IHTM' ? 'selected' : '' ?>>Institute of Hospitality Management</option>
+                    <option value="IAS"  <?= ($formValues['institute'] ?? '')==='IAS'  ? 'selected' : '' ?>>Institute of Arts and Sciences</option>
+                    <option value="ITE"  <?= ($formValues['institute'] ?? '')==='ITE'  ? 'selected' : '' ?>>Institute of Teaching Education</option>
+                </select>
+            </div>
 
-            <label>Password:</label><input type="text" name="password" id="security_password" value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-            <button type="button" onclick="generatePass('security_password')">Generate</button><br>
+            <div class="field">
+                <label class="label">Password</label>
+                <div class="with-btn">
+                    <input class="input" type="text" name="password" id="faculty_password"
+                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" required />
+                    <button type="button" class="btn btn-secondary" onclick="generatePass('faculty_password')">Generate</button>
+                </div>
+            </div>
 
-            <label>Photo:</label><input type="file" name="photo" onchange="previewPhoto(this,'securityPreview')">
-            <img id="securityPreview" width="100"><br>
+            <div class="field">
+                <label class="label">Photo</label>
+                <label class="file">
+                    <input type="file" name="photo" accept="image/*"
+                           onchange="previewPhoto(this,'facultyPreview')" />
+                    <span>Choose file</span>
+                </label>
+            </div>
 
-            <button type="submit">Register Security</button>
+            <div class="photo-preview-row span-2">
+                <img id="facultyPreview" class="preview preview-lg" alt="Preview" />
+            </div>
+
+            <div class="actions span-2">
+                <button type="submit" class="btn btn-primary">Register Faculty</button>
+            </div>
         </form>
-    </div>
+    </section>
 
-        <script>
-            window.onload = toggleForms;
-                function toggleForms(){
-                    const selected = document.getElementById("account_type").value;
-                    ['student','faculty','ccdu','security'].forEach(t=>{
-                        document.getElementById(t+'Form').style.display = (selected===t)?'block':'none';
-                    });
-                }
+    <!-- ========== CCDU ========== -->
+    <section id="ccduForm" class="card form-container">
+        <h2 class="section-title">CCDU Staff Registration</h2>
+        <form method="POST" enctype="multipart/form-data" class="form-grid">
+            <input type="hidden" name="account_type" value="ccdu" />
 
-                function generatePass(inputId){
-                    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-                    let pass = "";
-                    for(let i=0;i<10;i++) pass+=chars.charAt(Math.floor(Math.random()*chars.length));
-                    document.getElementById(inputId).value = pass;
-                }
+            <div class="field">
+                <label class="label">ID Number</label>
+                <input class="input" type="text" name="ccdu_id"
+                    value="<?= htmlspecialchars($formValues['ccdu_id'] ?? '') ?>"
+                    maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)"
+                    pattern="^[0-9]{4}-[0-9]{4}$"
+                    oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required />
+            </div>
 
-                function previewPhoto(input, previewId){
-                    const preview = document.getElementById(previewId);
-                    if(input.files && input.files[0]){
-                        const reader = new FileReader();
-                        reader.onload = function(e){ preview.src=e.target.result; preview.style.display='block'; }
-                        reader.readAsDataURL(input.files[0]);
-                    }
-                }
+            <div class="field">
+                <label class="label">First Name</label>
+                <input class="input" type="text" name="first_name"
+                    value="<?= htmlspecialchars($formValues['first_name'] ?? '') ?>" required />
+            </div>
 
-                // Example function to dynamically populate courses based on institute
-                function loadCourses(type){
-                    const institute = document.getElementById(type+'_institute').value;
-                    const courseSelect = document.getElementById(type+'_course');
-                    const courses = {
-                        'IBCE': ['BSIT','BSCA','BSA', 'BSOA', 'BSE', 'BSMA'],
-                        'IHTM': ['BSTM','BSHM'],
-                        'IAS': ['BSBIO', 'ABH', 'BSLM'],
-                        'ITE': ['BSED-ENG', 'BSED-FIL', 'BSED-MATH', 'BEED', 'BSED-SS', 'BTVTE', 'BSED-SCI', 'BPED']
-                    };
-                    courseSelect.innerHTML = '';
-                    if(courses[institute]){
-                        courses[institute].forEach(c=>{
-                            let opt = document.createElement('option');
-                            opt.value=c; opt.text=c;
-                            courseSelect.appendChild(opt);
-                        });
-                    }
-            }
-        </script>
-    </body>
+            <div class="field">
+                <label class="label">Last Name</label>
+                <input class="input" type="text" name="last_name"
+                    value="<?= htmlspecialchars($formValues['last_name'] ?? '') ?>" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Mobile</label>
+                <input class="input" type="text" name="mobile"
+                    value="<?= htmlspecialchars($formValues['mobile'] ?? '') ?>"
+                    maxlength="11" placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Email</label>
+                <input class="input" type="email" name="email"
+                    value="<?= htmlspecialchars($formValues['email'] ?? '') ?>" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Password</label>
+                <div class="with-btn">
+                    <input class="input" type="text" name="password" id="ccdu_password"
+                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" required />
+                    <button type="button" class="btn btn-secondary" onclick="generatePass('ccdu_password')">Generate</button>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">Photo</label>
+                <label class="file">
+                    <input type="file" name="photo" accept="image/*"
+                           onchange="previewPhoto(this,'ccduPreview')" />
+                    <span>Choose file</span>
+                </label>
+            </div>
+
+            <div class="photo-preview-row span-2">
+                <img id="ccduPreview" class="preview preview-lg" alt="Preview" />
+            </div>
+
+            <div class="actions span-2">
+                <button type="submit" class="btn btn-primary">Register CCDU</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- ========== SECURITY ========== -->
+    <section id="securityForm" class="card form-container">
+        <h2 class="section-title">Security Registration</h2>
+        <form method="POST" enctype="multipart/form-data" class="form-grid">
+            <input type="hidden" name="account_type" value="security" />
+
+            <div class="field">
+                <label class="label">ID Number</label>
+                <input class="input" type="text" name="security_id"
+                    value="<?= htmlspecialchars($formValues['security_id'] ?? '') ?>"
+                    maxlength="9" title="Format: YYYY-NNNN (e.g. 2023-0001)"
+                    pattern="^[0-9]{4}-[0-9]{4}$"
+                    oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required />
+            </div>
+
+            <div class="field">
+                <label class="label">First Name</label>
+                <input class="input" type="text" name="first_name"
+                    value="<?= htmlspecialchars($formValues['first_name'] ?? '') ?>" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Last Name</label>
+                <input class="input" type="text" name="last_name"
+                    value="<?= htmlspecialchars($formValues['last_name'] ?? '') ?>" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Mobile</label>
+                <input class="input" type="text" name="mobile"
+                    value="<?= htmlspecialchars($formValues['mobile'] ?? '') ?>"
+                    maxlength="11" placeholder="09XXXXXXXXX"
+                    pattern="^09[0-9]{9}$"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Email</label>
+                <input class="input" type="email" name="email"
+                    value="<?= htmlspecialchars($formValues['email'] ?? '') ?>" required />
+            </div>
+
+            <div class="field">
+                <label class="label">Password</label>
+                <div class="with-btn">
+                    <input class="input" type="text" name="password" id="security_password"
+                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" required />
+                    <button type="button" class="btn btn-secondary" onclick="generatePass('security_password')">Generate</button>
+                </div>
+            </div>
+
+            <div class="field">
+                <label class="label">Photo</label>
+                <label class="file">
+                    <input type="file" name="photo" accept="image/*"
+                           onchange="previewPhoto(this,'securityPreview')" />
+                    <span>Choose file</span>
+                </label>
+            </div>
+
+            <div class="photo-preview-row span-2">
+                <img id="securityPreview" class="preview preview-lg" alt="Preview" />
+            </div>
+
+            <div class="actions span-2">
+                <button type="submit" class="btn btn-primary">Register Security</button>
+            </div>
+        </form>
+    </section>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        toggleForms();
+
+        const typeSel = document.getElementById('account_type');
+        const saved = localStorage.getItem('au_type');
+        if (!typeSel.value && saved) { typeSel.value = saved; toggleForms(); }
+        typeSel.addEventListener('change', () => localStorage.setItem('au_type', typeSel.value));
+
+        const inst = document.getElementById('student_institute');
+        if (inst && inst.value) loadCourses('student');
+    });
+
+    function toggleForms(){
+        const selected = document.getElementById('account_type').value;
+        ['student','faculty','ccdu','security'].forEach(t=>{
+            const el = document.getElementById(t+'Form');
+            if (!el) return;
+            el.style.display = (selected===t) ? 'block' : 'none';
+        });
+        const active = document.getElementById(selected+'Form');
+        if (active) active.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    function generatePass(inputId){
+        const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let pass=""; for(let i=0;i<10;i++) pass+=chars[Math.floor(Math.random()*chars.length)];
+        const input=document.getElementById(inputId);
+        input.value=pass; input.focus(); input.select();
+    }
+
+    function previewPhoto(input, previewId){
+        const preview = document.getElementById(previewId);
+        if (input.files && input.files[0]){
+            const reader = new FileReader();
+            reader.onload = e => { preview.src=e.target.result; preview.style.display='block'; };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            preview.src=''; preview.style.display='none';
+        }
+    }
+
+    function loadCourses(type){
+        const institute = document.getElementById(type+'_institute').value;
+        const courseSelect = document.getElementById(type+'_course');
+        const courses = {
+            'IBCE':['BSIT','BSCA','BSA','BSOA','BSE','BSMA'],
+            'IHTM':['BSTM','BSHM'],
+            'IAS':['BSBIO','ABH','BSLM'],
+            'ITE':['BSED-ENG','BSED-FIL','BSED-MATH','BEED','BSED-SS','BTVTE','BSED-SCI','BPED']
+        };
+        courseSelect.innerHTML = '<option value="" disabled selected>-- Select --</option>';
+        if (courses[institute]){
+            const selected = courseSelect.dataset.selected || '';
+            courses[institute].forEach(c=>{
+                const opt = document.createElement('option');
+                opt.value=c; opt.textContent=c;
+                if (c===selected) opt.selected = true;
+                courseSelect.appendChild(opt);
+            });
+        }
+    }
+</script>
+</body>
 </html>
