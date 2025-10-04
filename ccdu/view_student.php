@@ -277,7 +277,7 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
        aria-modal="true"
        aria-labelledby="violationModalTitle">
     <button type="button" class="modal-close" id="violationClose" aria-label="Close">✕</button>
-    <div id="violationContent" class="modal-content">
+    <div id="violationContent" class="modal-content" style ="margin-top: 20px; margin-left:200px;">
       <!-- violation_view.php?modal=1 will be injected here -->
     </div>
   </div>
