@@ -1,5 +1,5 @@
 <?php
-include '../../includes/header.php';
+include '../../includes/admin_header.php';
 include '../../config.php';
 
 if(!isset($_GET['id'])){ die("No Security personnel ID provided."); }
