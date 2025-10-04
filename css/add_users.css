@@ -1,0 +1,227 @@
+/* ========= THEME & LAYOUT VARS ========= */
+:root{
+  /* Set to your actual sidebar width */
+  --sidebar-w: 260px;
+
+  --page-bg: #F6F7FB;
+
+  --accent: #a41d11;      /* matches your red header */
+  --accent-600: #8e190f;
+
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --radius: 14px;
+  --shadow: 0 8px 24px rgba(16, 24, 40, 0.06);
+  --shadow-sm: 0 3px 10px rgba(16,24,40,.06);
+
+  --preview-size: 220px;  /* large photo preview */
+}
+
+/* If the sidebar collapses/overlays on narrow screens, treat width as 0 */
+@media (max-width: 900px){
+  :root{ --sidebar-w: 0px; }
+}
+
+/* ========= BASE ========= */
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+body{
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  line-height: 1.45;
+}
+
+/* ========= PAGE WRAP (CENTERED BESIDE SIDEBAR) ========= */
+.au-wrap{
+  width: min(1100px, calc(100vw - var(--sidebar-w) - 48px));
+  margin-right: 24px;
+  margin-left: calc(
+    var(--sidebar-w) + max(24px, (100vw - var(--sidebar-w) - 1100px) / 2)
+  );
+  padding: 24px 0 64px;
+}
+
+/* On small screens, center the content in the viewport */
+@media (max-width: 900px){
+  .au-wrap{
+    width: min(1100px, calc(100vw - 32px));
+    margin: 24px auto 64px;
+    padding: 0 0 64px;
+  }
+}
+
+/* ========= HEADER ROW ========= */
+.au-header{
+  display: grid;
+  grid-template-columns: 1fr auto;  /* title left, button right */
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.page-title{
+  margin: 0;
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 800;
+  letter-spacing: .1px;
+}
+
+/* ========= NOTICES ========= */
+.notice{
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  margin: 12px 0 16px;
+  font-weight: 500;
+}
+.notice-success{ background:#effaf3; color:#16733d; border-color:#b9e5c9; }
+.notice-error{   background:#fff3f1; color:#a5281c; border-color:#ffd3cd; }
+
+/* ========= CARD ========= */
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(16px, 2vw, 22px);
+  margin-top: 14px;
+}
+
+.section-title{
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+/* ========= GRID & FIELDS ========= */
+.form-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 18px;
+}
+@media (max-width: 960px){
+  .form-grid{ grid-template-columns: 1fr; }
+}
+
+.field{ display:flex; flex-direction:column; gap:8px; }
+.label{ font-size: 13px; color: var(--muted); font-weight: 600; }
+
+/* Inputs */
+.input, .select{
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 15px;
+  transition: box-shadow .15s ease, border-color .15s ease, transform .02s ease;
+}
+.input:focus, .select:focus{
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(164, 29, 17, .12);
+}
+
+/* ========= FILE INPUT ========= */
+.file{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: #fff;
+  width: 100%;
+}
+.file input{ display: none; }
+.file span{ font-size: 14px; color: var(--muted); }
+.file:hover{ border-color: #cbd5e1; background: #f9fafb; }
+
+/* Make any field that contains a .file span full width (both columns) */
+.form-grid .field:has(.file){ grid-column: 1 / -1; }
+/* Fallback if :has is not supported: add class="photo-field" to that field */
+.form-grid .photo-field{ grid-column: 1 / -1; }
+
+/* ========= TEMP PASSWORD + GENERATE BUTTON ========= */
+/* Flex keeps the button inline; wraps gracefully on small widths. */
+.with-btn{
+  display: flex;
+  align-items: center;
+  gap: 12px;       /* space between input and button */
+  flex-wrap: wrap; /* allows wrapping when tight */
+}
+.with-btn .input{ flex: 1 1 240px; min-width: 0; }
+.with-btn .btn{ margin-top: 0; }
+.with-btn .btn-secondary{
+  margin-left: 0;   /* side gap handled by gap */
+}
+@media (max-width: 520px){
+  .with-btn{ gap: 12px; }
+  .with-btn .btn{ margin-top: 8px; } /* breathing room if it wraps below */
+}
+
+/* ========= PHOTO PREVIEW (BOTTOM & CENTERED) ========= */
+.photo-preview-row{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 8px;
+}
+.preview{
+  display: none;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.preview-lg{
+  width: var(--preview-size);
+  height: var(--preview-size);
+}
+@media (max-width: 520px){
+  .preview-lg{ width: 180px; height: 180px; }
+}
+
+/* ========= HELPERS ========= */
+.divider{ grid-column: 1 / -1; margin: 8px 0 2px; font-weight: 700; color: #0f172a; }
+.span-2{  grid-column: 1 / -1; }
+
+/* ========= BUTTONS ========= */
+.btn{
+  appearance: none;
+  border: 1px solid transparent;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1;
+  transition: transform .02s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn:active{ transform: translateY(1px); }
+.btn-primary{  background: var(--accent); color: #fff; box-shadow: var(--shadow-sm); }
+.btn-primary:hover{ background: var(--accent-600); }
+.btn-secondary{ background: #f3f4f6; color: #111827; border: 1px solid var(--border); }
+.btn-secondary:hover{ background: #edeef1; }
+.btn-outline{  background: #fff; color: var(--accent); border: 1px solid var(--accent); }
+.btn-outline:hover{ background: #fff5f4; }
+
+/* Actions row — keep Register button on the right at all sizes */
+.actions{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
