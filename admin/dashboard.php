@@ -15,60 +15,69 @@ $__VIEW_FILE = file_exists($__try1) ? 'account_view.php' : (file_exists($__try2)
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Moral Matrix – Admin</title>
-  <link rel="stylesheet" href="admin_dashboard.css">
-  </style>  
+  <link rel="stylesheet" href="../css/admin_dashboard.css" />
 </head>
 <body>
-  <div class="page">
-    <h1 class="welcome-admin-title">WELCOME ADMIN</h1>
+  <main class="page">
+    <section class="canvas" aria-labelledby="welcomeTitle">
+      <h1 id="welcomeTitle" class="welcome-admin-title">WELCOME ADMIN</h1>
 
-    <div class="add-users">
-      <a href="add_users.php">
-        <button type="button" class="add-user-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add Users
-        </button>
-      </a>
-    </div>
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <a class="add-users-link" href="add_users.php">
+          <button type="button" class="add-user-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Users
+          </button>
+        </a>
+      </div>
 
-    <h3 class="section-title">Accounts List</h3>
+      <h3 class="section-title">Accounts List</h3>
 
-    <div class="filter-bar">
-      <label for="accountType">Filter by Account Type:</label>
-      <select id="accountType" class="filter-select">
-        <option value="">-- Select Account Type --</option>
-        <option value="student">Student</option>
-        <option value="faculty">Faculty</option>
-        <option value="security">Security</option>
-        <option value="ccdu">CCDU</option>
-      </select>
-    </div>
+      <!-- Filter + Results Panel -->
+      <section class="panel" aria-labelledby="sectionTitle">
+        <header class="panel__header">
+          <div class="filter-stack">
+            <label for="accountType">Filter by Account Type</label>
+            <select id="accountType" class="filter-select">
+              <option value="">-- Select Account Type --</option>
+              <option value="student">Student</option>
+              <option value="faculty">Faculty</option>
+              <option value="security">Security</option>
+              <option value="ccdu">CCDU</option>
+            </select>
+          </div>
+        </header>
 
-    <h3 id="sectionTitle" class="section-title">Accounts</h3>
+        <div class="panel__content">
+          <h4 id="sectionTitle" class="sub-title">Accounts</h4>
 
-    <!-- Cards / Empty state -->
-    <div id="accountContainer">
-      <div class="empty">Please select an account type.</div>
-    </div>
-  </div>
+          <!-- Cards / Empty state -->
+          <div id="accountContainer" class="cards-wrap" aria-live="polite">
+            <div class="empty">Please select an account type.</div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
 
   <!-- Modal -->
   <div id="accountModal" class="account-modal" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
     <div class="dialog">
-      <header>
+      <header class="dialog__header">
         <div id="accountModalTitle" class="title">Account</div>
         <button type="button" class="close" aria-label="Close">&times;</button>
       </header>
-      <iframe id="accountFrame" src=""></iframe>
+      <iframe id="accountFrame" src="" title="Account details"></iframe>
     </div>
   </div>
 
   <script>
-    // Absolute URL to the account viewer inside /admin
-    const VIEW_PAGE = "<?php echo $__BASE_PATH . '/' . $__VIEW_FILE; ?>";
+    // Absolute URL to the account viewer (HTML-only version; adjust if needed)
+    const VIEW_PAGE = 'view_account.php';
 
     const selectEl   = document.getElementById('accountType');
     const container  = document.getElementById('accountContainer');
@@ -142,8 +151,8 @@ $__VIEW_FILE = file_exists($__try1) ? 'account_view.php' : (file_exists($__try2)
             const card = document.createElement('article');
             card.className = 'card';
             card.innerHTML = `
-              <div class="left" data-id="${acc.record_id}" data-type="${acc.account_type}">
-                <img src="${acc.photo || 'assets/default-avatar.png'}" alt="Photo">
+              <div class="left" data-id="${acc.record_id}" data-type="${acc.account_type}" tabindex="0" role="button" aria-label="View account ${escapeHtml(acc.first_name)} ${escapeHtml(acc.last_name)}">
+                <img src="${acc.photo || 'assets/default-avatar.png'}" alt="Photo of ${escapeHtml(acc.first_name)} ${escapeHtml(acc.last_name)}">
                 <div class="info">
                   <div class="muted">ID: <strong>${escapeHtml(acc.user_id)}</strong></div>
                   <div class="name">${escapeHtml(acc.first_name)} ${escapeHtml(acc.last_name)}</div>

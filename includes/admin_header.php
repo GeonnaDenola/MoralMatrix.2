@@ -61,7 +61,7 @@ if (!function_exists('activeClass')) {
 
   <div class="nav-group">
     <a class="nav-item<?php echo activeClass('dashboard.php'); ?>"
-       href="dashboard.php"
+       href="/moralmatrix/admin/dashboard.php"
        <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
@@ -69,7 +69,7 @@ if (!function_exists('activeClass')) {
       <span class="nav-label">Dashboard</span>
     </a>
         <a class="nav-item<?php echo activeClass('add_users.php'); ?>"
-        href="add_users.php"
+        href="/moralmatrix/admin/add_users.php"
         <?php echo $active==='add_users.php'?'aria-current="page"':''; ?>>
         <span class="nav-ico" aria-hidden="true">
             <!-- User + Plus icon -->
@@ -82,7 +82,7 @@ if (!function_exists('activeClass')) {
         </a>
 
     <a class="nav-item<?php echo activeClass('summary_report.php'); ?>"
-       href="summary_report.php"
+       href="/moralmatrix/admin/summary_report.php"
        <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z"/></svg>
