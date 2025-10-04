@@ -318,6 +318,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 $conn->close();
+
+if (empty($formValues['password'])) { 
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'; 
+    $formValues['password'] = substr(str_shuffle($chars), 0, 10); 
+}
 ?>
 
 
