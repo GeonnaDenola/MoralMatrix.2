@@ -8,6 +8,7 @@ ob_start();
 session_start();
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../lib/email_lib.php';
 
 // Include scanner (it should be silent). If your scanner needs to run only for GET/HTML rendering,
 // you can move this include further down (after POST handling). Keeping it here is fine when the scanner
@@ -127,10 +128,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $stmtIns->close();
 
-    // Redirect BEFORE any output is sent to the client. Because we started output buffering earlier,
-    // headers will still work even if included files accidentally produced output.
+    $stmtStu = $conn->prepare("SELECT first_name, last_name, email FROM student_account WHERE student_id = ?");
+$stmtStu->bind_param("s", $student_id);
+$stmtStu->execute();
+$resStu = $stmtStu->get_result();
+
+if ($stu = $resStu->fetch_assoc()) {
+    $toEmail = $stu['email'];
+    $toName  = trim($stu['first_name'].' '.$stu['last_name']);
+
+    if (!empty($toEmail)) {
+        $mail = moralmatrix_mailer();
+        $mail->addAddress($toEmail, $toName);
+        $mail->Subject = 'Violation Recorded in Moral Matrix';
+
+        $html = '
+            <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
+                <h2>Dear '.htmlspecialchars($toName).',</h2>
+                <p>A new violation has been recorded in your account.</p>
+                <p><strong>Category:</strong> '.htmlspecialchars($violation_category).'</p>
+                <p><strong>Details:</strong> '.nl2br(htmlspecialchars($offense_details ?? 'N/A')).'</p>
+                <p><strong>Date:</strong> '.date("F j, Y g:i A").'</p>
+                <p>You may log in to your Moral Matrix account for more details.</p>
+            </div>';
+
+        $mail->Body    = $html;
+        $mail->AltBody = strip_tags($html);
+
+        try {
+            $mail->send();
+            error_log("Violation email sent to $toEmail");
+        } catch (Throwable $e) {
+            error_log("Violation email error: ".$mail->ErrorInfo);
+        }
+    }
+}
+
+
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
-    // end buffering and send output (redirect header will be respected)
     ob_end_flush();
     exit;
 }
