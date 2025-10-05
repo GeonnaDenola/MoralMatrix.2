@@ -1,5 +1,5 @@
 <?php
-include '../includes/header.php';
+include '../includes/superadmin_header.php';
 require '../config.php';
 
 $servername = $database_settings['servername'];
@@ -99,34 +99,48 @@ if (empty($formValues['password'])) {
     $formValues['password'] = substr(str_shuffle($chars), 0, 10);
 }
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Super Admin - Admin Accounts</title>
-  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+  <!-- make sure this path matches your project -->
+  <link rel="stylesheet" href="../css/superadmin_dashboard.css" />
 </head>
 <body>
-  <div class="top-container">
-    <h2>Super Admin Dashboard - Admin Accounts</h2>
-    <button class="btn" onclick="openModal()">Add Administrator</button>
-  </div>
+  <!-- Main page content container (no header/sidebar here; you mentioned you already have those) -->
+  <main class="content-wrap">
+    <div class="content-inner">
+      <div class="actions-bar">
+        <h3 class="page-title">Admin Accounts</h3>
+        <div class="actions-right">
+          <div class="searchBar">
+            <input id="searchInput" class="search-input" type="search" placeholder="Search by name, id, email..." />
+          </div>
+          <button class="btn primary" onclick="openModal()">Add Administrator</button>
+        </div>
+      </div>
 
-  <h3>Account List</h3>
-  <div class="searchBar">
-  <input id="searchInput" class="search-input" type="search" placeholder="Search...">
-</div>
+      <section class="list-area">
+        <div class="list-heading">
+          <span class="muted">Account List</span>
+        </div>
 
-  <div class="container" id="adminContainer">
-    Loading...
-  </div>
+        <div class="container" id="adminContainer">
+          Loading...
+        </div>
+      </section>
+    </div>
+  </main>
 
-  <!-- ✅ Popup Modal -->
-  <div id="adminModal" class="modal">
+  <!-- Popup Modal -->
+  <div id="adminModal" class="modal" aria-hidden="true" role="dialog" aria-labelledby="modalTitle">
     <div class="modal-content">
-      <span class="close-btn" onclick="closeModal()">&times;</span>
-      <h2>Add New Admin Account</h2>
+      <button class="close-btn" onclick="closeModal()" aria-label="Close modal">&times;</button>
+      <h2 id="modalTitle">Add New Admin Account</h2>
 
       <?php if (!empty($errorMsg)): ?>
         <script>alert("<?php echo addslashes($errorMsg); ?>");</script>
@@ -135,61 +149,84 @@ if (empty($formValues['password'])) {
         <script>alert("<?php echo addslashes($flashMsg); ?>");</script>
       <?php endif; ?>
 
-      <form action="" method="post" enctype="multipart/form-data">
-        <label>ID Number:</label>
-        <input type="text" name="admin_id" maxlength="9"
-          pattern="^[0-9]{4}-[0-9]{4}$"
-          value="<?php echo htmlspecialchars($formValues['admin_id']); ?>"
-          oninput="this.value = this.value.replace(/[^0-9-]/g,'')" required>
+      <form action="" method="post" enctype="multipart/form-data" class="admin-form">
+        <div class="grid two">
+          <label>ID Number:
+            <input type="text" name="admin_id" maxlength="9"
+              pattern="^[0-9]{4}-[0-9]{4}$"
+              value="<?php echo htmlspecialchars($formValues['admin_id']); ?>"
+              oninput="this.value = this.value.replace(/[^0-9-]/g,'')" required>
+          </label>
 
-        <label>First Name:</label>
-        <input type="text" name="first_name" value="<?php echo htmlspecialchars($formValues['first_name']); ?>" required>
+          <label>Mobile:
+            <input type="text" name="mobile" maxlength="11" placeholder="09XXXXXXXXX"
+              pattern="^09[0-9]{9}$"
+              oninput="this.value = this.value.replace(/[^0-9]/g,'')"
+              value="<?php echo htmlspecialchars($formValues['mobile']); ?>" required>
+          </label>
+        </div>
 
-        <label>Last Name:</label>
-        <input type="text" name="last_name" value="<?php echo htmlspecialchars($formValues['last_name']); ?>" required>
+        <div class="grid three">
+          <label>First Name:
+            <input type="text" name="first_name" value="<?php echo htmlspecialchars($formValues['first_name']); ?>" required>
+          </label>
+          <label>Middle Name:
+            <input type="text" name="middle_name" value="<?php echo htmlspecialchars($formValues['middle_name']); ?>" required>
+          </label>
+          <label>Last Name:
+            <input type="text" name="last_name" value="<?php echo htmlspecialchars($formValues['last_name']); ?>" required>
+          </label>
+        </div>
 
-        <label>Middle Name:</label>
-        <input type="text" name="middle_name" value="<?php echo htmlspecialchars($formValues['middle_name']); ?>" required>
+        <label>Email:
+          <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required>
+        </label>
 
-        <label>Mobile:</label>
-        <input type="text" name="mobile" maxlength="11" placeholder="09XXXXXXXXX"
-          pattern="^09[0-9]{9}$"
-          oninput="this.value = this.value.replace(/[^0-9]/g,'')"
-          value="<?php echo htmlspecialchars($formValues['mobile']); ?>" required>
-
-        <label>Email:</label>
-        <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required>
-
-        <label>Profile Picture:</label>
-        <img id="photoPreview" src="" alt="No photo" width="100" style="display:none;">
-        <input type="file" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)">
-
-       <label for="password">Temporary Password:</label>
-
-          <div class="temp-pass-row">
-            <input type="text" id="password" name="password"
-                  value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-            <button type="button" onclick="generatePass()">Generate Password</button>
+        <div class="file-row">
+          <div class="photo-col">
+            <label>Profile Picture:</label>
+            <img id="photoPreview" src="" alt="No photo" width="120" style="display:none;">
+            <input type="file" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)">
           </div>
 
-        <button type="submit">Add Admin Account</button>
+          <div class="pass-col">
+            <label for="password">Temporary Password:</label>
+            <div class="temp-pass-row">
+              <input type="text" id="password" name="password"
+                value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
+              <button type="button" class="btn" onclick="generatePass()">Generate</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary large">Add Admin Account</button>
+          <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+        </div>
       </form>
     </div>
   </div>
 
   <script>
-  // Open / Close Modal
-  function openModal() {
-    document.getElementById("adminModal").style.display = "flex";
-  }
-  function closeModal() {
-    document.getElementById("adminModal").style.display = "none";
-  }
-  window.onclick = function(event) {
-    if (event.target === document.getElementById("adminModal")) {
-      closeModal();
-    }
-  }
+// Open / Close Modal - ensure the overlay centers and body doesn't scroll
+function openModal() {
+  const modal = document.getElementById("adminModal");
+  modal.style.display = "block";       // show overlay (modal uses absolute centering)
+  modal.classList.add('show');        // optional: for animation hook
+  document.body.classList.add('modal-open'); // lock body scroll
+  modal.setAttribute('aria-hidden', 'false');
+  // focus first input for accessibility
+  const f = modal.querySelector('input[name="admin_id"]');
+  if (f) f.focus();
+}
+
+function closeModal() {
+  const modal = document.getElementById("adminModal");
+  modal.style.display = "none";
+  modal.classList.remove('show');
+  document.body.classList.remove('modal-open');
+  modal.setAttribute('aria-hidden', 'true');
+}
 
   // Password Generator
   function generatePass() {
@@ -214,7 +251,7 @@ if (empty($formValues['password'])) {
     }
   }
 
-  // Load admins dynamically with labels
+  // Load admins dynamically with labels (kept as you had it)
   function loadAdmins(){
     fetch("/MoralMatrix/super_admin/get_admin.php")
       .then(response => response.json())
@@ -222,8 +259,8 @@ if (empty($formValues['password'])) {
         const container = document.getElementById("adminContainer");
         container.innerHTML = "";
 
-        if (data.length === 0){
-          container.innerHTML = "<p>No records found.</p>";
+        if (!Array.isArray(data) || data.length === 0){
+          container.innerHTML = "<p class='muted'>No records found.</p>";
           return;
         }
 
@@ -231,32 +268,26 @@ if (empty($formValues['password'])) {
           const card = document.createElement("div");
           card.classList.add("card");
           card.innerHTML = `
-            <div class="left">
-              <img src="${admin.photo ? '../uploads/' + admin.photo : 'placeholder.png'}" alt="Photo">
+            <div class="card-left">
+              <img class="avatar" src="${admin.photo ? '../uploads/' + admin.photo : 'placeholder.png'}" alt="Photo">
               <div class="info">
-                <p><strong>ID Number:</strong> ${admin.admin_id}</p>
-                <p><strong>Name:</strong> ${admin.first_name} ${admin.middle_name} ${admin.last_name}</p>
-                <p><strong>Email:</strong> ${admin.email}</p>
-                <p><strong>Mobile:</strong> ${admin.mobile}</p>
+                <p class="meta"><strong>ID:</strong> ${admin.admin_id}</p>
+                <p class="name">${admin.first_name} ${admin.middle_name} ${admin.last_name}</p>
+                <p class="meta">${admin.email}</p>
+                <p class="meta">Mobile: ${admin.mobile}</p>
               </div>
             </div>
-            <div class="actions">
-            <button
-              onclick="editAdmin(${admin.record_id})"
-              style="background:#2563eb;color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer"
-            >Edit</button>
-
-            <button
-              onclick="deleteAdmin(${admin.record_id})"
-              style="background:#dc2626;color:#fff;border:0;border-radius:8px;padding:8px 12px;cursor:pointer"
-            >Delete</button>
-          </div>
-            `;
+            <div class="card-actions">
+              <button class="btn small" onclick="editAdmin(${admin.record_id})">Edit</button>
+              <button class="btn danger small" onclick="deleteAdmin(${admin.record_id})">Delete</button>
+            </div>
+          `;
           container.appendChild(card);
         });
       })
       .catch(error => {
-        document.getElementById("adminContainer").innerHTML = "<p>Error Loading Data.</p>";
+        const c = document.getElementById("adminContainer");
+        c.innerHTML = "<p class='muted'>Error Loading Data.</p>";
         console.error("Error fetching student data: ", error);
       });
   }
@@ -285,7 +316,20 @@ if (empty($formValues['password'])) {
     .catch(err => console.error("Delete error: ", err));
   }
 
-  loadAdmins();
+  // optional: connect search input to client-side filter
+  document.addEventListener('DOMContentLoaded', function(){
+    const search = document.getElementById('searchInput');
+    search.addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      const cards = document.querySelectorAll('#adminContainer .card');
+      cards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+
+    loadAdmins();
+  });
   </script>
 </body>
 </html>
