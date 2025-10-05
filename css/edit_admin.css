@@ -1,0 +1,277 @@
+/* css/edit_admin.css
+   Separated styles for edit_admin.php — professional, modern, responsive
+   (Top accent stripe updated to span the full card width)
+*/
+
+/* =========================
+   Variables / Reset
+   ========================= */
+:root{
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --accent: #b91c1c;
+  --muted: #6b7280;
+  --panel-border: #e6e9ee;
+  --radius: 12px;
+  --max-width: 980px;
+  --sidebar-offset: 240px;
+  --focus-strong: rgba(185,28,28,0.12);
+  --glass: rgba(255,255,255,0.6);
+  --success: #059669;
+}
+
+*{box-sizing:border-box}
+html,body{
+  height:100%;
+  margin:0;
+  background:linear-gradient(180deg,#f7f8fa,#f3f5f7);
+  font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color:#0f172a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+a{color:inherit}
+button{font:inherit}
+
+/* =========================
+   Page layout
+   ========================= */
+.edit-admin-page{
+  margin-left: var(--sidebar-offset);
+  min-height: calc(100vh - 64px);
+  padding: 20px 36px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  gap:20px;
+}
+@media (max-width: 940px){
+  .edit-admin-page{ margin-left:0; padding:18px; }
+}
+
+/* =========================
+   Card
+   ========================= */
+.card{
+  width:100%;
+  max-width: var(--max-width);
+  background: linear-gradient(180deg,var(--card),#fcfeff);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(15,23,42,0.08);
+  padding: 26px;
+  border: 1px solid var(--panel-border);
+  position:relative;
+  overflow:hidden;
+}
+
+/* subtle full-width accent stripe across the top of the card */
+.card::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  height:6px;
+  width:100%;
+  background: linear-gradient(90deg, var(--accent), rgba(185,28,28,0.8));
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+}
+
+/* Header row */
+.card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:18px;
+}
+.title-wrap{ display:flex; align-items:center; gap:14px; }
+.back-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 12px;
+  border-radius:10px;
+  background:transparent;
+  border:1px solid transparent;
+  color:var(--accent);
+  cursor:pointer;
+  font-weight:700;
+  text-decoration:none;
+  transition:transform .12s ease, background .12s ease;
+}
+.back-btn:hover{ transform: translateY(-3px); background: rgba(185,28,28,0.04); }
+.card-title{
+  margin:0;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:-0.2px;
+  color:#0b1220;
+}
+.card-sub{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+/* Form layout - grid */
+.admin-form{ width: 100%; }
+.grid{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 18px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+.field label{
+  display:block;
+  font-size: 13px;
+  color: #374151;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="tel"],
+.field input[type="number"]{
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: #fff;
+  font-size: 14px;
+  color: #0f172a;
+  transition: box-shadow .12s ease, border-color .12s ease, transform .08s ease;
+  box-sizing: border-box;
+}
+.field input::placeholder{ color: #9ca3af; }
+
+/* Focus state: accent color subtle ring */
+.field input:focus{
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 8px 26px var(--focus-strong);
+  transform: translateY(-1px);
+}
+
+/* Single column on small screens */
+@media (max-width: 780px){
+  .grid{ grid-template-columns: 1fr; }
+  .card{ padding: 16px; }
+}
+
+/* Photo uploader area - improved visuals */
+.photo-section{ margin-top: 6px; margin-bottom: 12px; }
+.photo-label{ display:block; font-weight:700; margin-bottom:8px; color:#374151; }
+
+/* Uploader wrapper */
+.uploader{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  padding:12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg,#ffffff,#fbfcfd);
+  border: 1px solid #e9eef4;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.03);
+  transition: box-shadow .12s ease, transform .09s ease;
+}
+.uploader:hover{ box-shadow: 0 10px 30px rgba(15,23,42,0.05); transform: translateY(-2px); }
+
+/* Drop area */
+.uploader-drop{
+  flex: 0 0 220px;
+  min-height: 108px;
+  border-radius: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:10px;
+  cursor: pointer;
+  border: 1px dashed #eef2f6;
+  background: linear-gradient(180deg,#fff,#fbfbfb);
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.uploader-drop.dragover{
+  border-color: var(--accent);
+  box-shadow: 0 8px 30px rgba(194,65,12,0.08);
+}
+
+/* Preview thumbnail */
+.preview-img{
+  width: 86px;
+  height: 86px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e6e9ee;
+  display: inline-block;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.04);
+}
+
+/* Instructions & browse */
+.uploader-instructions{ font-size: 13px; color: #374151; }
+.uploader-instructions strong{ color: #0f172a; font-weight:800; }
+.uploader-browse{
+  background:transparent;
+  border:none;
+  color:var(--accent);
+  font-weight:800;
+  cursor:pointer;
+  padding:0;
+  margin-left:6px;
+}
+.uploader-browse:hover{ text-decoration:underline; }
+
+/* Meta & actions area */
+.uploader-meta{ flex:1; font-size:13px; color:var(--muted); padding-left:6px; }
+.uploader-filename{ display:block; color:#111827; font-weight:700; }
+.uploader-size{ color:var(--muted); font-weight:500; margin-left:6px; }
+
+.uploader-actions{ display:flex; gap:10px; align-items:center; }
+.uploader-remove{
+  border: 1px solid #f3d9d0;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight:700;
+  color:#7b2a1b;
+  cursor:pointer;
+  transition: background .12s ease, transform .08s ease;
+}
+.uploader-remove:hover{ background: #fff0ec; transform: translateY(-1px); }
+
+/* When image present */
+.uploader.has-image{ border-color:#efe5dd; }
+
+/* Form actions (Update button aligned right) */
+.form-actions{ margin-top:18px; display:flex; justify-content:flex-end; gap:12px; }
+
+/* Primary (Update) button - uses header/accent */
+.btn-primary{
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(194,65,12,0.14);
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+}
+.btn-primary:hover{ transform: translateY(-3px); opacity: .98; }
+.btn-primary:focus{ outline: 3px solid var(--focus-strong); outline-offset: 2px; }
+
+/* Small helpers & accessibility */
+label[for]{ cursor: pointer; }
+.uploader-drop:focus{ box-shadow: 0 0 0 4px var(--focus-strong); outline: none; }
+.uploader-browse:focus, .uploader-remove:focus, .btn-primary:focus, .back-btn:focus{ outline: 3px solid var(--focus-strong); outline-offset: 2px; }
+
+/* Tiny responsive polish */
+@media (max-width: 520px){
+  .uploader{ flex-direction: column; align-items: stretch; gap: 8px; }
+  .uploader-drop{ width: 100%; min-height: 96px; }
+  .uploader-meta{ padding-left:0; }
+  .form-actions{ justify-content: stretch; }
+  .btn-primary{ width:100%; }
+}
