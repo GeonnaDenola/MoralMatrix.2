@@ -192,7 +192,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($errorMsg) && $stmt) {
         if ($stmt->execute()) {
             // Insert into accounts (use password_hash per your schema)
-            $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password_hash, account_type) VALUES (?, ?, ?, ?)");
+            $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
             if (!$stmtAcc) {
                 $errorMsg = "⚠️ Prepare failed (accounts): ".$conn->error;
             } else {
