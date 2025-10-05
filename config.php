@@ -11,9 +11,9 @@ define('BASE_URL', '/MoralMatrix');
 $smtp = [
   'host'       => 'smtp.gmail.com',
   'port'       => 587,                        // 587=STARTTLS, 465=SMTPS
-  'user'       => 'moralmatrix01@gmail.com',  // your mailbox
-  'pass'       => 'ikwbepbmlbgiwmof',        // Gmail App Password (not normal pwd)
-  'from'       => 'moralmatrix01@gmail.com',  // usually same as user
+  'user'       => 'geodenola@gmail.com',  // your mailbox
+  'pass'       => 'oftnofxewexyqcfa',        // Gmail App Password (not normal pwd)
+  'from'       => 'geodenola@gmail.com',  // usually same as user
   'from_name'  => 'Moral Matrix',
   // Optional while testing:
   'reply_to'       => null,
