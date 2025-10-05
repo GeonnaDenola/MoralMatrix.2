@@ -1,27 +1,92 @@
 <?php
+declare(strict_types=1);
+
 include '../includes/admin_header.php';
 
 require '../config.php';
-require_once __DIR__.'/../vendor/autoload.php';
-require_once __DIR__ . '/../lib/email_lib.php'; // has moralmatrix_mailer()
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../lib/email_lib.php'; // provides moralmatrix_mailer()
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 
+/* ---------- DB Connect (exceptions on error) ---------- */
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+try{
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    $conn->set_charset('utf8mb4');
+} catch(Throwable $e){
+    http_response_code(500);
+    die('Database connection failed.');
 }
 
+/* ---------- Helpers ---------- */
+function clean($v){ return is_string($v) ? trim($v) : $v; }
+
+/** Save an uploaded photo safely under project_root/uploads/photos and return filename (or '') */
+function handle_photo_upload(string $field, string $appRoot, ?string &$err): string{
+    $err = '';
+    if(!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE){
+        return '';
+    }
+    if($_FILES[$field]['error'] !== UPLOAD_ERR_OK){
+        $err = "⚠️ Error uploading photo.";
+        return '';
+    }
+    // Validate size (<= 5MB)
+    if($_FILES[$field]['size'] > 5 * 1024 * 1024){
+        $err = "⚠️ Photo too large (max 5MB).";
+        return '';
+    }
+    // Validate mime
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($_FILES[$field]['tmp_name']);
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+        'image/gif'  => 'gif',
+    ];
+    if(!isset($allowed[$mime])){
+        $err = "⚠️ Invalid image type. Use JPG/PNG/WebP/GIF.";
+        return '';
+    }
+    $ext   = $allowed[$mime];
+    $dir   = $appRoot . '/uploads/photos';
+    if(!is_dir($dir) && !mkdir($dir, 0777, true)){
+        $err = "⚠️ Cannot create photos directory.";
+        return '';
+    }
+    $name  = bin2hex(random_bytes(8)) . '.' . $ext;
+    $dest  = $dir . '/' . $name;
+    if(!move_uploaded_file($_FILES[$field]['tmp_name'], $dest)){
+        $err = "⚠️ Failed to save uploaded photo.";
+        return '';
+    }
+    return $name; // store filename only
+}
+
+/** Build absolute base URL to app root (one level above /admin) */
+function app_base_url(): string{
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+    $scheme  = $isHttps ? 'https' : 'http';
+    $host    = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    // /app/admin/add_users.php -> /app
+    $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');        // /app/admin
+    $appBase   = rtrim(dirname($scriptDir), '/\\');                           // /app
+    return $scheme.'://'.$host.$appBase;
+}
+
+/* ---------- Page state ---------- */
 $flashMsg = "";
 $errorMsg = "";
 
-// Initialize form values (kept for re-fill + email body)
+// Default form values
 $formValues = [
     'account_type' => '',
     'student_id' => '', 'faculty_id' => '', 'ccdu_id' => '', 'security_id' => '',
@@ -30,305 +95,254 @@ $formValues = [
     'guardian' => '', 'guardian_mobile' => '', 'password' => ''
 ];
 
-// Temp password generator (server-side, always)
-function mm_generate_temp_password(int $length = 10): string {
-    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-    $out = '';
-    for ($i = 0; $i < $length; $i++) {
-        $out .= $alphabet[random_int(0, strlen($alphabet) - 1)];
-    }
-    return $out;
-}
+$validTypes = ['student','faculty','ccdu','security'];
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    foreach ($formValues as $key => $val) {
-        $formValues[$key] = $_POST[$key] ?? '';
+/* ---------- POST handler ---------- */
+if($_SERVER['REQUEST_METHOD'] === 'POST'){
+    // Keep submitted
+    foreach($formValues as $k => $v){
+        $formValues[$k] = clean($_POST[$k] ?? '');
     }
-
     $account_type = $formValues['account_type'];
 
-    // Map correct ID key for each role and validate early
-    $idKeyMap = [
-        'student'  => 'student_id',
-        'faculty'  => 'faculty_id',
-        'ccdu'     => 'ccdu_id',
-        'security' => 'security_id',
-    ];
-    $idKey = $idKeyMap[$account_type] ?? null;
-
-    if (!$idKey) {
-        $errorMsg = "⚠️ Invalid account type.";
-    }
-
-    // Validate ID and email on the server (do not rely on HTML only)
-    if (empty($errorMsg)) {
-        $rawId = trim($formValues[$idKey] ?? '');
-        if ($rawId === '') {
-            $errorMsg = "⚠️ ID Number is required for {$account_type}.";
-        } elseif (!preg_match('/^\d{4}-\d{4}$/', $rawId)) {
-            $errorMsg = "⚠️ ID format must be YYYY-NNNN (e.g., 2023-0001).";
+    try{
+        if(!in_array($account_type, $validTypes, true)){
+            throw new RuntimeException('⚠️ Invalid account type.');
         }
-    }
-    if (empty($errorMsg) && !filter_var($formValues['email'], FILTER_VALIDATE_EMAIL)) {
-        $errorMsg = "⚠️ Please provide a valid email address.";
-    }
 
-    // Check duplicate email in accounts
-    if (empty($errorMsg)) {
-        $stmtCheck = $conn->prepare("SELECT id_number FROM accounts WHERE email = ?");
-        if ($stmtCheck) {
-            $stmtCheck->bind_param("s", $formValues['email']);
-            $stmtCheck->execute();
-            $resultCheck = $stmtCheck->get_result();
-            if ($resultCheck && $resultCheck->num_rows > 0) {
-                $errorMsg = "⚠️ Email already registered!";
-            }
-            $stmtCheck->close();
-        } else {
-            $errorMsg = "⚠️ Prepare failed (email check): ".$conn->error;
+        // Basic validation
+        if(!filter_var($formValues['email'], FILTER_VALIDATE_EMAIL)){
+            throw new RuntimeException('⚠️ Invalid email address.');
         }
-    }
 
-    // (Optional) Check duplicate id_number in accounts too
-    if (empty($errorMsg)) {
-        $idNumberCheck = trim($formValues[$idKey] ?? '');
-        $stmtCheckId = $conn->prepare("SELECT email FROM accounts WHERE id_number = ?");
-        if ($stmtCheckId) {
-            $stmtCheckId->bind_param("s", $idNumberCheck);
-            $stmtCheckId->execute();
-            $resId = $stmtCheckId->get_result();
-            if ($resId && $resId->num_rows > 0) {
-                $errorMsg = "⚠️ ID Number already registered!";
-            }
-            $stmtCheckId->close();
-        } else {
-            $errorMsg = "⚠️ Prepare failed (ID check): ".$conn->error;
+        // Check duplicate email in accounts
+        $stmt = $conn->prepare("SELECT 1 FROM accounts WHERE email = ? LIMIT 1");
+        $stmt->bind_param("s", $formValues['email']);
+        $stmt->execute();
+        if($stmt->get_result()->num_rows > 0){
+            throw new RuntimeException('⚠️ Email already registered!');
         }
-    }
+        $stmt->close();
 
-    if (empty($errorMsg)) {
+        // Decide ID column & value by type
+        $idColumn = [
+            'student'  => 'student_id',
+            'faculty'  => 'faculty_id',
+            'ccdu'     => 'ccdu_id',
+            'security' => 'security_id',
+        ][$account_type];
+        $idNumber = $formValues[$idColumn];
+
+        // Check duplicate ID in the specific table to fail fast
+        $tableByType = [
+            'student'  => 'student_account',
+            'faculty'  => 'faculty_account',
+            'ccdu'     => 'ccdu_account',
+            'security' => 'security_account',
+        ][$account_type];
+        $stmt = $conn->prepare("SELECT 1 FROM {$tableByType} WHERE {$idColumn} = ? LIMIT 1");
+        $stmt->bind_param("s", $idNumber);
+        $stmt->execute();
+        if($stmt->get_result()->num_rows > 0){
+            throw new RuntimeException('⚠️ ID already exists for this account type.');
+        }
+        $stmt->close();
+
         // Handle photo upload
-        $photo = "";
-        if (isset($_FILES["photo"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . "/uploads/";
-            if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-
-            $photo = time() . "_" . basename($_FILES["photo"]["name"]);
-            $targetPath = $uploadDir . $photo;
-            if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
-                $errorMsg = "⚠️ Error uploading photo.";
-                $photo = "";
-            }
+        $appRoot = dirname(__DIR__); // project root
+        $photoErr = '';
+        $photoFilename = handle_photo_upload('photo', $appRoot, $photoErr);
+        if($photoErr){
+            throw new RuntimeException($photoErr);
         }
-    }
 
-    if (empty($errorMsg)) {
-        // Always auto-generate a temp password on the server
-        $formValues['password'] = mm_generate_temp_password(10);
-
+        // Prepare password
+        if($formValues['password'] === ''){
+            $formValues['password'] = bin2hex(random_bytes(5)); // 10 chars
+        }
         $hashedPassword = password_hash($formValues['password'], PASSWORD_DEFAULT);
-        if ($hashedPassword === false) {
-            $errorMsg = "⚠️ Failed to hash password.";
-        }
-    }
 
-    if (empty($errorMsg)) {
-        // Insert into role-specific table
-        switch ($account_type) {
-            case "student":
-                $stmt = $conn->prepare("INSERT INTO student_account (student_id, first_name, middle_name, last_name, mobile, email, institute, course, level, section, guardian, guardian_mobile, photo)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                if (!$stmt) { $errorMsg = "⚠️ Prepare failed: ".$conn->error; break; }
-                $stmt->bind_param("sssssssssssss",
+        /* ===== TRANSACTION ===== */
+        $conn->begin_transaction();
+
+        /* Insert into specific account table */
+        switch($account_type){
+            case 'student':
+                $stmt = $conn->prepare("
+                    INSERT INTO student_account
+                        (student_id, first_name, middle_name, last_name, mobile, email, institute, course, level, section, guardian, guardian_mobile, photo)
+                    VALUES
+                        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param(
+                    "sssssssssssss",
                     $formValues['student_id'], $formValues['first_name'], $formValues['middle_name'], $formValues['last_name'],
-                    $formValues['mobile'], $formValues['email'], $formValues['institute'], $formValues['course'], $formValues['level'],
-                    $formValues['section'], $formValues['guardian'], $formValues['guardian_mobile'], $photo
+                    $formValues['mobile'], $formValues['email'], $formValues['institute'], $formValues['course'],
+                    $formValues['level'], $formValues['section'], $formValues['guardian'], $formValues['guardian_mobile'],
+                    $photoFilename
                 );
-                $idNumber = $formValues['student_id'];
                 break;
 
-            case "faculty":
-                $stmt = $conn->prepare("INSERT INTO faculty_account (faculty_id, first_name, last_name, mobile, email, institute, photo)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?)");
-                if (!$stmt) { $errorMsg = "⚠️ Prepare failed: ".$conn->error; break; }
-                $stmt->bind_param("sssssss",
-                    $formValues['faculty_id'], $formValues['first_name'], $formValues['last_name'], $formValues['mobile'],
-                    $formValues['email'], $formValues['institute'], $photo
+            case 'faculty':
+                $stmt = $conn->prepare("
+                    INSERT INTO faculty_account
+                        (faculty_id, first_name, last_name, mobile, email, institute, photo)
+                    VALUES
+                        (?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param(
+                    "sssssss",
+                    $formValues['faculty_id'], $formValues['first_name'], $formValues['last_name'],
+                    $formValues['mobile'], $formValues['email'], $formValues['institute'], $photoFilename
                 );
-                $idNumber = $formValues['faculty_id'];
                 break;
 
-            case "ccdu":
-                // ✅ FIXED CCDU: no password column in ccdu_account, and photo can be NULL/filename
-                $stmt = $conn->prepare("INSERT INTO ccdu_account (ccdu_id, first_name, last_name, mobile, email, photo)
-                                        VALUES (?, ?, ?, ?, ?, ?)");
-                if (!$stmt) { $errorMsg = "⚠️ Prepare failed: ".$conn->error; break; }
-                // If upload didn't happen, keep empty string or set NULL; both ok with schema. We'll send NULL for neatness.
-                $photoParam = ($photo === "") ? null : $photo;
-                $stmt->bind_param("ssssss",
-                    $formValues['ccdu_id'], $formValues['first_name'], $formValues['last_name'], $formValues['mobile'],
-                    $formValues['email'], $photoParam
+            case 'ccdu':
+                $stmt = $conn->prepare("
+                    INSERT INTO ccdu_account
+                        (ccdu_id, first_name, last_name, mobile, email, photo)
+                    VALUES
+                        (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param(
+                    "ssssss",
+                    $formValues['ccdu_id'], $formValues['first_name'], $formValues['last_name'],
+                    $formValues['mobile'], $formValues['email'], $photoFilename
                 );
-                $idNumber = $formValues['ccdu_id'];
                 break;
 
-            case "security":
-                $stmt = $conn->prepare("INSERT INTO security_account (security_id, first_name, last_name, mobile, email, photo)
-                                        VALUES (?, ?, ?, ?, ?, ?)");
-                if (!$stmt) { $errorMsg = "⚠️ Prepare failed: ".$conn->error; break; }
-                $stmt->bind_param("ssssss",
-                    $formValues['security_id'], $formValues['first_name'], $formValues['last_name'], $formValues['mobile'],
-                    $formValues['email'], $photo
+            case 'security':
+                $stmt = $conn->prepare("
+                    INSERT INTO security_account
+                        (security_id, first_name, last_name, mobile, email, photo)
+                    VALUES
+                        (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->bind_param(
+                    "ssssss",
+                    $formValues['security_id'], $formValues['first_name'], $formValues['last_name'],
+                    $formValues['mobile'], $formValues['email'], $photoFilename
                 );
-                $idNumber = $formValues['security_id'];
                 break;
-
-            default:
-                $errorMsg = "⚠️ Invalid account type.";
-                $stmt = null;
         }
-    }
+        $stmt->execute();
+        $stmt->close();
 
-    if (empty($errorMsg) && $stmt) {
-        if ($stmt->execute()) {
-            // Insert into accounts (use password_hash per your schema)
-            $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
-            if (!$stmtAcc) {
-                $errorMsg = "⚠️ Prepare failed (accounts): ".$conn->error;
-            } else {
-                $stmtAcc->bind_param("ssss", $idNumber, $formValues['email'], $hashedPassword, $account_type);
-                if ($stmtAcc->execute()) {
+        /* Insert into accounts table */
+        $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
+        $stmtAcc->bind_param("ssss", $idNumber, $formValues['email'], $hashedPassword, $account_type);
+        $stmtAcc->execute();
+        $stmtAcc->close();
 
-                    // QR for students
-                    if ($account_type === 'student') {
-                        $studentIdForQR = $idNumber;
+        /* Student QR generate & save + key record */
+        $qrFilePath = null;
+        if($account_type === 'student'){
+            // ensure qr_key exists or insert a new one
+            $qrKey = bin2hex(random_bytes(32)); // 64 hex
+            // try insert; if duplicate due to unique(student_id), fetch existing
+            $insQR = $conn->prepare("INSERT IGNORE INTO student_qr_keys (student_id, qr_key) VALUES (?, ?)");
+            $insQR->bind_param("ss", $idNumber, $qrKey);
+            $insQR->execute();
+            $affected = $conn->affected_rows;
+            $insQR->close();
 
-                        // 1) insert or reuse qr_key
-                        $qrKey = bin2hex(random_bytes(32));
-                        $insQR = $conn->prepare("INSERT INTO student_qr_keys (student_id, qr_key) VALUES (?, ?)");
-                        if ($insQR){
-                            $insQR->bind_param("ss", $studentIdForQR, $qrKey);
-                            if(!$insQR->execute()){
-                                $sel = $conn->prepare("SELECT qr_key FROM student_qr_keys WHERE student_id = ? LIMIT 1");
-                                if ($sel){
-                                    $sel->bind_param("s", $studentIdForQR);
-                                    $sel->execute();
-                                    $row = $sel->get_result()->fetch_assoc();
-                                    if (!empty($row['qr_key'])) {
-                                        $qrKey = $row['qr_key'];
-                                    } else {
-                                        error_log('QR insert failed for '.$studentIdForQR.' : '.$insQR->error);
-                                    }
-                                    $sel->close();
-                                }
-                            }
-                            $insQR->close();
-                        }
-
-                        // 2) Build resolver URL
-                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                        $base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-                        $qrURL  = $scheme.'://'.$host.$base.'/../qr.php?k='.urlencode($qrKey);
-
-                        // 3) Generate SVG
-                        $options = new QROptions([
-                            'outputType' => QRCode::OUTPUT_MARKUP_SVG,
-                            'scale'      => 6,
-                            'eccLevel'   => QRCode::ECC_L,
-                        ]);
-                        $svg = (new QRCode($options))->render($qrURL);
-
-                        // 4) Save file
-                        $qrDir  = dirname(__DIR__) . '/uploads/qrcodes';
-                        if (!is_dir($qrDir)) @mkdir($qrDir, 0777, true);
-                        $qrFile = $qrDir . DIRECTORY_SEPARATOR . $studentIdForQR . '.svg';
-                        $bytes  = @file_put_contents($qrFile, $svg);
-                        if($bytes === false){
-                            error_log('QR save failed: file='.$qrFile
-                                .' dir_exists='.(is_dir($qrDir)?'1':'0')
-                                .' dir_writable='.(is_writable($qrDir)?'1':'0')
-                                .' parent='.dirname($qrDir));
-                        }
-                    }
-
-                    $flashMsg = "✅ Account added successfully!";
-
-                    // === SEND WELCOME EMAIL ===
-                    try {
-                        $mail = moralmatrix_mailer(); // from lib/email_lib.php
-                        $toEmail = $formValues['email'];
-                        $toName  = trim(($formValues['first_name'] ?? '').' '.($formValues['last_name'] ?? '')) ?: $toEmail;
-                        $mail->addAddress($toEmail, $toName);
-
-                        $tempPassword = $formValues['password'] ?? '';
-                        $idLabelMap   = ['student'=>'Student ID','faculty'=>'Faculty ID','ccdu'=>'CCDU ID','security'=>'Security ID'];
-                        $idLabel      = $idLabelMap[$account_type] ?? 'ID Number';
-
-                        $scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                        $host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                        $base     = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-                        $loginUrl = $scheme.'://'.$host.$base.'/../login.php';
-
-                        $mail->Subject = 'Your MoralMatrix account';
-                        $html = '
-                          <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
-                            <h2>Welcome, '.htmlspecialchars($toName).'</h2>
-                            <p>Your account has been created.</p>
-                            <p><strong>'.htmlspecialchars($idLabel).':</strong> '.htmlspecialchars($idNumber).'</p>
-                            <p><strong>Temporary password:</strong> '.htmlspecialchars($tempPassword).'</p>
-                            <p>Sign in here: <a href="'.htmlspecialchars($loginUrl).'">'.htmlspecialchars($loginUrl).'</a></p>'.
-                            ($account_type==='student' ? '<p>Your QR code is attached (SVG). Keep it safe.</p>' : '').
-                            '<hr style="border:none;border-top:1px solid #eee;margin:16px 0">
-                            <p>For security, please change your password after your first login.</p>
-                          </div>';
-                        $mail->Body    = $html;
-                        $mail->AltBody =
-                            "Welcome, $toName\n".
-                            "Your account has been created.\n".
-                            "$idLabel: $idNumber\n".
-                            "Temporary password: $tempPassword\n".
-                            "Sign in: $loginUrl\n".
-                            ($account_type==='student' ? "Your QR code is attached (SVG).\n" : "").
-                            "Please change your password after your first login.\n";
-
-                        if ($account_type === 'student') {
-                            $qrFile = dirname(__DIR__) . '/uploads/qrcodes/' . $idNumber . '.svg';
-                            if (is_file($qrFile)) {
-                                $mail->addAttachment($qrFile);
-                            }
-                        }
-
-                        $mail->send();
-                    } catch (Throwable $e) {
-                        error_log('Welcome email error: '.$e->getMessage());
-                    }
-                    // === END EMAIL ===
-
-                    // Clear form values after success
-                    $formValues = array_map(fn($v) => '', $formValues);
-
-                } else {
-                    $errorMsg = "⚠️ Error inserting into accounts table: ".$stmtAcc->error;
+            if($affected === 0){
+                $sel = $conn->prepare("SELECT qr_key FROM student_qr_keys WHERE student_id = ? LIMIT 1");
+                $sel->bind_param("s", $idNumber);
+                $sel->execute();
+                $row = $sel->get_result()->fetch_assoc();
+                if(!empty($row['qr_key'])){
+                    $qrKey = $row['qr_key'];
                 }
-                if (isset($stmtAcc)) $stmtAcc->close();
+                $sel->close();
             }
-        } else {
-            $errorMsg = "⚠️ Error inserting into {$account_type}_account table: ".$stmt->error;
+
+            // Build absolute URL to resolver at app root
+            $qrURL = app_base_url() . '/qr.php?k=' . urlencode($qrKey);
+
+            // Generate SVG
+            $options = new QROptions([
+                'outputType' => QRCode::OUTPUT_MARKUP_SVG,
+                'scale'      => 6,
+                'eccLevel'   => QRCode::ECC_L,
+            ]);
+            $svg = (new QRCode($options))->render($qrURL);
+
+            // Save as project_root/uploads/qrcodes/{student_id}.svg
+            $qrDir = $appRoot . '/uploads/qrcodes';
+            if(!is_dir($qrDir) && !mkdir($qrDir, 0777, true)){
+                throw new RuntimeException('⚠️ Failed to create QR directory.');
+            }
+            $qrFilePath = $qrDir . '/' . $idNumber . '.svg';
+            if(file_put_contents($qrFilePath, $svg) === false){
+                throw new RuntimeException('⚠️ Failed to save QR file.');
+            }
         }
-        if (isset($stmt)) $stmt->close();
+
+        // All good
+        $conn->commit();
+        $flashMsg = "✅ Account added successfully!";
+
+        // Send welcome email (post-commit, non-blocking)
+        try{
+            $mail = moralmatrix_mailer();
+            if(method_exists($mail, 'isHTML')) $mail->isHTML(true);
+
+            $toEmail = $formValues['email'];
+            $toName  = trim(($formValues['first_name'] ?? '').' '.($formValues['last_name'] ?? '')) ?: $toEmail;
+            $mail->addAddress($toEmail, $toName);
+
+            $idLabel = [
+                'student'  => 'Student ID',
+                'faculty'  => 'Faculty ID',
+                'ccdu'     => 'CCDU ID',
+                'security' => 'Security ID'
+            ][$account_type] ?? 'ID';
+
+            $loginUrl = app_base_url() . '/login.php';
+
+            $html = '
+                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
+                    <h2>Welcome, '.htmlspecialchars($toName).'</h2>
+                    <p>Your account has been created.</p>
+                    <p><strong>'.$idLabel.':</strong> '.htmlspecialchars($idNumber).'</p>
+                    <p>Sign in here: <a href="'.htmlspecialchars($loginUrl).'">'.htmlspecialchars($loginUrl).'</a></p>'.
+                    ($account_type==='student' ? '<p>Your QR code is attached (SVG).</p>' : '').
+                '</div>';
+
+            $mail->Subject = 'Welcome to MoralMatrix';
+            $mail->Body    = $html;
+            $mail->AltBody = strip_tags(str_replace(['<br>','<br/>','<br />'], "\n", $html));
+
+            if($account_type === 'student' && $qrFilePath && is_file($qrFilePath)){
+                $mail->addAttachment($qrFilePath);
+            }
+            @$mail->send();
+        } catch(Throwable $mailErr){
+            error_log('Welcome email error: '.$mailErr->getMessage());
+        }
+
+        // Clear form
+        foreach($formValues as $k => $v){ $formValues[$k] = ''; }
+
+    } catch(Throwable $e){
+        // Rollback if in tx
+        if($conn->errno === 0){ /* nothing */ }
+        try { $conn->rollback(); } catch(Throwable $ignore){}
+        $msg = $e->getMessage();
+        // If this was a mysqli exception, prefer its message
+        $errorMsg = $msg ?: "⚠️ Something went wrong while adding the account.";
     }
 }
 
 $conn->close();
 
-if (empty($formValues['password'])) { 
-    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'; 
-    $formValues['password'] = substr(str_shuffle($chars), 0, 10); 
+// Generate a default password for UI if empty
+if (empty($formValues['password'])) {
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $formValues['password'] = substr(str_shuffle($chars), 0, 10);
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -339,8 +353,7 @@ if (empty($formValues['password'])) {
 </head>
 <body>
 
-<main class="au-wrap"><!-- centered container that plays nice with your header/sidebar -->
-    <!-- Top row: title left, button right -->
+<main class="au-wrap">
     <div class="au-header">
         <h1 class="page-title">Add New User Accounts</h1>
         <a class="btn btn-outline" href="dashboard.php">Return to Dashboard</a>
@@ -353,7 +366,7 @@ if (empty($formValues['password'])) {
         <div class="notice notice-success"><?= htmlspecialchars($flashMsg) ?></div>
     <?php endif; ?>
 
-    <!-- Account type chooser -->
+    <!-- Account type chooser (UI only) -->
     <section class="card">
         <div class="field-row">
             <label for="account_type" class="label">Account Type</label>
@@ -489,7 +502,6 @@ if (empty($formValues['password'])) {
                 </label>
             </div>
 
-            <!-- Large, centered preview at the very bottom -->
             <div class="photo-preview-row span-2">
                 <img id="studentPreview" class="preview preview-lg" alt="Preview" />
             </div>
@@ -543,17 +555,6 @@ if (empty($formValues['password'])) {
             </div>
 
             <div class="field">
-                <label class="label">Institute</label>
-                <select class="select" name="institute" required>
-                    <option value="" disabled <?= empty($formValues['institute']) ? 'selected' : '' ?>>-- Select --</option>
-                    <option value="IBCE" <?= ($formValues['institute'] ?? '')==='IBCE' ? 'selected' : '' ?>>Institute of Business and Computing Education</option>
-                    <option value="IHTM" <?= ($formValues['institute'] ?? '')==='IHTM' ? 'selected' : '' ?>>Institute of Hospitality Management</option>
-                    <option value="IAS"  <?= ($formValues['institute'] ?? '')==='IAS'  ? 'selected' : '' ?>>Institute of Arts and Sciences</option>
-                    <option value="ITE"  <?= ($formValues['institute'] ?? '')==='ITE'  ? 'selected' : '' ?>>Institute of Teaching Education</option>
-                </select>
-            </div>
-
-            <div class="field">
                 <label class="label">Password</label>
                 <div class="with-btn">
                     <input class="input" type="text" name="password" id="faculty_password"
@@ -581,7 +582,7 @@ if (empty($formValues['password'])) {
         </form>
     </section>
 
-    <!-- ========== CCDU (FIXED) ========== -->
+    <!-- ========== CCDU ========== -->
     <section id="ccduForm" class="card form-container">
         <h2 class="section-title">CCDU Staff Registration</h2>
         <form method="POST" enctype="multipart/form-data" class="form-grid">
@@ -623,12 +624,11 @@ if (empty($formValues['password'])) {
                     value="<?= htmlspecialchars($formValues['email'] ?? '') ?>" required />
             </div>
 
-            <!-- FIX: Password is auto-generated server-side. No name attribute, so it won't submit. -->
             <div class="field">
-                <label class="label">Password (auto-generated)</label>
+                <label class="label">Password</label>
                 <div class="with-btn">
-                    <input class="input" type="text" id="ccdu_password"
-                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" readonly />
+                    <input class="input" type="text" name="password" id="ccdu_password"
+                           value="<?= htmlspecialchars($formValues['password'] ?? '') ?>" required />
                     <button type="button" class="btn btn-secondary" onclick="generatePass('ccdu_password')">Generate</button>
                 </div>
             </div>
@@ -745,6 +745,9 @@ if (empty($formValues['password'])) {
         });
         const active = document.getElementById(selected+'Form');
         if (active) active.scrollIntoView({behavior:'smooth', block:'start'});
+        // Keep the chosen type in hidden input of the shown form (for persistence in $formValues)
+        const inputs = document.querySelectorAll('input[name="account_type"]');
+        inputs.forEach(i => i.value = selected || i.value);
     }
 
     function generatePass(inputId){
@@ -788,3 +791,4 @@ if (empty($formValues['password'])) {
 </script>
 </body>
 </html>
+                                        ``
