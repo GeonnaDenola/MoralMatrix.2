@@ -182,22 +182,25 @@ if (empty($formValues['password'])) {
           <input type="email" name="email" value="<?php echo htmlspecialchars($formValues['email']); ?>" required>
         </label>
 
-        <div class="file-row">
-          <div class="photo-col">
-            <label>Profile Picture:</label>
-            <img id="photoPreview" src="" alt="No photo" width="120" style="display:none;">
-            <input type="file" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)">
-          </div>
-
-          <div class="pass-col">
-            <label for="password">Temporary Password:</label>
-            <div class="temp-pass-row">
-              <input type="text" id="password" name="password"
-                value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
-              <button type="button" class="btn" onclick="generatePass()">Generate</button>
-            </div>
-          </div>
-        </div>
+<!-- ...existing code... -->
+<div class="file-row">
+  <div class="photo-col">
+    <label>Profile Picture:</label>
+    <input type="file" name="photo" accept="image/png, image/jpeg" onchange="previewPhoto(this)">
+  </div>
+  <div class="pass-col">
+    <label for="password">Temporary Password:</label>
+    <div class="temp-pass-row">
+      <input type="text" id="password" name="password"
+        value="<?php echo htmlspecialchars($formValues['password']); ?>" required>
+      <button type="button" class="btn" onclick="generatePass()">Generate</button>
+    </div>
+  </div>
+</div>
+<div class="photo-preview-wrap">
+  <img id="photoPreview" src="" alt="No photo" style="display:none;">
+</div>
+<!-- ...existing code... -->
 
         <div class="form-actions">
           <button type="submit" class="btn primary large">Add Admin Account</button>
