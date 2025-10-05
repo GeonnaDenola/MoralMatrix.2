@@ -1,11 +1,3 @@
-/* ------------------------------------------------------------------
-   superadmin_dashboard.css (updated)
-   - Ensures page content sits right of fixed sidebar (--sidebar-width)
-   - All buttons are unified red
-   - Modal is centered using top/left + transform (stable)
-   - Adds body.modal-open to lock page scroll while modal is open
-   ------------------------------------------------------------------ */
-
 :root{
   --sidebar-width: 260px; /* adjust to your sidebar exact width */
   --bg: #f6f7f9;
@@ -227,7 +219,7 @@ body{
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 110vw;
   height: 100vh;
   display: none; /* JS toggles display to 'block' */
   z-index: 1200;
@@ -302,12 +294,26 @@ body{
 }
 
 /* file/pass row */
-.file-row{ display:flex; gap:18px; align-items:flex-start; }
-.photo-col{ min-width:160px; display:flex; flex-direction:column; gap:8px; }
-.pass-col{ flex:1; display:flex; flex-direction:column; gap:8px; }
-
-.temp-pass-row{ display:flex; gap:8px; align-items:center; }
-.temp-pass-row input{ flex:1; }
+.file-row {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  margin-top: 12px;
+}
+.photo-col {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* ensures all children are centered horizontally */
+  gap: 8px;
+}
+.pass-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-start;
+}
 
 /* form actions */
 .form-actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:6px; }
@@ -320,3 +326,22 @@ body.modal-open{
 
 /* Small accesibility helpers */
 button:focus, input:focus { outline: 3px solid rgba(185,28,28,0.12); outline-offset:2px; }
+
+.photo-preview-wrap {
+  display: flex;
+  justify-content: center; /* centers the image horizontally */
+  align-items: center;
+  margin-top: 12px;
+  width: 100%;
+}
+
+#photoPreview {
+  display: block;
+  max-width: 260px;
+  max-height: 260px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(18,24,32,0.12);
+  border: 2px solid #e8e9eb;
+  object-fit: cover;
+  background: linear-gradient(180deg,#fafafa,#f6f6f6);
+}
