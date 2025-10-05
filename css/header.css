@@ -257,3 +257,57 @@ html { scroll-padding-top: var(--header-h); }
     transition: none;
   }
 }
+
+/* ===== Centered Header Navigation ===== */
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* brand left, nav centered, actions right */
+  gap: 12px;
+  position: relative;
+}
+
+.header-nav {
+  display: flex;
+  gap: 24px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.header-nav .nav-link {
+  color: var(--text-on-header);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+/* Underline hover effect */
+.header-nav .nav-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 3px;
+  background: #fff;
+  border-radius: 2px;
+  transition: all 0.25s ease;
+  transform: translateX(-50%);
+}
+
+.header-nav .nav-link:hover::after {
+  width: 100%;
+}
+
+.header-nav .nav-link.is-active::after {
+  width: 100%;
+}
+
+/* Optional: subtle background hover */
+.header-nav .nav-link:hover {
+  background: rgba(255,255,255,0.1);
+}
