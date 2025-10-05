@@ -40,7 +40,7 @@ $sqlCreateLoginSchema = "CREATE TABLE IF NOT EXISTS accounts (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     id_number VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,  
     change_pass TINYINT(1) DEFAULT 1,
     account_type ENUM('super_admin', 'administrator', 'ccdu', 'faculty', 'student', 'security') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
