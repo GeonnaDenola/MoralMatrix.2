@@ -1,0 +1,192 @@
+/* Reset & base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f0f3f7;
+    color: #333;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+/* Container layout */
+.container {
+    display: flex;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    gap: 30px;
+}
+
+/* Sidebar */
+.sidebar {
+    flex: 0 0 250px;
+    background-color: #971200;
+    color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+    transition: all 0.3s ease;
+}
+
+.sidebar h2 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar ul li {
+    margin-bottom: 15px;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: #fff;
+    font-weight: 500;
+    transition: color 0.3s, transform 0.2s;
+}
+
+.sidebar ul li a:hover {
+    color: #ffd700;
+    transform: translateX(5px);
+}
+
+/* Main content */
+.content {
+    flex: 1;
+}
+
+header {
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.8rem;
+    color: #971200;
+    margin-bottom: 10px;
+}
+
+header .subtitle {
+    font-size: 1.2rem;
+    color: #555;
+}
+
+.handbook-section {
+    margin-bottom: 40px;
+    padding: 25px;
+    background-color: #fff;
+    border-left: 8px solid #971200;
+    border-radius: 12px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.handbook-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+}
+
+.handbook-section h2 {
+    color: #971200;
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+}
+
+.handbook-section p {
+    margin-bottom: 15px;
+    color: #444;
+    line-height: 1.7;
+}
+
+.handbook-section ul {
+    list-style: disc inside;
+    padding-left: 15px;
+}
+
+.handbook-section ul li {
+    margin-bottom: 12px;
+}
+
+/* Responsive: Tablets */
+@media (max-width: 992px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        flex: none;
+        width: 100%;
+        position: relative;
+        top: 0;
+        margin-bottom: 20px;
+        border-radius: 12px;
+    }
+
+    .sidebar ul li a {
+        display: inline-block;
+        padding: 8px 0;
+    }
+
+    header h1 {
+        font-size: 2.4rem;
+    }
+
+    .handbook-section h2 {
+        font-size: 1.6rem;
+    }
+}
+
+/* Responsive: Mobile */
+@media (max-width: 600px) {
+    body {
+        font-size: 15px;
+    }
+
+    header h1 {
+        font-size: 2rem;
+    }
+
+    header .subtitle {
+        font-size: 1rem;
+    }
+
+    .handbook-section {
+        padding: 20px;
+    }
+
+    .handbook-section h2 {
+        font-size: 1.4rem;
+    }
+
+    .sidebar h2 {
+        font-size: 1.3rem;
+    }
+
+    .sidebar ul li {
+        margin-bottom: 12px;
+    }
+}
+
+/* Smooth scroll for anchor links */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Optional: subtle hover on sections for mobile-friendly touch feedback */
+@media (hover: none) {
+    .handbook-section:hover {
+        transform: none;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+}
