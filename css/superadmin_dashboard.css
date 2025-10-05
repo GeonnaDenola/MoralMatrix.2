@@ -1,0 +1,322 @@
+/* ------------------------------------------------------------------
+   superadmin_dashboard.css (updated)
+   - Ensures page content sits right of fixed sidebar (--sidebar-width)
+   - All buttons are unified red
+   - Modal is centered using top/left + transform (stable)
+   - Adds body.modal-open to lock page scroll while modal is open
+   ------------------------------------------------------------------ */
+
+:root{
+  --sidebar-width: 260px; /* adjust to your sidebar exact width */
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --accent: #b91c1c; /* unified red for all buttons */
+  --border: #e8e9eb;
+  --radius: 10px;
+  --shadow: 0 10px 30px rgba(18,24,32,0.06);
+  --text: #111827;
+  --max-width: 1100px;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Reset */
+*,
+*::before,
+*::after { box-sizing: inherit; }
+html, body { height:100%; margin:0; padding:0; }
+body{
+  background: var(--bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-size:14px;
+  line-height:1.35;
+}
+
+/* Main content area offset for fixed sidebar */
+.content-wrap{
+  margin-left: var(--sidebar-width); /* prevents hiding under sidebar */
+  padding: 26px 28px;
+  min-height: calc(100vh - 0px);
+  display:flex;
+  justify-content:center; /* centers inner content in available area */
+  align-items:flex-start;
+}
+
+.content-inner{
+  width:100%;
+  max-width: var(--max-width);
+  background: transparent;
+}
+
+/* Actions bar (title, search, add button) */
+.actions-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.page-title{
+  margin:0;
+  font-size:20px;
+  font-weight:600;
+  color:var(--text);
+}
+
+.actions-right{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+/* Search */
+.searchBar { display:flex; align-items:center; }
+.search-input{
+  height:42px;
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  width:380px;
+  background:#fff;
+  outline:none;
+  transition: box-shadow .12s, border-color .12s;
+  font-size:14px;
+  color:var(--text);
+  box-shadow: none;
+}
+.search-input::placeholder { color: #b7bbc2; }
+.search-input:focus{
+  border-color: rgba(185,28,28,0.85);
+  box-shadow: 0 8px 24px rgba(185,28,28,0.06);
+}
+
+/* Unified buttons: all use red accent */
+.btn{
+  border:0;
+  background: var(--accent);
+  color:#fff;
+  padding:10px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:14px;
+  box-shadow: 0 8px 24px rgba(185,28,28,0.08);
+  transition: transform .08s ease, box-shadow .12s ease, opacity .08s;
+}
+.btn:hover{ transform: translateY(-2px); opacity:0.98; }
+.btn:active{ transform: translateY(0); }
+
+/* variants */
+.btn.small{ padding:6px 10px; font-size:13px; border-radius:8px; }
+.btn.large{ padding:12px 18px; font-size:15px; border-radius:10px; }
+
+/* List area */
+.list-area { margin-top: 6px; }
+.list-heading .muted { color: var(--muted); font-size:13px; }
+
+/* Container & Cards */
+.container{
+  margin-top: 12px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  width:100%;
+}
+
+/* Card */
+.card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  transition: transform .08s ease, box-shadow .12s ease;
+}
+.card:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(18,24,32,0.06);
+}
+
+/* Left block */
+.card-left{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  min-width:0;
+}
+
+.avatar{
+  width:72px;
+  height:72px;
+  object-fit:cover;
+  border-radius:9px;
+  border:1px solid #f1f1f1;
+  background: linear-gradient(180deg,#fafafa,#f6f6f6);
+  flex-shrink:0;
+}
+
+.info{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+
+.meta{
+  margin:0;
+  color:var(--muted);
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.name{
+  margin:0;
+  font-size:16px;
+  font-weight:700;
+  color:var(--text);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Actions aligned right (Edit/Delete) */
+.card-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-shrink:0;
+}
+
+/* Pill-style action buttons */
+.card-actions .btn.small{
+  padding:8px 12px;
+  font-size:13px;
+  border-radius:8px;
+  box-shadow:none;
+}
+
+/* ID label style */
+.card .meta-id{ font-size:12px; color:#9aa0a6; margin-bottom:2px; }
+
+/* Responsive adjustments */
+@media (max-width:900px){
+  .content-wrap{ padding:16px; margin-left: var(--sidebar-width); }
+  .search-input{ width:220px; }
+  .card{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .card-actions{ width:100%; justify-content:flex-end; margin-top:6px; }
+}
+
+/* ------------------ Modal (centered) ------------------ */
+/* Use fixed + left/top 50% and transform to ensure exact centering
+   regardless of other layout margins. The overlay covers full viewport. */
+
+.modal{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: none; /* JS toggles display to 'block' */
+  z-index: 1200;
+  background: rgba(8,10,12,0.36);
+  overflow: auto; /* allow internal scroll if small screen */
+}
+
+/* Centering wrapper: set modal-content to be centered via top/left transform */
+.modal-content{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* perfect centering */
+  width: calc(100% - 48px);
+  max-width: 920px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 24px 80px rgba(9,12,18,0.18);
+  border: 1px solid var(--border);
+  max-height: 92vh;
+  overflow: auto;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), opacity .12s ease;
+}
+
+/* Slight entrance (applies when shown) */
+.modal.show .modal-content{
+  transform: translate(-50%, -50%) scale(1);
+  opacity:1;
+}
+
+/* Close button */
+.close-btn{
+  position:absolute;
+  top:12px;
+  right:12px;
+  border:0;
+  background:transparent;
+  font-size:26px;
+  color:var(--muted);
+  cursor:pointer;
+}
+
+/* Form inside modal */
+.admin-form{ display:flex; flex-direction:column; gap:12px; margin-top:6px; }
+
+.admin-form label{
+  font-size:13px;
+  color:var(--muted);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.admin-form input[type="text"],
+.admin-form input[type="email"],
+.admin-form input[type="file"]{
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-size:14px;
+  color:var(--text);
+}
+
+/* grids */
+.grid.two{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+.grid.three{ display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+
+@media (max-width:900px){
+  .grid.three, .grid.two{ grid-template-columns: 1fr; }
+}
+
+/* file/pass row */
+.file-row{ display:flex; gap:18px; align-items:flex-start; }
+.photo-col{ min-width:160px; display:flex; flex-direction:column; gap:8px; }
+.pass-col{ flex:1; display:flex; flex-direction:column; gap:8px; }
+
+.temp-pass-row{ display:flex; gap:8px; align-items:center; }
+.temp-pass-row input{ flex:1; }
+
+/* form actions */
+.form-actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:6px; }
+
+/* lock body scroll when modal open */
+body.modal-open{
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Small accesibility helpers */
+button:focus, input:focus { outline: 3px solid rgba(185,28,28,0.12); outline-offset:2px; }
