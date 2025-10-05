@@ -228,23 +228,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $stmt->execute();
         $stmt->close();
 
-<<<<<<< HEAD
         /* Insert into accounts table */
         $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
         $stmtAcc->bind_param("ssss", $idNumber, $formValues['email'], $hashedPassword, $account_type);
         $stmtAcc->execute();
         $stmtAcc->close();
-=======
-    if (empty($errorMsg) && $stmt) {
-        if ($stmt->execute()) {
-            // Insert into accounts (use password_hash per your schema)
-            $stmtAcc = $conn->prepare("INSERT INTO accounts (id_number, email, password, account_type) VALUES (?, ?, ?, ?)");
-            if (!$stmtAcc) {
-                $errorMsg = "⚠️ Prepare failed (accounts): ".$conn->error;
-            } else {
-                $stmtAcc->bind_param("ssss", $idNumber, $formValues['email'], $hashedPassword, $account_type);
-                if ($stmtAcc->execute()) {
->>>>>>> b863d7f7ba5d6601c827afac727e85b08d4f4b57
 
         /* Student QR generate & save + key record */
         $qrFilePath = null;
@@ -349,16 +337,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
 $conn->close();
 
-<<<<<<< HEAD
 // Generate a default password for UI if empty
 if (empty($formValues['password'])) {
     $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     $formValues['password'] = substr(str_shuffle($chars), 0, 10);
-=======
-if (empty($formValues['password'])) { 
-    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*'; 
-    $formValues['password'] = substr(str_shuffle($chars), 0, 10); 
->>>>>>> b863d7f7ba5d6601c827afac727e85b08d4f4b57
 }
 ?>
 <!DOCTYPE html>
