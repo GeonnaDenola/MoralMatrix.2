@@ -1,4 +1,7 @@
 <?php
+require '../auth.php';
+require_role('super_admin');
+
 include '../includes/superadmin_header.php';
 require '../config.php';
 
