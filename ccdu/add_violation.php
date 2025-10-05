@@ -1,11 +1,17 @@
 <?php
 // ccdu/add_violation.php
 
-// Start session BEFORE any output
+// Start output buffering FIRST so accidental output in included files won't break redirects.
+// Long-term: make included files (like _scanner.php) silent instead of relying on buffering.
+ob_start();
+
 session_start();
 
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
 
+// Include scanner (it should be silent). If your scanner needs to run only for GET/HTML rendering,
+// you can move this include further down (after POST handling). Keeping it here is fine when the scanner
+// does not echo/print anything.
 include __DIR__ . '/_scanner.php';
 
 /* ---------- STUDENT ID FROM GET OR POST ---------- */
@@ -13,6 +19,8 @@ $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
 if (!$studentId && ($_SERVER['REQUEST_METHOD'] !== 'POST')) {
     // For GET views we need a student id; for POST we use the hidden input
     echo "<p>No student selected!</p>";
+    // flush buffer and exit
+    ob_end_flush();
     exit;
 }
 
@@ -25,6 +33,8 @@ $dbname     = $database_settings['dbname'];
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     http_response_code(500);
+    // flush buffer before dying
+    ob_end_flush();
     die("Connection failed: " . $conn->connect_error);
 }
 
@@ -38,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($student_id === '' || $offense_category === '' || $offense_type === '') {
         http_response_code(400);
+        ob_end_flush();
         die("Missing required fields.");
     }
 
@@ -62,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Ensure correct path with slash
         $uploadDir = dirname(__DIR__) . "/admin/uploads/";
         if (!is_dir($uploadDir)) {
-            // 0777 is fine here because it's server-side; adjust to your policy
+            // create directory (restrict permissions if appropriate for your environment)
             mkdir($uploadDir, 0777, true);
         }
 
@@ -89,16 +100,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmtIns = $conn->prepare($sql);
     if (!$stmtIns) {
         http_response_code(500);
+        ob_end_flush();
         die("Prepare failed: " . $conn->error);
     }
 
-    // Note: passing NULL through bind_param is okay; MySQL will store NULL
+    // Bind parameters: use strings; NULL will be converted to empty string by mysqli bind,
+    // but if you want true SQL NULL you can use bind_result + explicit NULL handling.
+    $detail_for_bind = $offense_details ?? null; // keep as-is; note: bind_param will treat null as empty string
     $stmtIns->bind_param(
         "sssssss",
         $student_id,
         $offense_category,
         $offense_type,
-        $offense_details,
+        $detail_for_bind,
         $description,
         $photo,
         $submitted_by
@@ -106,32 +120,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$stmtIns->execute()) {
         http_response_code(500);
-        die("Insert failed: " . $stmtIns->error);
+        $err = $stmtIns->error;
+        $stmtIns->close();
+        ob_end_flush();
+        die("Insert failed: " . $err);
     }
     $stmtIns->close();
 
-    // Redirect BEFORE any output has been sent
+    // Redirect BEFORE any output is sent to the client. Because we started output buffering earlier,
+    // headers will still work even if included files accidentally produced output.
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
+    // end buffering and send output (redirect header will be respected)
+    ob_end_flush();
     exit;
 }
 
 /* ========= END INSERT HANDLER ========= */
 
-// From here on, it's safe to output HTML
-include '../includes/header.php';
+/* From here on, it's safe to output HTML */
+// include page header (this may echo HTML)
+include __DIR__ . '/../includes/header.php';
 
 /* ---------- FETCH STUDENT FOR DISPLAY ---------- */
 if ($studentId) {
     $sql = "SELECT * FROM student_account WHERE student_id=?";
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $studentId);
-    $stmt->execute();
-    $result  = $stmt->get_result();
-    $student = $result->fetch_assoc();
-    $stmt->close();
+    if ($stmt) {
+        $stmt->bind_param("s", $studentId);
+        $stmt->execute();
+        $result  = $stmt->get_result();
+        $student = $result->fetch_assoc();
+        $stmt->close();
+    } else {
+        $student = null;
+    }
 } else {
     $student = null;
 }
+
+// rest of the HTML / form rendering goes here...
+// (omit closing PHP tag to avoid accident
 ?>
 <!DOCTYPE html>
 <html lang="en">
