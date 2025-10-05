@@ -1,8 +1,7 @@
 <?php
-include '../includes/header.php';
+include '../includes/student_header.php';
 include '../config.php';
 
-include 'menu_buttons.php';
 ?>
 
 <!DOCTYPE html>

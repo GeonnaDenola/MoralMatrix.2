@@ -65,26 +65,6 @@ if (!function_exists('activeClass')) {
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
       </span>
       <span class="nav-label">Dashboard</span>
-    </a>
-<a class="nav-item<?php echo activeClass('report_student.php'); ?>"
-   href="/moralmatrix/super_admin/add_users.php"
-   <?php echo $active==='report_student.php' ? 'aria-current="page"' : ''; ?>>
-  <span class="nav-ico" aria-hidden="true">
-    <!-- User + (scales with font via CSS) -->
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
-      <!-- body -->
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-      <!-- head -->
-      <circle cx="9" cy="7" r="4"></circle>
-      <!-- plus sign (to the right) -->
-      <line x1="20" y1="8" x2="20" y2="14"></line>
-      <line x1="17" y1="11" x2="23" y2="11"></line>
-    </svg>
-  </span>
-  <span class="nav-label">Add Admin Users</span>
-</a>
-
 
     <a class="nav-item<?php echo activeClass('summary_report.php'); ?>"
        href="/moralmatrix/admin/summary_report.php"

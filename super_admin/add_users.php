@@ -1,5 +1,5 @@
 <?php
-include '../includes/header.php';
+include '../includes/superadmin_header.php';
 
 require '../config.php';
 
