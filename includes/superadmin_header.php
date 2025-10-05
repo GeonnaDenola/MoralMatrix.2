@@ -59,42 +59,41 @@ if (!function_exists('activeClass')) {
 
   <div class="nav-group">
     <a class="nav-item<?php echo activeClass('dashboard.php'); ?>"
-       href="/moralmatrix/faculty/dashboard.php"
+       href="/moralmatrix/super_admin/dashboard.php"
        <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
       </span>
       <span class="nav-label">Dashboard</span>
     </a>
-       <a class="nav-item<?php echo activeClass('report_student.php'); ?>"
-   href="/moralmatrix/faculty/report_student.php"
+<a class="nav-item<?php echo activeClass('report_student.php'); ?>"
+   href="/moralmatrix/super_admin/add_users.php"
    <?php echo $active==='report_student.php' ? 'aria-current="page"' : ''; ?>>
   <span class="nav-ico" aria-hidden="true">
-    <!-- Report (circle + !), scales with font via CSS -->
+    <!-- User + (scales with font via CSS) -->
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-      <circle cx="12" cy="12" r="9"></circle>
-      <line x1="12" y1="7" x2="12" y2="13"></line>
-      <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"></circle>
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">
+      <!-- body -->
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+      <!-- head -->
+      <circle cx="9" cy="7" r="4"></circle>
+      <!-- plus sign (to the right) -->
+      <line x1="20" y1="8" x2="20" y2="14"></line>
+      <line x1="17" y1="11" x2="23" y2="11"></line>
     </svg>
   </span>
-  <span class="nav-label">Report Student</span>
+  <span class="nav-label">Add Admin Users</span>
 </a>
 
-<a class="nav-item<?php echo activeClass('pending_reports.php'); ?>"
-   href="/moralmatrix/faculty/pending_reports.php"
-   <?php echo $active==='pending_reports.php' ? 'aria-current="page"' : ''; ?>>
-  <span class="nav-ico" aria-hidden="true">
-    <!-- Pending (clock), scales with font via CSS -->
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-      <circle cx="12" cy="12" r="9"></circle>
-      <line x1="12" y1="7" x2="12" y2="12"></line>
-      <line x1="12" y1="12" x2="16" y2="14"></line>
-    </svg>
-  </span>
-  <span class="nav-label">Pending Reports</span>
-</a>
+
+    <a class="nav-item<?php echo activeClass('summary_report.php'); ?>"
+       href="/moralmatrix/admin/summary_report.php"
+       <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>
+      <span class="nav-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z"/></svg>
+      </span>
+      <span class="nav-label">Summary Report</span>
+    </a>
 
   </div>
 </nav>
