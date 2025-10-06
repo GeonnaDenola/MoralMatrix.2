@@ -4,6 +4,15 @@ require '../config.php';
 require __DIR__.'/_scanner.php';
 require 'violation_hrs.php';
 
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+if (!empty($_SESSION['sms_alert']) && is_array($_SESSION['sms_alert'])) {
+    // sanitize values to avoid XSS — json_encode will escape correctly
+    $smsFlash = $_SESSION['sms_alert'];
+    unset($_SESSION['sms_alert']);
+    // export it to JS so the page's showSmsAlert listener can pick it up
+    echo '<script>window.__sms_alert_from_server = ' . json_encode($smsFlash, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) . ';</script>';
+}
+
 $hours = 0;
 
 $servername = $database_settings['servername'];
@@ -345,6 +354,18 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
         }
       });
     })();
+
+  (function(){
+  // If server set a flash, show it now
+  if (window.__sms_alert_from_server && window.showSmsAlert) {
+    const payload = window.__sms_alert_from_server;
+    const status = Number(payload.status || 500);
+    const message = payload.message || (status === 200 ? 'SMS sent' : 'SMS failed');
+    window.showSmsAlert(status === 200 ? 'success' : 'error', (status === 200 ? '✅ ' : '⚠️ ') + message);
+    // optional: also clear it to be safe
+    try { delete window.__sms_alert_from_server; } catch(e) {}
+  }
+})();
   </script>
 </body>
 </html>

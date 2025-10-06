@@ -20,4 +20,10 @@ $smtp = [
   'reply_to_name'  => null,
   'debug'      => 2, // set to 0 after testing
 ];
+
+$twilio_settings = [
+  'twilio_sid' => 'TWILIO_SID_REDACTED',
+  'twilio_token' => 'TWILIO_TOKEN_REDACTED',
+  'twilio_from' => '+15005550006',
+];
 ?>

@@ -1,6 +1,13 @@
 <?php
+session_start(); // <-- ensure this is before any output
+
 include '../config.php';
 require __DIR__.'/_scanner.php';
+
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(24));
+}
+$csrf = $_SESSION['csrf_token'];
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -16,6 +23,30 @@ if ($conn->connect_error) {
   echo "Database connection failed.";
   exit;
 }
+
+/*function sendSMS($to, $message) {
+    $apiKey = "8254c96d5e03a4c37219c7a77a93c908d5d368a6"; // 🔑 paste your API key here
+    $url = "https://api.engagespark.com/v1/sms";
+
+    $data = [
+        "to" => $to,
+        "message" => $message
+    ];
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Authorization: Token " . $apiKey,
+        "Content-Type: application/json"
+    ]);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    return $response;
+} */
 
 /* Detect optional columns */
 $hasReportedBy = false;
@@ -80,8 +111,10 @@ if (!$r) {
     exit;
   } else {
     http_response_code(404); ?>
-    <!DOCTYPE html>
-    <html lang="en">
+
+
+<!DOCTYPE html>
+  <html lang="en">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -98,6 +131,7 @@ if (!$r) {
       </style>
     </head>
     <body>
+
       <div class="wrap">
         <h1>Violation not found</h1>
         <p>The record you’re trying to view doesn’t exist or may have been removed.</p>
@@ -169,7 +203,7 @@ ob_start(); ?>
   .nv-subtle{color:var(--muted)}
   .nv-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:6px 0 0}
   .nv-item{background:#fff;border:1px dashed var(--border);border-radius:12px;padding:10px}
-  .nv-item b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+  .nv-item b{Display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
   .nv-item span{font-size:15px}
   .nv-chips{display:flex;flex-wrap:wrap;gap:8px}
   .chip{display:inline-flex;align-items:center;border:1px solid var(--border);padding:6px 10px;border-radius:999px;font-size:13px;background:#fff}
@@ -256,7 +290,13 @@ ob_start(); ?>
             $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile);
           ?>
           <?php if (!empty($guardianMobile) && !empty($telClean)): ?>
-            <a class="btn" href="tel:<?= htmlspecialchars($telClean) ?>">📞 Contact Guardian<?= $guardianName ? ' — '.htmlspecialchars($guardianName) : '' ?></a>
+            <!-- REPLACED: secure POST form with CSRF token -->
+            <form method="POST" id="contactGuardianForm" action="send_sms.php" onsubmit="return confirm('Send SMS to guardian?');" style="display:inline">
+              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+              <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
+              <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violationNo) ?>">
+              <button type="submit" class="btn">📞 Contact Guardian<?= $guardianName ? ' — '.htmlspecialchars($guardianName) : '' ?></button>
+            </form>
           <?php else: ?>
             <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
           <?php endif; ?>
@@ -302,6 +342,24 @@ if (isset($_GET['modal']) && $_GET['modal'] == '1') {
   echo $inner;
   exit;
 }
+
+// Show SMS status alert if redirected from send_sms.php
+$smsAlert = '';
+if (isset($_GET['sms_status'])) {
+    $status = (int)$_GET['sms_status'];
+    if ($status === 200 || $status === 201) {
+        $smsAlert = "<div style='padding:10px;background:#d1fae5;color:#065f46;border:1px solid #059669;
+                      margin:10px 0;border-radius:8px'>
+                        ✅ SMS sent successfully to guardian.
+                     </div>";
+    } else {
+        $smsAlert = "<div style='padding:10px;background:#fee2e2;color:#991b1b;border:1px solid #f87171;
+                      margin:10px 0;border-radius:8px'>
+                        ⚠️ Failed to send SMS (code: {$status}). Please check guardian number or API logs.
+                     </div>";
+    }
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -345,6 +403,7 @@ if (isset($_GET['modal']) && $_GET['modal'] == '1') {
           <div class="sub">Record #<?= $violationNo ?> • Student <?= htmlspecialchars($r['student_id']) ?></div>
         </div>
       </header>
+      <?= $smsAlert ?>
       <?= $inner ?>
     </div>
     <footer>© <?= date('Y') ?> Discipline Management</footer>
