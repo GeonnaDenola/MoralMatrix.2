@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => 'dev-master',
-        'version' => 'dev-master',
-        'reference' => '4c1f12eaf42af981dda2f13614497fe2e888a75e',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '331cec776c8dd00112bd5fedffde4fe8a336b27d',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => 'dev-master',
-            'version' => 'dev-master',
-            'reference' => '4c1f12eaf42af981dda2f13614497fe2e888a75e',
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '331cec776c8dd00112bd5fedffde4fe8a336b27d',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -43,6 +43,15 @@
             'reference' => 'bf74d75a1fde6beaa34a0ddae2ec5fce0f72a144',
             'type' => 'library',
             'install_path' => __DIR__ . '/../phpmailer/phpmailer',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'twilio/sdk' => array(
+            'pretty_version' => '8.8.3',
+            'version' => '8.8.3.0',
+            'reference' => 'a2db2ea514498c4c55de1dfe5b858c8fd3f728ab',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../twilio/sdk',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
