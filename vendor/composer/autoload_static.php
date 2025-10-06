@@ -12,6 +12,10 @@ class ComposerStaticInitf23edb42c89f02ec3cbd882b0a8ee5fc
             'chillerlan\\Settings\\' => 20,
             'chillerlan\\QRCode\\' => 18,
         ),
+        'T' => 
+        array (
+            'Twilio\\' => 7,
+        ),
         'P' => 
         array (
             'PHPMailer\\PHPMailer\\' => 20,
@@ -26,6 +30,10 @@ class ComposerStaticInitf23edb42c89f02ec3cbd882b0a8ee5fc
         'chillerlan\\QRCode\\' => 
         array (
             0 => __DIR__ . '/..' . '/chillerlan/php-qrcode/src',
+        ),
+        'Twilio\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/twilio/sdk/src/Twilio',
         ),
         'PHPMailer\\PHPMailer\\' => 
         array (
