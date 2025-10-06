@@ -2,8 +2,8 @@
 require '../vendor/autoload.php'; // Twilio SDK
 use Twilio\Rest\Client;
 
-$sid   = getenv('TWILIO_TEST_SID') ?: '';
-$token = getenv('TWILIO_TEST_TOKEN') ?: '';
+$sid   = getenv('TWILIO_TEST_SID') ?: 'TWILIO_SID_REDACTED';
+$token = getenv('TWILIO_TEST_TOKEN') ?: 'TWILIO_TOKEN_REDACTED';
 
 // Twilio magic test number for successful create
 $from = 'TWILIO_FROM_REDACTED';
