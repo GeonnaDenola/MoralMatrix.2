@@ -22,8 +22,8 @@ $smtp = [
 ];
 
 $twilio_settings = [
-  'twilio_sid' => 'TWILIO_SID_REDACTED',
-  'twilio_token' => 'TWILIO_TOKEN_REDACTED',
+  'twilio_sid' => '',
+  'twilio_token' => '',
   'twilio_from' => '+15005550006',
 ];
 ?>
