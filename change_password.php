@@ -1,6 +1,7 @@
 <?php
 session_start();
-include 'config.php';
+require __DIR__ . '/config.php';
+
 
 $database_settings = $database_settings ?? []; // fallback if config didn't set
 $servername = $database_settings['servername'] ?? 'localhost';
