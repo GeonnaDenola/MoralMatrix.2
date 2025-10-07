@@ -1,7 +1,9 @@
 <?php
 include '../includes/header.php';
 include 'page_buttons.php';
+
 require '../config.php';
+require_once __DIR__ . '/../lib/email_lib.php';
 
 include __DIR__ . '/_scanner.php';
 
@@ -47,6 +49,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $errorMsg = "⚠️ Username and password are required.";
     }
 
+    
+
     // Duplicate username
     if (!$errorMsg) {
         $stmtCheck = $conn->prepare("SELECT validator_id FROM validator_account WHERE v_username = ?");
@@ -59,23 +63,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $stmtCheck->close();
     }
 
+    $plainPassword  = $v_password;
+    $hashedPassword = password_hash($v_password, PASSWORD_DEFAULT);
+
     // Proceed if OK
     if (!$errorMsg) {
 
-        $stmt = $conn->prepare("INSERT INTO validator_account 
-            (v_username, v_password, email, active, validator_type, designation) 
-            VALUES (?, ?, ?, ?, ?, ?)");
-        if (!$stmt) {
-            $errorMsg = "⚠️ Server error preparing statement.";
-        } else {
-            $stmt->bind_param("sssiss",
-                $v_username,
-                $v_password,
-                $email,
-                $active,
-                $validator_type,
-                $designation,  
-            );
+       $stmt = $conn->prepare("INSERT INTO validator_account 
+          (v_username, v_password, email, active, validator_type, designation) 
+          VALUES (?, ?, ?, ?, ?, ?)");
+      if (!$stmt) {
+          $errorMsg = "⚠️ Server error preparing statement.";
+      } else {
+          $stmt->bind_param("sssiss",
+              $v_username,
+              $hashedPassword,   // <-- was $v_password
+              $email,
+              $active,
+              $validator_type,
+              $designation
+          );
 
             if ($stmt->execute()) {
                 $new_validator_id = (int)$stmt->insert_id;
@@ -108,6 +115,54 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
                 }
 
+                // Send credentials email if email is present & valid
+              if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                  try {
+                      $mail = moralmatrix_mailer();              // from ../lib/email_lib.php
+                      if (method_exists($mail, 'isHTML')) $mail->isHTML(true);
+
+                      $mail->addAddress($email, $v_username);
+
+                      // Build login URL (app root assumed one level above this script's folder)
+                      $isHttps  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+                      $scheme   = $isHttps ? 'https' : 'http';
+                      $host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                      $scriptDir= rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\'); // e.g. /admin
+                      $appBase  = rtrim(dirname($scriptDir), '/\\');                    // go up one level
+                      $loginUrl = $scheme.'://'.$host.$appBase.'/validator/validator_login.php';
+
+                      // Safely embed values
+                      $u = htmlspecialchars($v_username, ENT_QUOTES, 'UTF-8');
+                      $p = htmlspecialchars($plainPassword, ENT_QUOTES, 'UTF-8');
+                      $L = htmlspecialchars($loginUrl, ENT_QUOTES, 'UTF-8');
+
+                      $mail->Subject = 'Your Community Validator Account';
+                      $mail->Body = "
+                        <div style=\"font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6\">
+                          <p>Hi <strong>{$u}</strong>,</p>
+                          <p>Your validator account has been created.</p>
+                          <p><strong>Username:</strong> {$u}<br>
+                            <strong>Temporary password:</strong> {$p}</p>
+                          <p>Please sign in and change your password immediately:</p>
+                          <p><a href=\"{$L}\">{$L}</a></p>
+                          <p>— Moral Matrix</p>
+                        </div>";
+                      $mail->AltBody = "Hi {$v_username},\n\n"
+                                    . "Your validator account has been created.\n\n"
+                                    . "Username: {$v_username}\n"
+                                    . "Temporary password: {$plainPassword}\n\n"
+                                    . "Login: {$loginUrl}\n\n"
+                                    . "— Moral Matrix";
+
+                      @$mail->send();
+                  } catch (Throwable $mailErr) {
+                      // Account exists; surface a soft warning and log details
+                      $errorMsg = "⚠️ Validator created, but email could not be sent.";
+                      error_log('Validator welcome email error: '.$mailErr->getMessage());
+                  }
+              }
+
+
                 if ($errorMsg === "") {
                     $flashMsg  = "✅ Validator account created successfully.";
                     // Reset form values except active
@@ -134,6 +189,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST" && empty($formValues['password'])) {
     $formValues['password'] = substr(str_shuffle($chars), 0, 10);
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
