@@ -1,6 +1,7 @@
 <?php
 session_start();
-require 'config.php';
+require __DIR__ . '/config.php';
+
 
 $conn = new mysqli(
   $database_settings['servername'],
