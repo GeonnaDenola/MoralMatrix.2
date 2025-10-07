@@ -2,12 +2,12 @@
 require '../vendor/autoload.php'; // Twilio SDK
 use Twilio\Rest\Client;
 
-$sid   = getenv('TWILIO_TEST_SID') ?: 'TWILIO_SID_REDACTED';
-$token = getenv('TWILIO_TEST_TOKEN') ?: 'TWILIO_TOKEN_REDACTED';
+$sid   = getenv('TWILIO_TEST_SID') ?: '';
+$token = getenv('TWILIO_TEST_TOKEN') ?: '';
 
 // Twilio magic test number for successful create
-$from = '+15005550006';
-$to   = '+15005550006';
+$from = '+';
+$to   = '+';
 
 // mask debug helper
 function mask($s){ if (!$s) return '(empty)'; $n=strlen($s); return str_repeat('*', max(0,$n-4)) . substr($s,-4); }
