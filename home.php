@@ -59,7 +59,7 @@
       <li><a href="login.php" role="menuitem">Student Login</a></li>
       <li><a href="login.php" role="menuitem">Faculty Login</a></li>
       <li><a href="login.php" role="menuitem">Security Login</a></li>
-      <li><a href="login.php" role="menuitem">Validator Login</a></li>
+      <li><a href="/moralmatrix/validator/validator_login.php" role="menuitem">Validator Login</a></li>
     </ul>
   </nav>
 
