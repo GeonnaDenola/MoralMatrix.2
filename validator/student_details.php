@@ -251,7 +251,6 @@ $totalLogged = (float)$sumHours;
 /* Remaining (never negative) */
 $remainingHours = max(0, $requiredHours - $totalLogged);
 
-
 /* ---------- Fetch previous entries ---------- */
 $entries = [];
 $esql = "SELECT entry_id, hours, remarks, comment, photo_paths, service_date, created_at, violation_id
@@ -263,7 +262,7 @@ $st->bind_param("s", $student_id);
 $st->execute();
 $res = $st->get_result();
 while ($row = $res->fetch_assoc()) { $entries[] = $row; }
-$st->close();
+$st->close();   
 
 ?>
 <!DOCTYPE html>
