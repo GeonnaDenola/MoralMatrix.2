@@ -1,26 +1,22 @@
-<?php
-declare(strict_types=1);
+﻿<?php
 
-// Start session ASAP, before ANY output.
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
 include '../includes/validator_header.php';
 
-// Enforce auth: require a validator_id
 if (empty($_SESSION['validator_id'])) {
     header('Location: ../login.php?msg=Please+sign+in');
     exit;
 }
 
-// Read session values safely
 $validatorId = (int)$_SESSION['validator_id'];
 $vUsername   = $_SESSION['v_username'] ?? 'Validator';
 
 require_once '../config.php';
 
-// DB connection (throw on error; set charset)
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $conn = new mysqli(
     $database_settings['servername'],
@@ -30,7 +26,6 @@ $conn = new mysqli(
 );
 $conn->set_charset('utf8mb4');
 
-// Query (handle null/empty middle_name cleanly)
 $sql = "SELECT 
             s.student_id,
             TRIM(CONCAT_WS(' ', s.first_name, NULLIF(s.middle_name,''), s.last_name)) AS full_name,
@@ -49,17 +44,62 @@ $stmt = $conn->prepare($sql);
 $stmt->bind_param('i', $validatorId);
 $stmt->execute();
 $result = $stmt->get_result();
-$assignedCount = $result->num_rows;
 
-// Helper to format datetime nicely without breaking if format unknown
+$assignments = [];
+while ($row = $result->fetch_assoc()) {
+    $assignments[] = $row;
+}
+
+$assignedCount  = count($assignments);
+$ongoingCount   = 0;
+$completedCount = 0;
+$upcomingCount  = 0;
+
+function e(?string $value): string {
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
 function format_dt(?string $value): string {
-    if (!$value) return '';
+    if (!$value) {
+        return '';
+    }
     try {
         $dt = new DateTime($value);
-        return $dt->format('M j, Y · g:i A');
+        return $dt->format('M j, Y | g:i A');
     } catch (Exception $e) {
-        // Fallback to raw if parsing fails
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        return e($value);
+    }
+}
+
+function assignment_status(array $row): array {
+    $now = new DateTimeImmutable('now');
+    try {
+        if (!empty($row['ends_at'])) {
+            $end = new DateTimeImmutable($row['ends_at']);
+            if ($end < $now) {
+                return ['Completed', 'ended'];
+            }
+        }
+        if (!empty($row['starts_at'])) {
+            $start = new DateTimeImmutable($row['starts_at']);
+            if ($start > $now) {
+                return ['Upcoming', 'upcoming'];
+            }
+        }
+    } catch (Exception $e) {
+        // fall through to ongoing
+    }
+    return ['Ongoing', 'ongoing'];
+}
+
+foreach ($assignments as $assignment) {
+    [, $statusSlug] = assignment_status($assignment);
+    if ($statusSlug === 'ongoing') {
+        $ongoingCount++;
+    } elseif ($statusSlug === 'ended') {
+        $completedCount++;
+    } elseif ($statusSlug === 'upcoming') {
+        $upcomingCount++;
     }
 }
 ?>
@@ -69,62 +109,98 @@ function format_dt(?string $value): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Validator Dashboard</title>
-  <link rel="stylesheet" href="../css/validator_dashboard.css">
+  <link rel="stylesheet" href="../css/validator_dashboard.css?v=2">
 </head>
 <body class="validator-dashboard">
-  <main class="vd-page" role="main" aria-labelledby="page-title">
-    <div class="vd-container">
-      <section class="vd-hero">
-        <h1 id="page-title">Welcome, <?= htmlspecialchars($vUsername, ENT_QUOTES, 'UTF-8') ?>!</h1>
-        <p class="vd-subtitle">Here are your current student assignments.</p>
-
-        <div class="vd-stats">
-          <span class="vd-chip">
-            Assigned: <strong><?= (int)$assignedCount ?></strong>
-          </span>
+  <main class="vd-wrapper" role="main" aria-labelledby="page-title">
+    <div class="vd-shell">
+      <header class="vd-header">
+        <div class="vd-header__text">
+          <p class="vd-eyebrow">Validator Dashboard</p>
+          <h1 id="page-title">Welcome back, <?= e($vUsername) ?>.</h1>
+          <p class="vd-subtitle">Stay on top of your assigned students and monitor their community service progress in one place.</p>
         </div>
-      </section>
+        <div class="vd-metrics">
+          <article class="vd-metric">
+            <span class="vd-metric__label">Assigned</span>
+            <span class="vd-metric__value"><?= (int)$assignedCount ?></span>
+          </article>
+          <article class="vd-metric vd-metric--ongoing">
+            <span class="vd-metric__label">Ongoing</span>
+            <span class="vd-metric__value"><?= (int)$ongoingCount ?></span>
+          </article>
+          <article class="vd-metric vd-metric--completed">
+            <span class="vd-metric__label">Completed</span>
+            <span class="vd-metric__value"><?= (int)$completedCount ?></span>
+          </article>
+          <article class="vd-metric vd-metric--upcoming">
+            <span class="vd-metric__label">Upcoming</span>
+            <span class="vd-metric__value"><?= (int)$upcomingCount ?></span>
+          </article>
+        </div>
+      </header>
 
-      <section class="vd-content">
+      <section class="vd-section">
         <?php if ($assignedCount > 0): ?>
-          <div class="card-grid">
-            <?php while ($row = $result->fetch_assoc()): ?>
-              <a class="card-link" href="student_details.php?student_id=<?= urlencode((string)$row['student_id']) ?>" aria-label="Open details for <?= htmlspecialchars($row['full_name'], ENT_QUOTES, 'UTF-8') ?>">
-                <div class="card">
-                  <h3 class="card-title"><?= htmlspecialchars($row['full_name'], ENT_QUOTES, 'UTF-8') ?></h3>
-
-                  <div class="card-meta">
-                    <p><span class="label">ID</span><span class="value"><?= htmlspecialchars((string)$row['student_id'], ENT_QUOTES, 'UTF-8') ?></span></p>
-                    <p><span class="label">Course</span><span class="value"><?= htmlspecialchars((string)$row['course'], ENT_QUOTES, 'UTF-8') ?></span></p>
-                    <p><span class="label">Level &amp; Section</span><span class="value"><?= htmlspecialchars((string)$row['level'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars((string)$row['section'], ENT_QUOTES, 'UTF-8') ?></span></p>
-                    <p><span class="label">Starts</span><span class="value"><?= format_dt($row['starts_at']) ?></span></p>
-                    <p>
-                      <span class="label">Ends</span>
-                      <span class="value">
-                        <?php if (!empty($row['ends_at'])): ?>
-                          <span class="pill ended"><?= format_dt($row['ends_at']) ?></span>
-                        <?php else: ?>
-                          <span class="pill ongoing">Ongoing</span>
-                        <?php endif; ?>
-                      </span>
+          <div class="vd-section__head">
+            <div>
+              <h2>Current Assignments</h2>
+              <p>Click any card to open the student record and add updates or notes.</p>
+            </div>
+          </div>
+          <div class="vd-grid">
+            <?php foreach ($assignments as $row): ?>
+              <?php [$statusLabel, $statusSlug] = assignment_status($row); ?>
+              <a class="vd-card vd-card--<?= e($statusSlug) ?>" href="student_details.php?student_id=<?= urlencode((string)$row['student_id']) ?>">
+                <header class="vd-card__header">
+                  <div>
+                    <h3><?= e($row['full_name']) ?></h3>
+                    <p class="vd-card__sub">
+                      <?= e((string)$row['course']) ?> | <?= e((string)$row['level']) ?>-<?= e((string)$row['section']) ?>
                     </p>
                   </div>
+                  <span class="vd-pill status-<?= e($statusSlug) ?>"><?= e($statusLabel) ?></span>
+                </header>
 
-                  <?php if (!empty($row['notes'])): ?>
-                    <p class="card-notes">
-                      <span class="notes-label">Notes</span>
-                      <span class="notes-text"><?= htmlspecialchars((string)$row['notes'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </p>
-                  <?php endif; ?>
-                </div>
+                <dl class="vd-details">
+                  <div>
+                    <dt>Student ID</dt>
+                    <dd><?= e((string)$row['student_id']) ?></dd>
+                  </div>
+                  <div>
+                    <dt>Starts</dt>
+                    <dd><?= format_dt($row['starts_at']) ?: 'Not set' ?></dd>
+                  </div>
+                  <div>
+                    <dt>Ends</dt>
+                    <dd>
+                      <?php if (!empty($row['ends_at'])): ?>
+                        <?= format_dt($row['ends_at']) ?>
+                      <?php else: ?>
+                        <span class="vd-pill status-ongoing is-soft">Open</span>
+                      <?php endif; ?>
+                    </dd>
+                  </div>
+                </dl>
+
+                <?php if (!empty($row['notes'])): ?>
+                  <div class="vd-notes">
+                    <span class="vd-notes__label">Latest note</span>
+                    <p><?= e((string)$row['notes']) ?></p>
+                  </div>
+                <?php endif; ?>
+
+                <footer class="vd-card__footer">
+                  <span class="vd-link">View student record</span>
+                </footer>
               </a>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
           </div>
         <?php else: ?>
-          <div class="empty-state" role="status">
-            <div class="empty-emoji" aria-hidden="true">📄</div>
-            <h3>No students are currently assigned to you.</h3>
-            <p>When assignments are created for you, they’ll appear here automatically.</p>
+          <div class="vd-empty" role="status">
+            <div class="vd-empty__icon" aria-hidden="true">Ã°Å¸â€œâ€¹</div>
+            <h2>No assignments just yet</h2>
+            <p>Once community service assignments are created for you, they will appear here automatically.</p>
           </div>
         <?php endif; ?>
       </section>
@@ -135,3 +211,7 @@ function format_dt(?string $value): string {
 <?php
 $stmt->close();
 $conn->close();
+
+
+
+
