@@ -59,7 +59,7 @@ if (!function_exists('activeClass')) {
 
   <div class="nav-group">
     <a class="nav-item<?php echo activeClass('dashboard.php'); ?>"
-       href="/moralmatrix/faculty/dashboard.php"
+       href="/moralmatrix/validator/dashboard.php"
        <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
