@@ -1,9 +1,7 @@
 <?php
-include '../includes/header.php';
-include '../config.php';
-include 'page_buttons.php';
+// set_community_service.php — no output before potential redirects
 
-include __DIR__ . '/_scanner.php';
+require '../config.php';
 
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -16,9 +14,17 @@ if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
 /* ---------- Inputs ---------- */
 $student_id   = $_GET['student_id']   ?? null;
 $violation_id = isset($_GET['violation_id']) ? (int)$_GET['violation_id'] : 0;
-$returnUrl    = $_GET['return'] ?? ('view_student.php?student_id=' . urlencode((string)$student_id));
 
-/* ---------- Handle assignment POST ---------- */
+$defaultReturn = 'view_student.php?student_id=' . urlencode((string)$student_id);
+$returnUrlIn   = $_GET['return'] ?? $defaultReturn;
+/* allow only relative return URLs */
+$returnUrl = (is_string($returnUrlIn) && $returnUrlIn !== '' && strpos($returnUrlIn, '://') === false)
+  ? $returnUrlIn : $defaultReturn;
+
+/* collect errors to display after header include */
+$errorMsg = null;
+
+/* ---------- Handle assignment POST *before any output* ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_validator'])) {
     $student_id   = $_POST['student_id']   ?? null;
     $violation_id = (int)($_POST['violation_id'] ?? 0);
@@ -31,15 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_validator'])) 
         $stmt = $conn->prepare($sql);
         if (!$stmt) { die("Prepare failed: " . $conn->error); }
         $stmt->bind_param("isi", $violation_id, $student_id, $validator_id);
+
         if ($stmt->execute()) {
-            header("Location: " . $returnUrl);
-            exit;
+            if (!headers_sent()) {
+                header("Location: " . $returnUrl, true, 302);
+                exit;
+            } else {
+                // Fallback if something output unexpectedly
+                echo '<script>location.replace(' . json_encode($returnUrl) . ');</script>';
+                exit;
+            }
         } else {
-            echo "<p style='color:red'>Error assigning validator: " . htmlspecialchars($stmt->error) . "</p>";
+            $errorMsg = "Error assigning validator: " . htmlspecialchars($stmt->error);
         }
         $stmt->close();
     } else {
-        echo "<p style='color:red'>Missing required fields.</p>";
+        $errorMsg = "Missing required fields.";
     }
 }
 
@@ -53,7 +66,7 @@ $sql = "
     student_id,
     CONCAT_WS(' ', first_name, middle_name, last_name) AS student_name,
     course,
-    CONCAT(COALESCE(level,''), COALESCE(section,'')) AS year_level
+    TRIM(CONCAT(COALESCE(level,''), CASE WHEN level IS NOT NULL AND section IS NOT NULL AND section <> '' THEN '-' ELSE '' END, COALESCE(section,''))) AS year_level
   FROM student_account
   WHERE student_id = ?
 ";
@@ -65,7 +78,7 @@ $student = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$student) { die("Student not found."); }
 
-/* ---------- Fetch the specific violation (include photo filename) ---------- */
+/* ---------- Fetch selected violation ---------- */
 $vsql = "
   SELECT
     violation_id,
@@ -91,8 +104,6 @@ $datePretty = !empty($violation['reported_at']) ? date('M d, Y h:i A', strtotime
 $cat        = htmlspecialchars($violation['offense_category'] ?? '');
 $type       = htmlspecialchars($violation['offense_type'] ?? '');
 $desc       = htmlspecialchars($violation['description'] ?? '');
-
-/* Flatten offense_details JSON safely */
 $detailsText = '—';
 if (!empty($violation['offense_details'])) {
   $decoded = json_decode($violation['offense_details'], true);
@@ -101,47 +112,32 @@ if (!empty($violation['offense_details'])) {
     $detailsText = implode(', ', $safe);
   }
 }
-
-/* ---------- Determine photo path (same logic as your working view) ---------- */
-$photoRel = null; // show nothing if none
+/* Photo path */
+$photoRel = null;
 if (!empty($violation['photo'])) {
-    // Reference behavior uses current folder's /uploads/
-    $tryAbs = __DIR__ . '/uploads/' . $violation['photo'];   // filesystem
+    $tryAbs = __DIR__ . '/uploads/' . $violation['photo'];
     if (is_file($tryAbs)) {
-        $photoRel = 'uploads/' . $violation['photo'];        // web path
-    } else {
-        // Optional: fallback to placeholder if file missing
-        // $photoRel = 'placeholder.png';
-        $photoRel = null;
+        $photoRel = 'uploads/' . rawurlencode($violation['photo']);
     }
 }
 
-/* ---------- Build validator list: only ACTIVE + assigned count ---------- */
+/* ---------- Build validator list (filter active if columns exist) ---------- */
 $hasActive = $hasIsActive = $hasAccountStatus = false;
+if ($res = $conn->query("SHOW COLUMNS FROM validator_account LIKE 'active'"))        { $hasActive = ($res->num_rows > 0); $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM validator_account LIKE 'is_active'"))     { $hasIsActive = ($res->num_rows > 0); $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM validator_account LIKE 'account_status'")){ $hasAccountStatus = ($res->num_rows > 0); $res->close(); }
 
-if ($res = $conn->query("SHOW COLUMNS FROM validator_account LIKE 'active'")) {
-    $hasActive = ($res->num_rows > 0); $res->close();
-}
-if ($res = $conn->query("SHOW COLUMNS FROM validator_account LIKE 'is_active'")) {
-    $hasIsActive = ($res->num_rows > 0); $res->close();
-}
-if ($res = $conn->query("SHOW COLUMNS FROM validator_account LIKE 'account_status'")) {
-    $hasAccountStatus = ($res->num_rows > 0); $res->close();
-}
+$filters = [];
+if ($hasActive)        $filters[] = "va.active = 1";
+if ($hasIsActive)      $filters[] = "va.is_active = 1";
+if ($hasAccountStatus) $filters[] = "LOWER(va.account_status) = 'active'";
 
-$conditions = [];
-if ($hasActive)        $conditions[] = "va.active = 1";
-if ($hasIsActive)      $conditions[] = "va.is_active = 1";
-if ($hasAccountStatus) $conditions[] = "LOWER(va.account_status) = 'active'";
-
-/* Count DISTINCT students per validator */
 $countSub = "
   SELECT validator_id, COUNT(DISTINCT student_id) AS assigned_count
   FROM validator_student_assignment
   GROUP BY validator_id
 ";
 
-/* Main query */
 $vlistSql = "
   SELECT
     va.validator_id,
@@ -151,9 +147,9 @@ $vlistSql = "
     COALESCE(vs.assigned_count, 0) AS assigned_count
   FROM validator_account AS va
   LEFT JOIN ($countSub) AS vs ON vs.validator_id = va.validator_id
+" . ($filters ? " WHERE " . implode(" AND ", $filters) : "") . "
+  ORDER BY validator_name ASC
 ";
-$vlistSql .= $conditions ? (" WHERE (" . implode(" OR ", $conditions) . ") ") : " WHERE 1=0 ";
-$vlistSql .= " ORDER BY validator_name ASC";
 
 $validators = $conn->query($vlistSql);
 ?>
@@ -163,115 +159,129 @@ $validators = $conn->query($vlistSql);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Assign Validator</title>
- <style>
-  /* remove all outer gutters */
-  html, body { margin: 0; padding: 0; }
-  * { box-sizing: border-box; }
+  <style>
+    html, body { margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
+    a { text-decoration: none; }
+    .btn { display:inline-block; padding:8px 12px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; color:#111; }
+    .btn:hover { background:#f9fafb; }
+    .page { padding: 16px; }
 
-  /* (optional) add inner padding only where you want it */
-  /* .page { padding: 16px; } */
+    .student-info p, .violation-info p { margin: 4px 0; }
+    .violation-info img { max-width: 100%; border-radius: 10px; display: block; margin-top: 8px; }
 
-  a { text-decoration: none; }
-  .btn { display:inline-block; padding:8px 12px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; color:#111; }
-  .btn:hover { background:#f9fafb; }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem; margin-top: .5rem;
+    }
+    .validator-card { cursor: pointer; display: block; }
+    .validator-card input[type="radio"] { display: none; }
+    .card-content {
+      border: 2px solid #ccc; border-radius: 12px; padding: 1rem; background: #fff;
+      transition: all .2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .validator-card:hover .card-content {
+      border-color: #007bff; background:#f9f9ff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .validator-card input[type="radio"]:checked + .card-content {
+      border-color: #007bff; background:#eef4ff; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .card-content h4 { margin: 0 0 8px; font-size: 1.1rem; }
+    .card-content p { margin: 4px 0; font-size: 0.9rem; }
 
-  .student-info p, .violation-info p { margin: 4px 0; }
-  .violation-info img { max-width: 100%; border-radius: 10px; display: block; margin-top: 8px; }
-
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1rem; margin-top: .5rem;
-  }
-  .validator-card { cursor: pointer; display: block; }
-  .validator-card input[type="radio"] { display: none; }
-  .card-content {
-    border: 2px solid #ccc; border-radius: 12px; padding: 1rem; background: #fff;
-    transition: all .2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  }
-  .validator-card:hover .card-content {
-    border-color: #007bff; background:#f9f9ff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  }
-  .validator-card input[type="radio"]:checked + .card-content {
-    border-color: #007bff; background:#eef4ff; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
-  .card-content h4 { margin: 0 0 8px; font-size: 1.1rem; }
-  .card-content p { margin: 4px 0; font-size: 0.9rem; }
-</style>
-
+    .alert { padding:10px 12px; border-radius:8px; margin:10px 0; }
+    .alert-error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+  </style>
 </head>
 <body>
+  <?php
+  // It is safe to include files that output HTML only now.
+  include '../includes/header.php';
+  include 'page_buttons.php';
+  ?>
 
-  <p><a href="<?= htmlspecialchars($returnUrl) ?>">← Back</a></p>
+  <main class="page">
+    <p><a href="<?= htmlspecialchars($returnUrl) ?>">← Back</a></p>
 
-  <h2>Assign Validator for Student</h2>
+    <h2>Assign Validator for Student</h2>
 
-  <div class="student-info">
-    <p><b>ID:</b> <?= htmlspecialchars($student['student_id']) ?></p>
-    <p><b>Name:</b> <?= htmlspecialchars($student['student_name']) ?></p>
-    <p><b>Course:</b> <?= htmlspecialchars($student['course']) ?></p>
-    <p><b>Year Level:</b> <?= htmlspecialchars($student['year_level']) ?></p>
-  </div>
-
-  <div class="violation-info" style="margin-top:14px;">
-    <h3>Selected Violation #<?= htmlspecialchars((string)$violation_id) ?></h3>
-    <p><b>Category:</b> <?= ucfirst($cat) ?></p>
-    <p><b>Type:</b> <?= $type ?></p>
-    <p><b>Details:</b> <?= $detailsText ?></p>
-    <p><b>Reported on:</b> <?= $datePretty ?></p>
-    <p><b>Description:</b><br><?= nl2br($desc) ?: '—' ?></p>
-
-    <?php if ($photoRel): ?>
-      <p><b>Photo evidence:</b></p>
-      <div class="photo-wrap" style="margin-top:8px">
-        <img src="<?= htmlspecialchars($photoRel) ?>" alt="Evidence photo">
-      </div>
+    <?php if ($errorMsg): ?>
+      <div class="alert alert-error"><?= $errorMsg ?></div>
     <?php endif; ?>
-  </div>
 
-  <div class="validators-container" style="margin-top:20px;">
-    <h3>Select Validator</h3>
-    <form method="post" action="" onsubmit="return confirmAssign();">
-      <input type="hidden" name="student_id" value="<?= htmlspecialchars($student_id) ?>">
-      <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violation_id) ?>">
+    <div class="student-info">
+      <p><b>ID:</b> <?= htmlspecialchars($student['student_id']) ?></p>
+      <p><b>Name:</b> <?= htmlspecialchars($student['student_name']) ?></p>
+      <p><b>Course:</b> <?= htmlspecialchars($student['course']) ?></p>
+      <p><b>Year Level:</b> <?= htmlspecialchars($student['year_level']) ?></p>
+    </div>
 
-      <div class="cards-grid">
-        <?php
-        if ($validators && $validators->num_rows > 0) {
-          while ($v = $validators->fetch_assoc()) {
-            $id    = htmlspecialchars($v['validator_id']);
-            $name  = htmlspecialchars($v['validator_name']);
-            $org   = htmlspecialchars($v['designation']);
-            $email = htmlspecialchars($v['email']);
-            $cnt   = (int)$v['assigned_count'];
-            ?>
-            <label class="validator-card">
-              <input type="radio" name="validator_id" value="<?= $id ?>" required>
-              <div class="card-content">
-                <h4><?= $name ?></h4>
-                <p><b>Designation:</b> <?= $org ?: '—' ?></p>
-                <p><b>Email:</b> <?= $email ?: '—' ?></p>
-                <p><b>Assigned students:</b> <?= $cnt ?></p>
-              </div>
-            </label>
-            <?php
+    <div class="violation-info" style="margin-top:14px;">
+      <h3>Selected Violation #<?= htmlspecialchars((string)$violation_id) ?></h3>
+      <p><b>Category:</b> <?= ucfirst($cat) ?></p>
+      <p><b>Type:</b> <?= $type ?></p>
+      <p><b>Details:</b> <?= $detailsText ?></p>
+      <p><b>Reported on:</b> <?= $datePretty ?></p>
+      <p><b>Description:</b><br><?= nl2br($desc) ?: '—' ?></p>
+
+      <?php if ($photoRel): ?>
+        <p><b>Photo evidence:</b></p>
+        <div class="photo-wrap" style="margin-top:8px">
+          <img src="<?= htmlspecialchars($photoRel) ?>" alt="Evidence photo">
+        </div>
+      <?php endif; ?>
+    </div>
+
+    <div class="validators-container" style="margin-top:20px;">
+      <h3>Select Validator</h3>
+      <form method="post" action="" onsubmit="return confirmAssign();">
+        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student_id) ?>">
+        <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violation_id) ?>">
+
+        <div class="cards-grid">
+          <?php
+          if ($validators && $validators->num_rows > 0) {
+            while ($v = $validators->fetch_assoc()) {
+              $id    = htmlspecialchars($v['validator_id']);
+              $name  = htmlspecialchars($v['validator_name']);
+              $org   = htmlspecialchars($v['designation']);
+              $email = htmlspecialchars($v['email']);
+              $cnt   = (int)$v['assigned_count'];
+              ?>
+              <label class="validator-card">
+                <input type="radio" name="validator_id" value="<?= $id ?>" required>
+                <div class="card-content">
+                  <h4><?= $name ?></h4>
+                  <p><b>Designation:</b> <?= $org ?: '—' ?></p>
+                  <p><b>Email:</b> <?= $email ?: '—' ?></p>
+                  <p><b>Assigned students:</b> <?= $cnt ?></p>
+                </div>
+              </label>
+              <?php
+            }
+            $validators->free();
+          } else {
+            echo "<p>No active validators available.</p>";
           }
-          $validators->free();
-        } else {
-          echo "<p>No active validators available.</p>";
-        }
-        ?>
-      </div>
+          ?>
+        </div>
 
-      <br>
-      <button type="submit" name="assign_validator">Assign Validator</button>
-    </form>
-  </div>
+        <br>
+        <button type="submit" name="assign_validator">Assign Validator</button>
+      </form>
+    </div>
+  </main>
 
   <script>
     function confirmAssign() { return confirm("Assign validator to student?"); }
   </script>
 
+  <?php
+  // Include the scanner *after* all header/redirect-sensitive logic.
+  // This prevents its output from breaking header() earlier.
+  include __DIR__ . '/_scanner.php';
+  ?>
 </body>
 </html>
 <?php
