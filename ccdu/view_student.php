@@ -296,11 +296,11 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
       ?>
         <div class="violation-card" style="display:block">
           <div class="violation-card__body">
-            <p class="title"><strong>Group:</strong> <?= htmlspecialchars($csv) ?> <span class="badge">10 hours</span></p>
+            <p class="title"><strong>Group:</strong><span class="badge">10 hours</span></p>
             <ul class="muted" style="margin:8px 0 10px; padding-left:18px;">
               <?php foreach ($group as $g): ?>
                 <li>
-                  #<?= (int)$g['violation_id'] ?> • <?= htmlspecialchars(ucfirst(strtolower((string)$g['offense_category']))) ?>
+                  • <?= htmlspecialchars(ucfirst(strtolower((string)$g['offense_category']))) ?>
                   — <?= htmlspecialchars($g['offense_type'] ?: '—') ?> 
                   (<?= htmlspecialchars(date('M d, Y', strtotime($g['reported_at']))) ?>)
                 </li>
