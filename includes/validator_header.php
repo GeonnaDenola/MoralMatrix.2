@@ -66,35 +66,7 @@ if (!function_exists('activeClass')) {
       </span>
       <span class="nav-label">Dashboard</span>
     </a>
-       <a class="nav-item<?php echo activeClass('report_student.php'); ?>"
-   href="/moralmatrix/faculty/report_student.php"
-   <?php echo $active==='report_student.php' ? 'aria-current="page"' : ''; ?>>
-  <span class="nav-ico" aria-hidden="true">
-    <!-- Report (circle + !), scales with font via CSS -->
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-      <circle cx="12" cy="12" r="9"></circle>
-      <line x1="12" y1="7" x2="12" y2="13"></line>
-      <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"></circle>
-    </svg>
-  </span>
-  <span class="nav-label">Report Student</span>
-</a>
 
-<a class="nav-item<?php echo activeClass('pending_reports.php'); ?>"
-   href="/moralmatrix/faculty/pending_reports.php"
-   <?php echo $active==='pending_reports.php' ? 'aria-current="page"' : ''; ?>>
-  <span class="nav-ico" aria-hidden="true">
-    <!-- Pending (clock), scales with font via CSS -->
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-      <circle cx="12" cy="12" r="9"></circle>
-      <line x1="12" y1="7" x2="12" y2="12"></line>
-      <line x1="12" y1="12" x2="16" y2="14"></line>
-    </svg>
-  </span>
-  <span class="nav-label">Pending Reports</span>
-</a>
 
   </div>
 </nav>
