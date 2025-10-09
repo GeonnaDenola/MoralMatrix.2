@@ -240,217 +240,495 @@ $requiredHours = ($graveCount * 20) + (intdiv($modLightCount, 3) * 10);
 
 /* Logged hours (portable fetch) */
 $totalLogged = 0.0;
-$sum = $conn->prepare("SELECT COALESCE(SUM(hours),0) AS total FROM community_service_entries WHERE student_id = ?");
-$sum->bind_param("s", $student_id);
-$sum->execute();
-$sum->bind_result($sumHours);
-$sum->fetch();
-$sum->close();
-$totalLogged = (float)$sumHours;
+$hasCsEntriesTable = false;
+if ($res = $conn->query("SHOW TABLES LIKE 'community_service_entries'")) {
+  $hasCsEntriesTable = ($res->num_rows > 0);
+  $res->close();
+}
+if ($hasCsEntriesTable) {
+  $sum = $conn->prepare("SELECT COALESCE(SUM(hours),0) AS total FROM community_service_entries WHERE student_id = ?");
+  if ($sum) {
+    $sum->bind_param("s", $student_id);
+    $sum->execute();
+    $sum->bind_result($sumHours);
+    $sum->fetch();
+    $sum->close();
+    $totalLogged = (float)$sumHours;
+  }
+}
 
 /* Remaining (never negative) */
 $remainingHours = max(0, $requiredHours - $totalLogged);
 
 /* ---------- Fetch previous entries ---------- */
 $entries = [];
-$esql = "SELECT entry_id, hours, remarks, comment, photo_paths, service_date, created_at, violation_id
-         FROM community_service_entries
-         WHERE student_id = ?
-         ORDER BY service_date DESC, created_at DESC, entry_id DESC";
-$st = $conn->prepare($esql);
-$st->bind_param("s", $student_id);
-$st->execute();
-$res = $st->get_result();
-while ($row = $res->fetch_assoc()) { $entries[] = $row; }
-$st->close();   
+if ($hasCsEntriesTable) {
+  $esql = "SELECT entry_id, hours, remarks, comment, photo_paths, service_date, created_at, violation_id
+           FROM community_service_entries
+           WHERE student_id = ?
+           ORDER BY service_date DESC, created_at DESC, entry_id DESC";
+  $st = $conn->prepare($esql);
+  if ($st) {
+    $st->bind_param("s", $student_id);
+    $st->execute();
+    $res = $st->get_result();
+    while ($row = $res->fetch_assoc()) { $entries[] = $row; }
+    $st->close();
+  }
+}
 
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Student Details — Community Service</title>
-  <style>
-    html, body { margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#111827; }
-    * { box-sizing: border-box; }
-    a { text-decoration: none; color:#2563eb; }
-    .page { max-width: 1100px; margin: 0 auto; padding: 16px; }
-    .grid { display:grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
-    .card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-    .muted { color:#6b7280; }
-    .profile-img { width:100%; height:auto; border-radius:12px; object-fit:cover; border:1px solid #e5e7eb; }
-    .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.8rem; background:#f3f4f6; }
-
-    .alert { padding:10px 12px; border-radius:8px; margin:12px 0; }
-    .alert-ok { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
-    .alert-err{ background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
-
-    label { display:block; font-weight:600; margin:.5rem 0 .25rem; }
-    input[type="number"], input[type="text"], input[type="date"], textarea {
-      width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Details - Community Service</title>
+<style>
+  body.validator-student-page{
+    --bg:#f4f6fb;
+    --text:#171f2c;
+    --muted:#6c7385;
+    --surface:#ffffff;
+    --surface-muted:#f8f9fd;
+    --border:#e3e7f2;
+    --primary:#8c1c13;
+    --shadow:0 28px 50px -36px rgba(17,24,39,.45);
+    margin:0;
+    background:linear-gradient(180deg, rgba(140,28,19,.06) 0%, rgba(244,246,251,1) 220px);
+    color:var(--text);
+    font:15px/1.55 "Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    padding:0;
+  }
+  body.validator-student-page *{box-sizing:border-box;}
+  .validator-content{
+    width:min(1100px,100%);
+    margin:28px auto 96px;
+    padding:0 clamp(20px,3vw,40px);
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+  }
+  @media (min-width:1100px){
+    body.validator-student-page{
+      --sidebar-offset:250px;
+      padding-left:calc(var(--sidebar-offset,240px) + clamp(24px,4vw,64px));
+      padding-right:clamp(28px,4vw,72px);
     }
-    textarea { min-height: 90px; resize: vertical; }
-    .help { font-size:.85rem; color:#6b7280; }
-    .row { display:flex; gap:10px; align-items:center; }
-    .row > * { flex:1; }
-    .btn { display:inline-block; padding:10px 14px; border:1px solid #e5e7eb; border-radius:10px; background:#111827; color:#fff; cursor:pointer; }
-    .btn.secondary { background:#fff; color:#111827; }
-    .thumbs { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-    .thumbs img { width:90px; height:90px; object-fit:cover; border-radius:8px; border:1px solid #e5e7eb; }
-
-    .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:10px; margin:14px 0; }
-    .stat { border:1px solid #e5e7eb; border-radius:12px; padding:12px; background:#fff; }
-    .stat .label { font-size:.85rem; color:#6b7280; }
-    .stat .value { font-weight:700; font-size:1.4rem; margin-top:4px; }
-    .value.ok { color:#065f46; }
-    .value.warn { color:#991b1b; }
-
-    .entries { margin-top: 18px; display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-    .entry { border:1px solid #e5e7eb; border-radius:10px; padding:12px; background:#fff; }
-    .entry .meta { font-size:.85rem; color:#6b7280; margin-bottom:6px; }
-  </style>
+    .validator-content{margin-top:32px;}
+  }
+  @media (max-width:640px){
+    .validator-content{margin:24px auto 72px;padding:0 18px;}
+  }
+  .back-link-wrapper{display:flex;justify-content:flex-start;}
+  .back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-weight:600;
+    color:#fff;
+    background:var(--primary);
+    text-decoration:none;
+    font-size:.9rem;
+    padding:9px 16px;
+    border-radius:999px;
+    box-shadow:0 12px 24px -20px rgba(140,28,19,.65);
+    transition:transform .18s, box-shadow .18s, opacity .18s;
+  }
+  .back-link:hover{transform:translateY(-1px);opacity:.94;}
+  .alert{
+    margin:4px 0 0;
+    padding:14px 18px;
+    border-radius:14px;
+    border:1px solid transparent;
+    font-size:.92rem;
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    box-shadow:0 10px 22px -14px rgba(17,24,39,.18);
+  }
+  .alert strong{font-weight:700;}
+  .alert-ok{background:#ecfdf5;border-color:#a7f3d0;color:#047857;}
+  .alert-err{background:#fef2f2;border-color:#fecaca;color:#b91c1c;}
+  .card{
+    background:var(--surface);
+    border-radius:24px;
+    border:1px solid var(--border);
+    padding:30px;
+    box-shadow:var(--shadow);
+  }
+  .card.slim{padding:24px;}
+  .hero-card{
+    display:grid;
+    gap:28px;
+    grid-template-columns:minmax(0,280px) minmax(0,1fr);
+    align-items:center;
+    background:linear-gradient(135deg, rgba(140,28,19,.12), rgba(255,255,255,.95));
+    border:1px solid rgba(140,28,19,.22);
+  }
+  .hero-media{display:flex;justify-content:center;}
+  .portrait{
+    width:100%;
+    max-width:260px;
+    aspect-ratio:1/1;
+    object-fit:cover;
+    border-radius:22px;
+    border:2px solid rgba(255,255,255,.7);
+    box-shadow:0 18px 40px -26px rgba(17,24,39,.6);
+    background:#fff;
+  }
+  .hero-body{display:flex;flex-direction:column;gap:12px;}
+  .hero-overline{
+    text-transform:uppercase;
+    letter-spacing:.28em;
+    font-size:.7rem;
+    color:rgba(23,31,44,.55);
+    font-weight:700;
+  }
+  .hero-title{margin:0;font-size:2.2rem;line-height:1.1;letter-spacing:-.01em;}
+  .hero-tags{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;}
+  .chip{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    padding:12px 16px;
+    border-radius:16px;
+    background:rgba(255,255,255,.72);
+    border:1px solid rgba(140,28,19,.18);
+    min-width:150px;
+  }
+  .chip-label{
+    font-size:.68rem;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:rgba(23,31,44,.55);
+    font-weight:700;
+  }
+  .chip-value{font-size:.98rem;font-weight:600;color:var(--text);}
+  .hero-stats{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:16px;
+    margin-top:10px;
+  }
+  .hero-stat{
+    background:rgba(255,255,255,.82);
+    border-radius:18px;
+    border:1px solid rgba(227,231,242,.8);
+    padding:16px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .hero-stat-label{
+    font-size:.75rem;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:rgba(23,31,44,.6);
+    font-weight:600;
+  }
+  .hero-stat-value{
+    font-size:1.9rem;
+    font-weight:700;
+    color:var(--primary);
+    line-height:1.1;
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+  }
+  .hero-stat-value small{
+    font-size:.78rem;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    color:rgba(23,31,44,.55);
+    font-weight:600;
+  }
+  .hero-stat-value.ok{color:#047857;}
+  .hero-stat-value.warn{color:#b91c1c;}
+  .content-grid{
+    display:grid;
+    gap:24px;
+    grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+    align-items:start;
+  }
+  @media (max-width:1080px){
+    .hero-card{grid-template-columns:1fr;}
+    .hero-media{justify-content:flex-start;}
+    .portrait{max-width:200px;}
+    .content-grid{grid-template-columns:1fr;}
+  }
+  form{display:flex;flex-direction:column;gap:18px;}
+  .form-row{display:flex;flex-wrap:wrap;gap:16px;}
+  .field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px;}
+  label{font-weight:600;font-size:.92rem;color:var(--text);}
+  input[type="number"],
+  input[type="text"],
+  input[type="date"],
+  textarea{
+    width:100%;
+    border-radius:14px;
+    border:1px solid var(--border);
+    background:var(--surface-muted);
+    padding:12px 14px;
+    font-size:.96rem;
+    color:var(--text);
+    transition:border-color .18s, box-shadow .18s, background .18s;
+  }
+  textarea{min-height:120px;resize:vertical;}
+  input:focus,
+  textarea:focus{
+    border-color:var(--primary);
+    box-shadow:0 0 0 4px rgba(140,28,19,.16);
+    outline:none;
+    background:#fff;
+  }
+  .help{font-size:.8rem;color:var(--muted);}
+  .preview-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:4px;
+  }
+  .preview-grid img,
+  .entry-photos img{
+    width:88px;
+    height:88px;
+    object-fit:cover;
+    border-radius:12px;
+    border:1px solid rgba(227,231,242,.9);
+    box-shadow:0 8px 16px -12px rgba(17,24,39,.35);
+  }
+  .button-group{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:4px;}
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius:14px;
+    padding:12px 26px;
+    font-weight:700;
+    font-size:.95rem;
+    letter-spacing:.04em;
+    cursor:pointer;
+    transition:transform .18s, box-shadow .18s, opacity .18s;
+  }
+  .btn.primary{
+    background:var(--primary);
+    color:#fff;
+    box-shadow:0 20px 32px -24px rgba(140,28,19,.6);
+  }
+  .btn.primary:hover{transform:translateY(-1px);opacity:.92;}
+  .btn.secondary{background:var(--surface);color:var(--text);border:1px solid var(--border);text-decoration:none;display:inline-flex;align-items:center;}
+  .history-card{display:flex;flex-direction:column;gap:18px;}
+  .history-card h2{margin:0;font-size:1.35rem;}
+  .history-subtext{font-size:.9rem;color:var(--muted);margin:0;}
+  .empty-state{
+    padding:28px;
+    border-radius:18px;
+    background:var(--surface-muted);
+    border:1px dashed rgba(140,28,19,.25);
+    text-align:center;
+    color:var(--muted);
+    font-size:.95rem;
+  }
+  .entries{display:flex;flex-direction:column;gap:14px;}
+  .entry{
+    border:1px solid rgba(227,231,242,.9);
+    border-radius:18px;
+    padding:18px 20px;
+    background:var(--surface-muted);
+    box-shadow:0 18px 32px -30px rgba(17,24,39,.45);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .entry-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:.9rem;color:var(--muted);}
+  .entry-hours{margin-left:auto;font-weight:700;color:var(--primary);font-size:1.05rem;}
+  .entry-body{display:flex;flex-direction:column;gap:8px;}
+  .entry-body p{margin:0;font-size:.92rem;color:var(--text);}
+  .entry-body p.muted{color:var(--muted);}
+  .entry-photos{display:flex;flex-wrap:wrap;gap:10px;}
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:0 10px;
+    height:26px;
+    border-radius:999px;
+    font-size:.78rem;
+    background:rgba(140,28,19,.12);
+    color:var(--primary);
+    border:1px solid rgba(140,28,19,.25);
+    font-weight:600;
+  }
+  @media (max-width:540px){
+    .card{padding:24px;}
+    .hero-title{font-size:1.8rem;}
+    .hero-stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
+    .entry{padding:16px;}
+    .entry-hours{margin-left:0;}
+  }
+</style>
 </head>
-<body>
-  <?php include '../includes/header.php'; ?>
+<body class="validator-student-page">
+<?php include '../includes/header.php'; ?>
 
-  <main class="page">
-    <p><a href="<?= htmlspecialchars($returnUrl) ?>">← Back to Dashboard</a></p>
+<main class="validator-content">
+  <div class="back-link-wrapper">
+    <a class="back-link" href="<?= htmlspecialchars($returnUrl) ?>">&larr; Back to Dashboard</a>
+  </div>
 
-    <?php if ($saved): ?>
-      <div class="alert alert-ok">✅ Entry saved.</div>
-    <?php endif; ?>
-    <?php if ($flashError): ?>
-      <div class="alert alert-err">⚠️ <?= $flashError ?></div>
-    <?php endif; ?>
+  <?php if ($saved): ?>
+    <div class="alert alert-ok"><strong>Entry logged!</strong> The community service record was saved successfully.</div>
+  <?php endif; ?>
+  <?php if ($flashError): ?>
+    <div class="alert alert-err"><strong>Heads up:</strong> <?= htmlspecialchars($flashError) ?></div>
+  <?php endif; ?>
 
-    <div class="grid">
-      <!-- Left: Student profile -->
-      <section class="card">
-        <img class="profile-img" src="<?= htmlspecialchars($photoUrl) ?>" alt="Profile photo">
-        <h2 style="margin:10px 0 0;"><?= htmlspecialchars($student['student_name']) ?></h2>
-        <p class="muted" style="margin:4px 0 0;"><span class="badge"><?= htmlspecialchars($student['student_id']) ?></span></p>
-        <p style="margin:10px 0 0;"><b>Year & Section:</b> <?= htmlspecialchars($yearSection ?: '—') ?></p>
-        <p class="muted"><b>Course:</b> <?= htmlspecialchars($student['course'] ?? '—') ?></p>
+  <section class="card hero-card">
+    <div class="hero-media">
+      <img src="<?= htmlspecialchars($photoUrl) ?>" alt="Student photo" class="portrait">
+    </div>
+    <div class="hero-body">
+      <p class="hero-overline">Student ID <?= htmlspecialchars($student['student_id']) ?></p>
+      <h1 class="hero-title"><?= htmlspecialchars($student['student_name']) ?></h1>
 
-        <!-- Hours: Required / Logged / Remaining -->
-        <div class="stats">
-          <div class="stat">
-            <div class="label">Required (by violations)</div>
-            <div class="value"><?= (int)$requiredHours ?> hrs</div>
+      <div class="hero-tags">
+        <?php if ($yearSection): ?>
+          <span class="chip">
+            <span class="chip-label">Year &amp; Section</span>
+            <span class="chip-value"><?= htmlspecialchars($yearSection) ?></span>
+          </span>
+        <?php endif; ?>
+        <?php if (!empty($student['course'])): ?>
+          <span class="chip">
+            <span class="chip-label">Course</span>
+            <span class="chip-value"><?= htmlspecialchars($student['course']) ?></span>
+          </span>
+        <?php endif; ?>
+        <?php if (!empty($student['institute'])): ?>
+          <span class="chip">
+            <span class="chip-label">Institute</span>
+            <span class="chip-value"><?= htmlspecialchars($student['institute']) ?></span>
+          </span>
+        <?php endif; ?>
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-label">Required Hours</span>
+          <span class="hero-stat-value">
+            <?= htmlspecialchars(number_format($requiredHours, 2)) ?>
+            <small>hrs</small>
+          </span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-label">Logged Hours</span>
+          <span class="hero-stat-value ok">
+            <?= htmlspecialchars(number_format($totalLogged, 2)) ?>
+            <small>hrs</small>
+          </span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-label">Remaining</span>
+          <span class="hero-stat-value <?= $remainingHours > 0 ? 'warn' : 'ok' ?>">
+            <?= htmlspecialchars(number_format($remainingHours, 2)) ?>
+            <small>hrs</small>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="content-grid">
+    <section class="card slim form-card">
+      <h2 style="margin:0 0 4px;">Log Community Service</h2>
+      <p class="history-subtext" style="margin-bottom:12px;">Capture service hours, remarks, and supporting photos for this student.</p>
+      <form method="post" action="" enctype="multipart/form-data" id="entryForm">
+        <input type="hidden" name="save_entry" value="1">
+        <input type="hidden" name="violation_id" value="<?= $violation_get !== null ? (int)$violation_get : '' ?>">
+
+        <div class="form-row">
+          <div class="field">
+            <label for="hours">Hours</label>
+            <input type="number" id="hours" name="hours" step="0.5" min="0.5" placeholder="e.g., 2 or 2.5" required>
           </div>
-          <div class="stat">
-            <div class="label">Logged (entries)</div>
-            <div class="value <?= $totalLogged > 0 ? 'ok' : '' ?>"><?= number_format($totalLogged, 2) ?> hrs</div>
-          </div>
-          <div class="stat">
-            <div class="label">Remaining</div>
-            <div class="value <?= $remainingHours > 0 ? 'warn' : 'ok' ?>"><?= number_format($remainingHours, 2) ?> hrs</div>
+          <div class="field">
+            <label for="service_date">Service Date</label>
+            <input type="date" id="service_date" name="service_date" value="<?= date('Y-m-d') ?>" required>
           </div>
         </div>
-      </section>
 
-      <!-- Right: Form -->
-      <section class="card">
-        <h3 style="margin-top:0;">Log Community Service</h3>
-        <form method="post" action="" enctype="multipart/form-data" id="entryForm">
-          <input type="hidden" name="save_entry" value="1">
-          <input type="hidden" name="violation_id" value="<?= $violation_get !== null ? (int)$violation_get : '' ?>">
-
-          <div class="row">
-            <div>
-              <label for="hours">Hours<span class="muted"> (e.g., 2 or 2.5)</span></label>
-              <input type="number" id="hours" name="hours" step="0.5" min="0.5" required>
-            </div>
-            <div>
-              <label for="service_date">Service Date</label>
-              <input type="date" id="service_date" name="service_date" value="<?= date('Y-m-d') ?>" required>
-            </div>
-          </div>
-
+        <div class="field">
           <label for="remarks">Remarks (short)</label>
           <input type="text" id="remarks" name="remarks" maxlength="255" placeholder="e.g., Park clean-up, Day 1">
+        </div>
 
+        <div class="field">
           <label for="comment">Comment (details)</label>
-          <textarea id="comment" name="comment" placeholder="Add any relevant details..."></textarea>
+          <textarea id="comment" name="comment" placeholder="Highlight the tasks completed, supervisors, or any notable observations..."></textarea>
+        </div>
 
-          <label for="evidence">Photo Evidence (up to 5 images)</label>
+        <div class="field">
+          <label for="evidence">Photo Evidence</label>
           <input type="file" id="evidence" name="evidence[]" accept="image/*" multiple>
-          <div class="help">Max 5 files; up to 6MB each. Accepted: JPG, PNG, WEBP, GIF.</div>
-          <div class="thumbs" id="preview"></div>
+          <div class="help">Attach up to 5 images - JPG, PNG, WEBP, or GIF, max 6 MB each.</div>
+          <div class="preview-grid" id="preview"></div>
+        </div>
 
-          <div style="margin-top:12px;">
-            <button type="submit" class="btn">Save Entry</button>
-            <a href="<?= htmlspecialchars($returnUrl) ?>" class="btn secondary">Cancel</a>
-          </div>
-        </form>
+        <div class="button-group">
+          <button type="submit" class="btn primary">Save Entry</button>
+          <a href="<?= htmlspecialchars($returnUrl) ?>" class="btn secondary">Cancel</a>
+        </div>
+      </form>
+    </section>
 
-        <?php if (!empty($entries)): ?>
-          <h4 style="margin:18px 0 6px;">Previous Entries</h4>
-          <div class="entries">
-            <?php foreach ($entries as $e):
-              $photos = [];
-              if (!empty($e['photo_paths'])) {
-                $decoded = json_decode($e['photo_paths'], true);
-                if (is_array($decoded)) $photos = $decoded;
-              }
-            ?>
-              <div class="entry">
-                <div class="meta">
-                  <?= htmlspecialchars(date('M d, Y', strtotime($e['service_date'] ?? $e['created_at']))) ?>
-                  · logged <?= htmlspecialchars(date('h:i A', strtotime($e['created_at']))) ?>
-                  <?php if (!empty($e['violation_id'])): ?>
-                    · <span class="badge">Violation #<?= (int)$e['violation_id'] ?></span>
-                  <?php endif; ?>
-                </div>
-                <div><b>Hours:</b> <?= htmlspecialchars(number_format((float)$e['hours'], 2)) ?></div>
-                <?php if (!empty($e['remarks'])): ?>
-                  <div><b>Remarks:</b> <?= htmlspecialchars($e['remarks']) ?></div>
-                <?php endif; ?>
-                <?php if (!empty($e['comment'])): ?>
-                  <div class="muted"><?= nl2br(htmlspecialchars($e['comment'])) ?></div>
-                <?php endif; ?>
-                <?php if (!empty($photos)): ?>
-                  <div class="thumbs" style="margin-top:8px;">
-                    <?php foreach ($photos as $p): ?>
-                      <a href="<?= htmlspecialchars($p) ?>" target="_blank" title="Open image">
-                        <img src="<?= htmlspecialchars($p) ?>" alt="Evidence">
-                      </a>
-                    <?php endforeach; ?>
-                  </div>
-                <?php endif; ?>
+    <section class="card slim history-card">
+      <header>
+        <h2>Service History</h2>
+        <p class="history-subtext">Latest entries appear first. Click an image to open the full photo.</p>
+      </header>
+
+      <?php if (empty($entries)): ?>
+        <div class="empty-state">No community-service entries logged for this student yet. Use the form to add the first record.</div>
+      <?php else: ?>
+        <div class="entries">
+          <?php foreach ($entries as $e):
+            $photos = [];
+            if (!empty($e['photo_paths'])) {
+              $decoded = json_decode($e['photo_paths'], true);
+              if (is_array($decoded)) $photos = $decoded;
+            }
+            $serviceDate = $e['service_date'] ?? $e['created_at'];
+          ?>
+          <article class="entry">
+            <div class="entry-header">
+              <span><?= htmlspecialchars(date('M d, Y', strtotime($serviceDate))) ?></span>
+              <span>Logged at <?= htmlspecialchars(date('h:i A', strtotime($e['created_at']))) ?></span>
+              <?php if (!empty($e['violation_id'])): ?>
+                <span class="badge">Violation #<?= (int)$e['violation_id'] ?></span>
+              <?php endif; ?>
+              <span class="entry-hours"><?= htmlspecialchars(number_format((float)$e['hours'], 2)) ?> hrs</span>
+            </div>
+            <div class="entry-body">
+              <?php if (!empty($e['remarks'])): ?>
+                <p><strong>Remarks:</strong> <?= htmlspecialchars($e['remarks']) ?></p>
+              <?php endif; ?>
+              <?php if (!empty($e['comment'])): ?>
+                <p class="muted"><?= nl2br(htmlspecialchars($e['comment'])) ?></p>
+              <?php endif; ?>
+            </div>
+            <?php if (!empty($photos)): ?>
+              <div class="entry-photos">
+                <?php foreach ($photos as $p): ?>
+                  <a href="<?= htmlspecialchars($p) ?>" target="_blank" title="Open image">
+                    <img src="<?= htmlspecialchars($p) ?>" alt="Evidence">
+                  </a>
+                <?php endforeach; ?>
               </div>
-            <?php endforeach; ?>
-          </div>
-        <?php endif; ?>
-      </section>
-    </div>
-  </main>
-
-  <script>
-    // Limit to 5 files and preview thumbnails
-    const input = document.getElementById('evidence');
-    const preview = document.getElementById('preview');
-    input?.addEventListener('change', () => {
-      const files = Array.from(input.files || []);
-      if (files.length > 5) {
-        alert('You can upload up to 5 images only.');
-        input.value = '';
-        preview.innerHTML = '';
-        return;
-      }
-      preview.innerHTML = '';
-      files.forEach(file => {
-        const url = URL.createObjectURL(file);
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = 'Preview';
-        img.onload = () => URL.revokeObjectURL(url);
-        preview.appendChild(img);
-      });
-    });
-  </script>
-</body>
-</html>
-<?php
-$conn->close();
+            <?php endif; ?>
+          </article>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+  </div>
+</main>

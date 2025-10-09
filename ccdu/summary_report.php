@@ -101,9 +101,18 @@ $totSql = "
 $totalRows = fetch_group($conn, $totSql, $types, $binds);
 $totalViolations = (int)($totalRows[0]['total'] ?? 0);
 
+$uniqueSql = "
+  SELECT COUNT(DISTINCT sv.student_id) AS total_unique
+  FROM student_violation sv
+  JOIN student_account sa ON sa.student_id = sv.student_id
+  $whereSql
+";
+$uniqueRows = fetch_group($conn, $uniqueSql, $types, $binds);
+$uniqueStudents = (int)($uniqueRows[0]['total_unique'] ?? 0);
+
 /* ----- 1) By Institute ----- */
 $sqlByInst = "
-  SELECT COALESCE(NULLIF(TRIM(sa.institute),''), '—') AS label,
+  SELECT COALESCE(NULLIF(TRIM(sa.institute),''), '-') AS label,
          COUNT(*) AS violations,
          COUNT(DISTINCT sv.student_id) AS students
   FROM student_violation sv
@@ -184,88 +193,252 @@ function prettyPeriodName($p) {
     'yearly'     => 'Yearly'
   ][$p] ?? 'Monthly';
 }
+
+function prettyRangeLabel($startOk, $start, $endOk, $end) {
+  if (!$startOk && !$endOk) {
+    return 'All recorded dates';
+  }
+
+  $from = $startOk ? $start : 'Earliest';
+  $to   = $endOk ? $end : 'Latest';
+
+  if ($from === $to) {
+    return $from;
+  }
+
+  return $from . ' to ' . $to;
+}
+
+function pluralLabel($count, $singular, $plural = null) {
+  $plural = $plural ?? ($singular . 's');
+  return ($count === 1) ? $singular : $plural;
+}
 ?>
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Student Violations — Analytics</title>
+<title>Student Violations - Analytics</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{--b:#e5e7eb;--tx:#111827;--mut:#6b7280;--card:#fff;--bg:#f8fafc;--pri:#8C1C13}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.55 system-ui,Segoe UI,Roboto,Arial}
-  .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
-  h1{margin:0 0 8px}
-  .sub{color:var(--mut);margin:0 0 18px}
-  .filters{display:flex;gap:12px;align-items:end;margin:14px 0 18px;flex-wrap:wrap}
-  .card{background:var(--card);border:1px solid var(--b);border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 6px 20px rgba(0,0,0,.04)}
-  label{font-weight:600;display:block;margin:0 0 6px}
-  input[type=date], select{padding:8px 10px;border:1px solid var(--b);border-radius:10px;background:#fff}
-  .btn{appearance:none;background:var(--pri);color:#fff;border:none;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px;border-bottom:1px solid var(--b);text-align:left;vertical-align:top}
-  th{font-size:.88rem;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
-  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:10px 0}
-  .k{background:#fff;border:1px solid var(--b);border-radius:12px;padding:12px}
-  .k .lbl{font-size:.8rem;color:var(--mut)}
-  .k .val{font-weight:800;font-size:1.6rem}
-  .mut{color:var(--mut)}
+  body.summary-report-page{
+    --bg:#f4f6fb;
+    --text:#141b2a;
+    --muted:#6b7280;
+    --surface:#ffffff;
+    --surface-muted:#f8f9fd;
+    --border:#e5e7f3;
+    --primary:#8c1c13;
+    --shadow:0 24px 40px -30px rgba(17,24,39,.35);
+    margin:0;
+    background:linear-gradient(180deg, rgba(140,28,19,.05) 0%, rgba(244,246,251,1) 260px);
+    color:var(--text);
+    font:15px/1.55 "Inter","Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+    overflow-x:hidden;
+    padding:0;
+  }
+  body.summary-report-page *{box-sizing:border-box;}
+  .summary-report{
+    width:min(1200px,100%);
+    margin:40px auto 80px;
+    padding:0 clamp(20px,4vw,48px);
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+  }
+  @media (min-width:1100px){
+    body.summary-report-page{
+      --sidebar-offset:250px;
+      padding-left:calc(var(--sidebar-offset,240px) + clamp(24px,4vw,72px));
+      padding-right:clamp(32px,4vw,80px);
+    }
+    .summary-report{
+      margin:48px auto 96px;
+      width:min(1200px,100%);
+    }
+  }
+  @media (max-width:600px){
+    .summary-report{
+      margin:32px auto 64px;
+      padding:0 18px;
+    }
+  }
+  .card{background:var(--surface);border-radius:22px;padding:28px;border:1px solid var(--border);box-shadow:var(--shadow);}
+  .card.accent{background:linear-gradient(135deg,rgba(140,28,19,.12),rgba(255,255,255,.92));border:1px solid rgba(140,28,19,.25);}
+  .page-header{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between;}
+  .page-header h1{margin:6px 0 0;font-size:2.05rem;font-weight:700;letter-spacing:-.01em;}
+  .page-header .lead{margin:12px 0 0;color:var(--muted);max-width:48ch;}
+  .eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.3em;font-weight:700;color:rgba(140,28,19,.8);margin:0;}
+  .header-meta{display:flex;flex-wrap:wrap;gap:12px;}
+  .chip{padding:12px 18px;border-radius:18px;background:rgba(255,255,255,.9);border:1px solid rgba(140,28,19,.18);min-width:190px;display:flex;flex-direction:column;gap:4px;}
+  .chip-muted{background:var(--surface);border-color:var(--border);}
+  .chip-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:rgba(17,24,39,.6);}
+  .chip-value{font-size:.95rem;font-weight:600;color:var(--text);}
+  .chip-value strong{color:var(--primary);}
+  .filters{display:flex;flex-direction:column;gap:24px;}
+  .filters-grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));}
+  .control label{font-weight:600;font-size:.9rem;margin-bottom:8px;color:var(--text);}
+  .control input[type=date], .control select{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--surface-muted);font-size:.95rem;color:var(--text);transition:border-color .18s, box-shadow .18s, background .18s;}
+  .control input[type=date]:focus, .control select:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(140,28,19,.15);outline:none;background:#fff;}
+  .filters-actions{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;}
+  .btn{appearance:none;background:var(--primary);color:#fff;border:none;border-radius:14px;padding:12px 28px;font-weight:700;cursor:pointer;font-size:.98rem;letter-spacing:.04em;transition:transform .18s, box-shadow .18s, background .18s;}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 18px 32px -20px rgba(140,28,19,.6);}
+  .btn:focus-visible{outline:3px solid rgba(140,28,19,.4);outline-offset:2px;}
+  .status-text{color:var(--muted);font-size:.9rem;}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;}
+  .metric-card{
+    position:relative;
+    background:var(--surface);
+    border-radius:22px;
+    border:1px solid var(--border);
+    padding:26px 28px 28px;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    overflow:hidden;
+  }
+  .metric-card::after{
+    content:"";
+    position:absolute;
+    inset:-60% 40% auto -40%;
+    height:160%;
+    background:radial-gradient(ellipse at top, rgba(140,28,19,.22) 0%, rgba(140,28,19,0) 70%);
+    opacity:.65;
+    pointer-events:none;
+  }
+  .metric-card .label{
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:rgba(17,24,39,.55);
+    position:relative;
+    z-index:1;
+  }
+  .metric-card .value{
+    position:relative;
+    z-index:1;
+    font-size:2.6rem;
+    font-weight:700;
+    color:var(--primary);
+    line-height:1.1;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .metric-card .value small{
+    font-size:.78rem;
+    font-weight:600;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:rgba(17,24,39,.55);
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:20px;
+  }
+  @media (min-width:1200px){
+    .grid{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+  }
+  .data-card{
+    display:flex;
+    flex-direction:column;
+    height:100%;
+  }
+  .data-card h3{margin:0;font-size:1.05rem;font-weight:600;color:var(--text);}
+  .data-card table{margin-top:16px;flex:1;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{padding:14px 12px;border-bottom:1px solid rgba(229,231,243,.8);text-align:center;}
+  th{text-transform:uppercase;font-size:.72rem;letter-spacing:.18em;color:rgba(17,24,39,.55);}
+  td{font-size:.95rem;}
+  td:first-child{font-weight:600;color:var(--text);}
+  tbody tr:hover{background:rgba(140,28,19,.05);}
+  tbody tr:last-child td{border-bottom:none;}
+  .empty{text-align:center;color:var(--muted);font-style:italic;padding:12px 0;}
+  .full-width{grid-column:1 / -1;}
+  @media (max-width:900px){
+    .summary-report{margin-top:24px;}
+    .card{padding:22px;}
+    .page-header h1{font-size:1.85rem;}
+    .metric-card{padding:22px 24px;}
+    .metric-card .value{font-size:2.1rem;}
+    .metric-card .value small{font-size:.72rem;}
+  }
 </style>
 </head>
-<body>
-  <div class="wrap">
-    <h1>Student Violations — Analytics</h1>
-    <p class="sub">Grouped by Institute • Year Level • Course • Violation Level • Time Period</p>
+<body class="summary-report-page">
+  <main class="summary-report">
+    <section class="card accent page-header">
+      <div>
+        <p class="eyebrow">Summary Report</p>
+        <h1>Student Violations Analytics</h1>
+        <p class="lead">Monitor violation trends across institutes, year levels, courses, violation levels, and time periods.</p>
+      </div>
+      <div class="header-meta">
+        <div class="chip">
+          <span class="chip-label">Current View</span>
+          <span class="chip-value"><?= htmlspecialchars(prettyPeriodName($period)) ?></span>
+        </div>
+        <div class="chip chip-muted">
+          <span class="chip-label">Date Range</span>
+          <span class="chip-value"><?= htmlspecialchars(prettyRangeLabel($startOk, $start, $endOk, $end)) ?></span>
+        </div>
+      </div>
+    </section>
 
-    <form class="filters card" method="get" action="">
-      <div>
-        <label for="start">Start date</label>
-        <input type="date" id="start" name="start" value="<?= htmlspecialchars($startOk ? $start : '') ?>">
+    <form class="card filters" method="get" action="">
+      <div class="filters-grid">
+        <div class="control">
+          <label for="start">Start date</label>
+          <input type="date" id="start" name="start" value="<?= htmlspecialchars($startOk ? $start : '') ?>">
+        </div>
+        <div class="control">
+          <label for="end">End date</label>
+          <input type="date" id="end" name="end" value="<?= htmlspecialchars($endOk ? $end : '') ?>">
+        </div>
+        <div class="control">
+          <label for="period">Period</label>
+          <select id="period" name="period">
+            <option value="weekly"     <?= $period==='weekly'?'selected':'' ?>>Weekly</option>
+            <option value="monthly"    <?= $period==='monthly'?'selected':'' ?>>Monthly</option>
+            <option value="semiannual" <?= $period==='semiannual'?'selected':'' ?>>Every 6 Months</option>
+            <option value="yearly"     <?= $period==='yearly'?'selected':'' ?>>Yearly</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label for="end">End date</label>
-        <input type="date" id="end" name="end" value="<?= htmlspecialchars($endOk ? $end : '') ?>">
-      </div>
-      <div>
-        <label for="period">Period</label>
-        <select id="period" name="period">
-          <option value="weekly"     <?= $period==='weekly'?'selected':'' ?>>Weekly</option>
-          <option value="monthly"    <?= $period==='monthly'?'selected':'' ?>>Monthly</option>
-          <option value="semiannual" <?= $period==='semiannual'?'selected':'' ?>>Every 6 Months</option>
-          <option value="yearly"     <?= $period==='yearly'?'selected':'' ?>>Yearly</option>
-        </select>
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button class="btn" type="submit">Apply</button>
-      </div>
-      <div class="mut">
-        Showing:
-        <?= $startOk ? htmlspecialchars($start) : '…' ?> to <?= $endOk ? htmlspecialchars($end) : '…' ?> •
-        Period: <strong><?= htmlspecialchars(prettyPeriodName($period)) ?></strong>
+      <div class="filters-actions">
+        <button class="btn" type="submit">Apply Filters</button>
+        <p class="status-text">
+          Showing <?= htmlspecialchars(prettyRangeLabel($startOk, $start, $endOk, $end)) ?> &middot; Period:
+          <strong><?= htmlspecialchars(prettyPeriodName($period)) ?></strong>
+        </p>
       </div>
     </form>
 
-    <div class="kpi">
-      <div class="k"><div class="lbl">Total Violations</div><div class="val"><?= number_format($totalViolations) ?></div></div>
-      <div class="k">
-        <div class="lbl">Unique Students</div>
-        <div class="val">
-          <?php
-            $uSql = "SELECT COUNT(DISTINCT sv.student_id) AS u FROM student_violation sv JOIN student_account sa ON sa.student_id = sv.student_id $whereSql";
-            $u = fetch_group($conn, $uSql, $types, $binds);
-            echo number_format((int)($u[0]['u'] ?? 0));
-          ?>
-        </div>
-      </div>
-    </div>
+    <section class="kpi">
+      <article class="metric-card">
+        <span class="label">Total Violations</span>
+        <span class="value">
+          <?= number_format($totalViolations) ?>
+          <small><?= htmlspecialchars(pluralLabel($totalViolations, 'case recorded', 'cases recorded')) ?></small>
+        </span>
+      </article>
+      <article class="metric-card">
+        <span class="label">Unique Students</span>
+        <span class="value">
+          <?= number_format($uniqueStudents) ?>
+          <small><?= htmlspecialchars(pluralLabel($uniqueStudents, 'student involved', 'students involved')) ?></small>
+        </span>
+      </article>
+    </section>
 
     <div class="grid">
-      <!-- By Institute -->
-      <section class="card">
-        <h3 style="margin:0 0 8px">By Institute</h3>
+      <section class="card data-card">
+        <h3>By Institute</h3>
         <table>
           <thead><tr><th>Institute</th><th>Violations</th><th>%</th><th>Students</th></tr></thead>
           <tbody>
@@ -277,15 +450,14 @@ function prettyPeriodName($p) {
               <td><?= number_format($r['students']) ?></td>
             </tr>
           <?php endforeach; if (!$byInstitute): ?>
-            <tr><td colspan="4" class="mut">No data.</td></tr>
+            <tr><td colspan="4" class="empty">No data available</td></tr>
           <?php endif; ?>
           </tbody>
         </table>
       </section>
 
-      <!-- By Year Level -->
-      <section class="card">
-        <h3 style="margin:0 0 8px">By Year Level</h3>
+      <section class="card data-card">
+        <h3>By Year Level</h3>
         <table>
           <thead><tr><th>Year Level</th><th>Violations</th><th>%</th><th>Students</th></tr></thead>
           <tbody>
@@ -297,15 +469,14 @@ function prettyPeriodName($p) {
               <td><?= number_format($r['students']) ?></td>
             </tr>
           <?php endforeach; if (!$byYear): ?>
-            <tr><td colspan="4" class="mut">No data.</td></tr>
+            <tr><td colspan="4" class="empty">No data available</td></tr>
           <?php endif; ?>
           </tbody>
         </table>
       </section>
 
-      <!-- By Course -->
-      <section class="card">
-        <h3 style="margin:0 0 8px">By Course</h3>
+      <section class="card data-card">
+        <h3>By Course</h3>
         <table>
           <thead><tr><th>Course</th><th>Violations</th><th>%</th><th>Students</th></tr></thead>
           <tbody>
@@ -317,15 +488,14 @@ function prettyPeriodName($p) {
               <td><?= number_format($r['students']) ?></td>
             </tr>
           <?php endforeach; if (!$byCourse): ?>
-            <tr><td colspan="4" class="mut">No data.</td></tr>
+            <tr><td colspan="4" class="empty">No data available</td></tr>
           <?php endif; ?>
           </tbody>
         </table>
       </section>
 
-      <!-- By Violation Level -->
-      <section class="card">
-        <h3 style="margin:0 0 8px">By Violation Level</h3>
+      <section class="card data-card">
+        <h3>By Violation Level</h3>
         <table>
           <thead><tr><th>Level</th><th>Violations</th><th>%</th><th>Students</th></tr></thead>
           <tbody>
@@ -337,16 +507,15 @@ function prettyPeriodName($p) {
               <td><?= number_format($r['students']) ?></td>
             </tr>
           <?php endforeach; if (!$byLevel): ?>
-            <tr><td colspan="4" class="mut">No data.</td></tr>
+            <tr><td colspan="4" class="empty">No data available</td></tr>
           <?php endif; ?>
           </tbody>
         </table>
       </section>
     </div>
 
-    <!-- NEW: By Time Period -->
-    <section class="card">
-      <h3 style="margin:0 0 8px">By Time Period (<?= htmlspecialchars(prettyPeriodName($period)) ?>)</h3>
+    <section class="card data-card full-width">
+      <h3>By Time Period (<?= htmlspecialchars(prettyPeriodName($period)) ?>)</h3>
       <table>
         <thead><tr><th>Period</th><th>Violations</th><th>%</th><th>Students</th></tr></thead>
         <tbody>
@@ -358,13 +527,13 @@ function prettyPeriodName($p) {
             <td><?= number_format($r['students']) ?></td>
           </tr>
         <?php endforeach; if (!$byPeriod): ?>
-          <tr><td colspan="4" class="mut">No data.</td></tr>
+          <tr><td colspan="4" class="empty">No data available</td></tr>
         <?php endif; ?>
         </tbody>
       </table>
     </section>
 
-  </div>
+  </main>
 </body>
 </html>
 <?php $conn->close(); ?>
