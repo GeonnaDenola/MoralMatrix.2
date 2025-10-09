@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-﻿<?php
-// set_community_service.php â€” no output before potential redirects
-include '../includes/header.php';
-=======
 <?php
 // set_community_service.php — make sure no output before redirects!
->>>>>>> f8c4ad6b488c9d7b7c6659390be7d0ba655e2d24
 require '../config.php';
 
 $servername = $database_settings['servername'];
@@ -152,21 +146,12 @@ if ($violation_id > 0) {
 }
 
 /* ---------- Pretty / safe values ---------- */
-<<<<<<< HEAD
-$datePretty = !empty($violation['reported_at']) ? date('M d, Y h:i A', strtotime($violation['reported_at'])) : 'â€”';
-$cat        = htmlspecialchars($violation['offense_category'] ?? '');
-$type       = htmlspecialchars($violation['offense_type'] ?? '');
-$desc       = htmlspecialchars($violation['description'] ?? '');
-$detailsText = 'â€”';
-if (!empty($violation['offense_details'])) {
-=======
 $datePretty = $violation && !empty($violation['reported_at']) ? date('M d, Y h:i A', strtotime($violation['reported_at'])) : '—';
 $cat        = $violation ? htmlspecialchars($violation['offense_category'] ?? '') : '';
 $type       = $violation ? htmlspecialchars($violation['offense_type'] ?? '') : '';
 $desc       = $violation ? htmlspecialchars($violation['description'] ?? '') : '';
 $detailsText = '—';
 if ($violation && !empty($violation['offense_details'])) {
->>>>>>> f8c4ad6b488c9d7b7c6659390be7d0ba655e2d24
   $decoded = json_decode($violation['offense_details'], true);
   if (is_array($decoded) && count($decoded)) {
     $safe = array_map('htmlspecialchars', $decoded);
@@ -223,9 +208,6 @@ include '../includes/header.php';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Assign Validator</title>
-<<<<<<< HEAD
-  <link rel="stylesheet" href="../css/set_community_service.css?v=1">
-=======
   <style>
     :root {
       --mm-primary: #8C1C13;
@@ -285,7 +267,6 @@ include '../includes/header.php';
     .hint { color:#6B7280; font-size:.92rem; margin-top:8px; }
   </style>
 
->>>>>>> f8c4ad6b488c9d7b7c6659390be7d0ba655e2d24
 </head>
 <body>
 
@@ -441,4 +422,3 @@ include '../includes/header.php';
 </html>
 <?php
 $conn->close();
-
