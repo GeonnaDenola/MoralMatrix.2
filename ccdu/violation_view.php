@@ -24,30 +24,6 @@ if ($conn->connect_error) {
   exit;
 }
 
-/*function sendSMS($to, $message) {
-    $apiKey = "8254c96d5e03a4c37219c7a77a93c908d5d368a6"; // 🔑 paste your API key here
-    $url = "https://api.engagespark.com/v1/sms";
-
-    $data = [
-        "to" => $to,
-        "message" => $message
-    ];
-
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Token " . $apiKey,
-        "Content-Type: application/json"
-    ]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    return $response;
-} */
-
 /* Detect optional columns */
 $hasReportedBy = false;
 $hasStatus     = false;
@@ -102,17 +78,93 @@ if ($r) {
     $guardianMobile = $acc['guardian_mobile'] ?? '';
   }
 }
-$conn->close();
+
+/* ===== NEW: Community Service status for THIS violation ===== */
+$csAssigned      = false;
+$assignedToName  = null;
+$assignedAt      = null;
+$requiredForThis = 0;   // per-violation required hours
+$loggedForThis   = 0.0; // sum of entries tied to this violation
+$remainingForThis= 0.0;
+
+/* 1) Is this violation assigned to community service? (robust across schemas) */
+if ($r) {
+  $hasAssignCol = false;
+  $hasViolCol   = false;
+
+  if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'assignment_id'")) {
+    $hasAssignCol = ($res->num_rows > 0); $res->close();
+  }
+  if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'violation_id'")) {
+    $hasViolCol = ($res->num_rows > 0); $res->close();
+  }
+
+  if ($hasAssignCol && $hasViolCol) {
+    $sqlA = "SELECT a.validator_id, a.assigned_at, v.v_username
+             FROM validator_student_assignment a
+             LEFT JOIN validator_account v ON v.validator_id = a.validator_id
+             WHERE a.student_id = ? AND (a.assignment_id = ? OR a.violation_id = ?) LIMIT 1";
+    $stA = $conn->prepare($sqlA);
+    if (!$stA) { die('Prepare failed: ' . $conn->error); }
+    $stA->bind_param("sii", $r['student_id'], $violationId, $violationId);
+
+  } elseif ($hasViolCol) {
+    $sqlA = "SELECT a.validator_id, a.assigned_at, v.v_username
+             FROM validator_student_assignment a
+             LEFT JOIN validator_account v ON v.validator_id = a.validator_id
+             WHERE a.violation_id = ? AND a.student_id = ? LIMIT 1";
+    $stA = $conn->prepare($sqlA);
+    if (!$stA) { die('Prepare failed: ' . $conn->error); }
+    $stA->bind_param("is", $violationId, $r['student_id']);
+
+  } else { // fallback: assignment_id only
+    $sqlA = "SELECT a.validator_id, a.assigned_at, v.v_username
+             FROM validator_student_assignment a
+             LEFT JOIN validator_account v ON v.validator_id = a.validator_id
+             WHERE a.assignment_id = ? AND a.student_id = ? LIMIT 1";
+    $stA = $conn->prepare($sqlA);
+    if (!$stA) { die('Prepare failed: ' . $conn->error); }
+    $stA->bind_param("is", $violationId, $r['student_id']);
+  }
+
+  $stA->execute();
+  $as = $stA->get_result()->fetch_assoc();
+  $stA->close();
+
+  if ($as) {
+    $csAssigned     = true;
+    $assignedAt     = $as['assigned_at'] ?? null;
+    $assignedToName = $as['v_username'] ?? null;
+  }
+}
+
+
+
+/* 2) Required hours for THIS violation
+      - 'grave' (not 'less grave') => 20h
+      - everything else => we attribute 10h to this violation (simple per-violation model)
+*/
+$rawCat = strtolower((string)($r['offense_category'] ?? ''));
+$isGrave = (bool)(preg_match('/\bgrave\b/', $rawCat) && !preg_match('/\bless\b/', $rawCat));
+$requiredForThis = $isGrave ? 20 : 10;
+
+/* 3) Logged hours for THIS violation (from community_service_entries) */
+$stL = $conn->prepare("SELECT COALESCE(SUM(hours),0) AS total FROM community_service_entries WHERE student_id=? AND violation_id=?");
+$stL->bind_param("si", $r['student_id'], $violationId);
+$stL->execute();
+$loggedForThis = (float)($stL->get_result()->fetch_assoc()['total'] ?? 0);
+$stL->close();
+
+$remainingForThis = max(0, $requiredForThis - $loggedForThis);
 
 /* Not found */
 if (!$r) {
   if (isset($_GET['modal']) && $_GET['modal'] == '1') {
     echo '<div class="violation-view"><div class="nv-empty">Violation not found.</div></div>';
+    $conn->close();
     exit;
   } else {
     http_response_code(404); ?>
-
-
 <!DOCTYPE html>
   <html lang="en">
     <head>
@@ -131,7 +183,6 @@ if (!$r) {
       </style>
     </head>
     <body>
-
       <div class="wrap">
         <h1>Violation not found</h1>
         <p>The record you’re trying to view doesn’t exist or may have been removed.</p>
@@ -139,7 +190,9 @@ if (!$r) {
       </div>
     </body>
     </html>
-    <?php exit;
+    <?php
+    $conn->close();
+    exit;
   }
 }
 
@@ -165,7 +218,7 @@ if (!empty($r['offense_details'])) {
 }
 
 /* Build return + Set CS URL */
-$backTo  = 'view_student.php?student_id=' . rawurlencode($studentId ?: $r['student_id']);
+$backTo   = 'view_student.php?student_id=' . rawurlencode($studentId ?: $r['student_id']);
 $setCsUrl = 'set_community_service.php?student_id=' . urlencode($r['student_id'])
           . '&violation_id=' . urlencode((string)$violationNo)
           . '&return=' . urlencode($backTo);
@@ -192,7 +245,7 @@ function statusBadgeClass($status){
 
 ob_start(); ?>
 
-<!-- Scoped styles to ensure good look when used as modal content (light theme only) -->
+<!-- Scoped styles (add CS status styles) -->
 <style>
   .violation-view *{box-sizing:border-box}
   .violation-view{--bg:#ffffff;--card:#ffffff;--text:#0f172a;--muted:#64748b;--border:#e5e7eb;--accent:#2563eb;--ok:#16a34a;--warn:#b45309;--info:#0e7490;--danger:#b91c1c}
@@ -233,7 +286,6 @@ ob_start(); ?>
   .nv-empty{padding:14px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);text-align:center}
   .nv-toolbar{position:sticky;top:0;z-index:3;background:#ffffff;backdrop-filter:saturate(1.2);padding:10px 0 14px;margin:-6px 0 12px}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
-  @media print{.nv-actions,.nv-toolbar a{display:none}.violation-view{color:black}.nv-card{border:1px solid #000}}
 </style>
 
 <div class="violation-view">
@@ -256,6 +308,34 @@ ob_start(); ?>
       <div class="nv-item"><b>Ordinal</b><span>#<?= (int)$studentNo ?> for this student</span></div>
       <div class="nv-item"><b>Category</b><span><?= htmlspecialchars(ucfirst($cat)) ?></span></div>
       <div class="nv-item"><b>Type</b><span><?= $type ?: '—' ?></span></div>
+
+      <!-- ===== NEW: CS status per violation ===== -->
+      <div class="nv-item">
+        <b>Community Service</b>
+        <?php if ($remainingForThis <= 0): ?>
+          <span class="badge badge-ok">Completed · <?= (int)$requiredForThis ?>h</span>
+          <?php if ($csAssigned && $assignedToName): ?>
+            <span class="badge badge-info">by <?= htmlspecialchars($assignedToName) ?></span>
+          <?php endif; ?>
+        <?php elseif ($csAssigned): ?>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+            <span class="badge badge-warn">In progress</span>
+            <?php if ($assignedToName): ?>
+              <span class="badge badge-info">Validator: <?= htmlspecialchars($assignedToName) ?></span>
+            <?php endif; ?>
+            <span class="badge">Required: <?= (int)$requiredForThis ?>h</span>
+            <span class="badge">Logged: <?= number_format($loggedForThis, 2) ?>h</span>
+            <span class="badge badge-warn">Remaining: <?= number_format($remainingForThis, 2) ?>h</span>
+          </div>
+        <?php else: ?>
+          <span class="badge badge-muted">Not assigned</span>
+          <span class="badge">Required: <?= (int)$requiredForThis ?>h</span>
+          <?php if ($loggedForThis > 0): ?>
+            <span class="badge">Logged: <?= number_format($loggedForThis, 2) ?>h</span>
+          <?php endif; ?>
+        <?php endif; ?>
+      </div>
+      <!-- ======================================== -->
     </div>
 
     <div class="nv-item" style="margin-top:10px">
@@ -286,11 +366,9 @@ ob_start(); ?>
         </div>
 
         <div class="nv-actions">
-          <?php
-            $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile);
-          ?>
+          <?php $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile); ?>
+
           <?php if (!empty($guardianMobile) && !empty($telClean)): ?>
-            <!-- REPLACED: secure POST form with CSRF token -->
             <form method="POST" id="contactGuardianForm" action="send_sms.php" onsubmit="return confirm('Send SMS to guardian?');" style="display:inline">
               <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
               <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
@@ -301,7 +379,22 @@ ob_start(); ?>
             <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
           <?php endif; ?>
 
-          <a class="btn btn-primary" href="<?= $setCsUrl ?>">🧹 Set for Community Service</a>
+          <?php
+            // Link to logging page with violation preselected (so logs subtract from THIS violation)
+            $logUrl = 'student_details.php?student_id=' . urlencode($r['student_id'])
+                    . '&violation_id=' . urlencode((string)$violationNo)
+                    . '&return=' . urlencode('violation_view.php?id='.$violationNo.'&student_id='.$r['student_id']);
+          ?>
+
+          <?php if ($remainingForThis <= 0): ?>
+            <a class="btn" href="<?= $logUrl ?>">🧾 View / Add Notes</a>
+          <?php elseif ($csAssigned): ?>
+            <a class="btn btn-primary" href="<?= $logUrl ?>">⏱️ Log Hours (Remaining: <?= number_format($remainingForThis, 2) ?>h)</a>
+          <?php else: ?>
+            <a class="btn btn-primary" href="<?= $setCsUrl ?>">🧹 Set for Community Service</a>
+            <a class="btn" href="<?= $logUrl ?>">⏱️ Log Hours</a>
+          <?php endif; ?>
+
           <a class="btn" href="violation_edit.php?id=<?= $violationNo ?>&student_id=<?= urlencode($r['student_id']) ?>">✏️ Edit</a>
 
           <?php if ($hasStatus && strtolower($statusVal) !== 'void'): ?>
@@ -324,7 +417,6 @@ ob_start(); ?>
           <?php endif; ?>
         </div>
         <figure style="margin:0">
-          <!-- Clicking opens new tab by default; if full page (not modal), JS lightbox will also intercept -->
           <a class="js-lightbox" href="<?= htmlspecialchars($photoRel) ?>" target="_blank" rel="noopener">
             <img src="<?= htmlspecialchars($photoRel) ?>" alt="Evidence photo for violation #<?= $violationNo ?>">
           </a>
@@ -340,6 +432,7 @@ $inner = ob_get_clean();
 
 if (isset($_GET['modal']) && $_GET['modal'] == '1') {
   echo $inner;
+  $conn->close();
   exit;
 }
 
@@ -359,7 +452,6 @@ if (isset($_GET['sms_status'])) {
                      </div>";
     }
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -384,7 +476,6 @@ if (isset($_GET['sms_status'])) {
     footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
     @media print{.backline,footer{display:none}.page{box-shadow:none;border:1px solid #000}}
 
-    /* Simple lightbox */
     .lb{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000}
     .lb[hidden]{display:none}
     .lb img{max-width:100%;max-height:90vh;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.40)}
@@ -409,7 +500,6 @@ if (isset($_GET['sms_status'])) {
     <footer>© <?= date('Y') ?> Discipline Management</footer>
   </div>
 
-  <!-- Lightbox root (only used on full page, not inside modal=1) -->
   <div id="photo-lightbox" class="lb" hidden>
     <button class="lb-close" aria-label="Close">×</button>
     <img src="" alt="">
@@ -424,7 +514,6 @@ if (isset($_GET['sms_status'])) {
     document.addEventListener('click', function(e){
       var a = e.target.closest && e.target.closest('a.js-lightbox');
       if(!a) return;
-      // If user explicitly wants new tab, let default happen if they middle-click / use modifier keys
       if (e.button === 1 || e.metaKey || e.ctrlKey) return; 
       e.preventDefault();
       imgEl.src = a.getAttribute('href');
@@ -441,3 +530,5 @@ if (isset($_GET['sms_status'])) {
   </script>
 </body>
 </html>
+<?php
+$conn->close();

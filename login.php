@@ -16,11 +16,12 @@ if (isset($_SESSION['email'])) {
     }
 }
 
-$errorMsg = '';
-if (isset($_SESSION['error'])) {
-  $errorMsg = $_SESSION['error'];
-  unset($_SESSION['error']);
-}
+/* Flash error + old email (set by login_process.php) */
+$errorMsg = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
+
+$oldEmail = $_SESSION['old_email'] ?? '';
+unset($_SESSION['old_email']);
 ?>
 <!doctype html>
 <html lang="en">
@@ -39,6 +40,19 @@ if (isset($_SESSION['error'])) {
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/login.css" />
+
+  <!-- Inline styles just for the error banner -->
+  <style>
+    .alert-error {
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -97,6 +111,13 @@ if (isset($_SESSION['error'])) {
     <div class="login-box" role="form">
       <h3 class="login-welcome">WELCOME</h3>
 
+      <!-- Error banner ABOVE the form -->
+      <?php if (!empty($errorMsg)) : ?>
+        <div class="alert-error" role="alert" aria-live="assertive">
+          Invalid email or password.
+        </div>
+      <?php endif; ?>
+
       <form action="login_process.php" method="POST" novalidate>
         <label for="email">EMAIL</label>
         <input
@@ -106,6 +127,7 @@ if (isset($_SESSION['error'])) {
           placeholder="Enter your email"
           autocomplete="username"
           required
+          value="<?= htmlspecialchars($oldEmail) ?>"
         />
 
         <label for="password">PASSWORD</label>
@@ -153,10 +175,6 @@ if (isset($_SESSION['error'])) {
 
         <button type="submit" class="btn-login">LOGIN</button>
       </form>
-
-      <?php if (!empty($errorMsg)) : ?>
-        <p class="error-msg"><?= htmlspecialchars($errorMsg) ?></p>
-      <?php endif; ?>
     </div>
   </main>
 
@@ -203,7 +221,6 @@ if (isset($_SESSION['error'])) {
         hamBtn.setAttribute('aria-expanded', String(open));
         hamBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
         if (open) {
-          // move focus inside the menu for accessibility
           const firstLink = menu.querySelector('a,button,[tabindex]:not([tabindex="-1"])');
           firstLink && firstLink.focus();
         } else {
@@ -217,12 +234,10 @@ if (isset($_SESSION['error'])) {
       closeBtn && closeBtn.addEventListener('click', () => setMenu(false));
       backdrop.addEventListener('click', () => setMenu(false));
 
-      // Close on Escape
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && body.classList.contains('menu-open')) setMenu(false);
       });
 
-      // Ensure menu closes if resized to desktop
       const mq = window.matchMedia('(min-width: 521px)');
       mq.addEventListener('change', () => {
         if (mq.matches && body.classList.contains('menu-open')) setMenu(false);
@@ -231,4 +246,3 @@ if (isset($_SESSION['error'])) {
   </script>
 </body>
 </html>
-

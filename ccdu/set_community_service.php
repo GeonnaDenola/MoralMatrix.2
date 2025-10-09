@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 ﻿<?php
 // set_community_service.php â€” no output before potential redirects
 include '../includes/header.php';
+=======
+<?php
+// set_community_service.php — make sure no output before redirects!
+>>>>>>> f8c4ad6b488c9d7b7c6659390be7d0ba655e2d24
 require '../config.php';
 
 $servername = $database_settings['servername'];
@@ -21,44 +26,94 @@ $returnUrlIn   = $_GET['return'] ?? $defaultReturn;
 $returnUrl = (is_string($returnUrlIn) && $returnUrlIn !== '' && strpos($returnUrlIn, '://') === false)
   ? $returnUrlIn : $defaultReturn;
 
-/* collect errors to display after header include */
+/* ---------- Decide which link column to use ---------- */
+$keyCol = 'violation_id';
+if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'violation_id'")) {
+  if ($res->num_rows === 0) { $keyCol = 'assignment_id'; }
+  $res->close();
+}
+
+/* ---------- Optional 3-for-10 group coming from view_student.php ---------- */
+$groupParam = isset($_GET['group']) ? trim($_GET['group']) : '';
+$groupIds = [];
+
+if ($groupParam !== '') {
+    $groupIds = array_values(array_unique(array_filter(array_map('intval', explode(',', $groupParam)))));
+    if (count($groupIds) !== 3) { $groupIds = []; }
+    if ($groupIds && $student_id) {
+        // verify the 3 violations belong to the student and are non-grave
+        $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
+        $types = str_repeat('i', count($groupIds)) . 's'; // 3 ints + 1 string (student_id)
+        $sql = "SELECT violation_id, offense_category
+                FROM student_violation
+                WHERE violation_id IN ($placeholders) AND student_id = ?";
+        $stmt = $conn->prepare($sql);
+        $bindParams = array_merge($groupIds, [$student_id]);
+        $stmt->bind_param($types, ...$bindParams);
+        $stmt->execute();
+        $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
+        $ok = 0;
+        foreach ($rows as $row) {
+            $raw = strtolower((string)$row['offense_category']);
+            $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
+            if (!$isGrave) $ok++;
+        }
+        if ($ok !== 3) { $groupIds = []; } // if any is grave/missing, drop grouping
+    }
+}
+
+/* ---------- Handle assignment POST (no output above!) ---------- */
 $errorMsg = null;
 
-/* ---------- Handle assignment POST before any output ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_validator'])) {
     $student_id   = $_POST['student_id']   ?? null;
-    $violation_id = (int)($_POST['violation_id'] ?? 0);
-    $validator_id = $_POST['validator_id'] ?? null;
+    $validator_id = isset($_POST['validator_id']) ? (int)$_POST['validator_id'] : null;
 
-    if ($student_id && $violation_id > 0 && $validator_id) {
-        $sql  = "INSERT INTO validator_student_assignment (assignment_id, student_id, validator_id, assigned_at)
-                 VALUES (?, ?, ?, NOW())
-                 ON DUPLICATE KEY UPDATE validator_id = VALUES(validator_id), assigned_at = NOW()";
+    // Either a single violation_id or an exact group of 3 (group_ids[])
+    $violation_id = isset($_POST['violation_id']) && $_POST['violation_id'] !== '' ? (int)$_POST['violation_id'] : 0;
+    $postedGroup  = isset($_POST['group_ids']) ? (array)$_POST['group_ids'] : [];
+    $postedGroup  = array_values(array_unique(array_map('intval', $postedGroup)));
+
+    if ($student_id && $validator_id && ( ($violation_id > 0) || count($postedGroup) === 3 )) {
+        $idsToAssign = count($postedGroup) === 3 ? $postedGroup : [$violation_id];
+
+        // NOTE: ON DUPLICATE KEY requires a UNIQUE index on (student_id, $keyCol)
+        // e.g.: ALTER TABLE validator_student_assignment ADD UNIQUE KEY uniq_student_case (student_id, violation_id);
+        $sql = "INSERT INTO validator_student_assignment ($keyCol, student_id, validator_id, assigned_at)
+                VALUES (?, ?, ?, NOW())
+                ON DUPLICATE KEY UPDATE validator_id = VALUES(validator_id), assigned_at = NOW()";
         $stmt = $conn->prepare($sql);
         if (!$stmt) { die("Prepare failed: " . $conn->error); }
-        $stmt->bind_param("isi", $violation_id, $student_id, $validator_id);
 
-        if ($stmt->execute()) {
+        foreach ($idsToAssign as $vid) {
+            $stmt->bind_param("isi", $vid, $student_id, $validator_id);
+            if (!$stmt->execute()) {
+                $errorMsg = "Error assigning validator: " . htmlspecialchars($stmt->error);
+                break;
+            }
+        }
+        $stmt->close();
+
+        if (empty($errorMsg)) {
             if (!headers_sent()) {
                 header("Location: " . $returnUrl, true, 302);
                 exit;
             } else {
-                // Fallback if something output unexpectedly
                 echo '<script>location.replace(' . json_encode($returnUrl) . ');</script>';
                 exit;
             }
-        } else {
-            $errorMsg = "Error assigning validator: " . htmlspecialchars($stmt->error);
         }
-        $stmt->close();
     } else {
         $errorMsg = "Missing required fields.";
     }
 }
 
 /* ---------- Guards ---------- */
-if (!$student_id)       { die("No student selected."); }
-if ($violation_id <= 0) { die("No violation selected."); }
+if (!$student_id) { die("No student selected."); }
+/* If there's no single violation, allow a valid 3-group; otherwise require violation_id */
+if ($violation_id <= 0 && count($groupIds) !== 3) { die("No violation selected."); }
 
 /* ---------- Fetch student ---------- */
 $sql = "
@@ -78,34 +133,40 @@ $student = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$student) { die("Student not found."); }
 
-/* ---------- Fetch selected violation ---------- */
+/* ---------- Fetch selected violation (for display; if grouping, this is still the “landing” violation) ---------- */
 $vsql = "
-  SELECT
-    violation_id,
-    offense_category,
-    offense_type,
-    offense_details,
-    description,
-    reported_at,
-    photo
+  SELECT violation_id, offense_category, offense_type, offense_details, description, reported_at, photo
   FROM student_violation
   WHERE violation_id = ? AND student_id = ?
 ";
-$stmtv = $conn->prepare($vsql);
-if (!$stmtv) die("Prepare failed: " . $conn->error);
-$stmtv->bind_param("is", $violation_id, $student_id);
-$stmtv->execute();
-$violation = $stmtv->get_result()->fetch_assoc();
-$stmtv->close();
-if (!$violation) { die("Selected violation not found for this student."); }
+if ($violation_id > 0) {
+  $stmtv = $conn->prepare($vsql);
+  if (!$stmtv) die("Prepare failed: " . $conn->error);
+  $stmtv->bind_param("is", $violation_id, $student_id);
+  $stmtv->execute();
+  $violation = $stmtv->get_result()->fetch_assoc();
+  $stmtv->close();
+  if (!$violation && count($groupIds) !== 3) { die("Selected violation not found for this student."); }
+} else {
+  $violation = null; // using group-only flow
+}
 
 /* ---------- Pretty / safe values ---------- */
+<<<<<<< HEAD
 $datePretty = !empty($violation['reported_at']) ? date('M d, Y h:i A', strtotime($violation['reported_at'])) : 'â€”';
 $cat        = htmlspecialchars($violation['offense_category'] ?? '');
 $type       = htmlspecialchars($violation['offense_type'] ?? '');
 $desc       = htmlspecialchars($violation['description'] ?? '');
 $detailsText = 'â€”';
 if (!empty($violation['offense_details'])) {
+=======
+$datePretty = $violation && !empty($violation['reported_at']) ? date('M d, Y h:i A', strtotime($violation['reported_at'])) : '—';
+$cat        = $violation ? htmlspecialchars($violation['offense_category'] ?? '') : '';
+$type       = $violation ? htmlspecialchars($violation['offense_type'] ?? '') : '';
+$desc       = $violation ? htmlspecialchars($violation['description'] ?? '') : '';
+$detailsText = '—';
+if ($violation && !empty($violation['offense_details'])) {
+>>>>>>> f8c4ad6b488c9d7b7c6659390be7d0ba655e2d24
   $decoded = json_decode($violation['offense_details'], true);
   if (is_array($decoded) && count($decoded)) {
     $safe = array_map('htmlspecialchars', $decoded);
@@ -114,8 +175,8 @@ if (!empty($violation['offense_details'])) {
 }
 /* Photo path */
 $photoRel = null;
-if (!empty($violation['photo'])) {
-    $tryAbs = _DIR_ . '/uploads/' . $violation['photo'];
+if ($violation && !empty($violation['photo'])) {
+    $tryAbs = __DIR__ . '/uploads/' . $violation['photo']; // <-- __DIR__ fix
     if (is_file($tryAbs)) {
         $photoRel = 'uploads/' . rawurlencode($violation['photo']);
     }
@@ -152,6 +213,9 @@ $vlistSql = "
 ";
 
 $validators = $conn->query($vlistSql);
+
+/* Now it's safe to include the header (after POST) */
+include '../includes/header.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -159,7 +223,69 @@ $validators = $conn->query($vlistSql);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Assign Validator</title>
+<<<<<<< HEAD
   <link rel="stylesheet" href="../css/set_community_service.css?v=1">
+=======
+  <style>
+    :root {
+      --mm-primary: #8C1C13;
+      --mm-primary-hover: #74140E;
+      --mm-muted: #6B7280;
+      --mm-border: #E5E7EB;
+      --mm-surface: #ffffff;
+      --mm-surface-alt: #f8f9fb;
+      --mm-shadow-lg: 0 25px 55px -25px rgba(15, 23, 42, 0.35);
+      --mm-shadow-sm: 0 12px 30px -18px rgba(15, 23, 42, 0.25);
+      --mm-radius-lg: 18px;
+      --mm-radius-md: 14px;
+      --mm-radius-sm: 10px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif; background: var(--mm-surface-alt); color: #1F2937; }
+    a { color: inherit; text-decoration: none; }
+    main.page-wrapper { margin: 0; margin-left: var(--sidebar-w, 0px); padding: calc(var(--header-h, 64px) + 36px) 38px 60px; display: flex; justify-content: center; align-items: flex-start; min-height: calc(100vh - var(--header-h, 64px)); }
+    .page-frame { background: var(--mm-surface); border-radius: var(--mm-radius-lg); box-shadow: var(--mm-shadow-lg); padding: 42px 48px 48px; max-width: 1200px; width: 100%; }
+    .page-header { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+    .back-link { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; width: fit-content; border-radius: 999px; background: #1F2937; color: #fff; font-size: 0.92rem; font-weight: 500; transition: background 0.2s ease, transform 0.2s ease; box-shadow: var(--mm-shadow-sm); }
+    .back-link:hover { background: #111827; transform: translateY(-1px); }
+    .page-header h1 { margin: 0; font-size: 1.95rem; font-weight: 700; color: #111827; }
+    .page-header p { margin: 0; color: var(--mm-muted); font-size: 0.98rem; max-width: 680px; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 26px; margin-bottom: 40px; }
+    .info-card { background: linear-gradient(135deg, rgba(140, 28, 19, 0.04), rgba(48, 57, 82, 0.06)); padding: 1px; border-radius: var(--mm-radius-lg); }
+    .info-card__inner { background: var(--mm-surface); border-radius: inherit; padding: 28px 26px 30px; height: 100%; display: flex; flex-direction: column; gap: 18px; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; background: rgba(140, 28, 19, 0.12); color: var(--mm-primary); }
+    .detail-stack { display: flex; flex-direction: column; gap: 14px; }
+    .detail-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    .detail-label { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mm-muted); font-weight: 600; }
+    .detail-value { font-size: 1.02rem; font-weight: 600; color: #111827; text-align: right; }
+    .detail-value span { display: block; line-height: 1.45; }
+    .violation-notes { margin-top: 4px; color: #374151; font-size: 0.95rem; line-height: 1.5; }
+    .violation-notes p { margin: 0 0 12px; }
+    .photo-preview { border-radius: var(--mm-radius-md); background: var(--mm-surface-alt); padding: 18px; border: 1px dashed rgba(140, 28, 19, 0.2); display: flex; justify-content: center; align-items: center; }
+    .photo-preview img { max-width: 100%; height: auto; border-radius: var(--mm-radius-sm); display: block; }
+    .section-heading { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+    .section-heading h2 { margin: 0; font-size: 1.45rem; font-weight: 700; color: #111827; }
+    .section-heading span { color: var(--mm-muted); font-size: 0.94rem; }
+    form.assign-form { display: flex; flex-direction: column; gap: 24px; }
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 22px; }
+    .validator-card { cursor: pointer; display: block; }
+    .validator-card input[type="radio"] { display: none; }
+    .card-content { border-radius: var(--mm-radius-md); padding: 22px 24px 24px; border: 1px solid rgba(17, 24, 39, 0.08); background: var(--mm-surface); box-shadow: 0 15px 35px -28px rgba(15, 23, 42, 0.45); transition: border 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; height: 100%; }
+    .card-content h4 { margin: 0 0 10px; font-size: 1.12rem; font-weight: 700; color: #111827; }
+    .card-content p { margin: 6px 0; font-size: 0.93rem; color: #374151; }
+    .card-content p b { color: #111827; }
+    .validator-card:hover .card-content { border-color: rgba(140, 28, 19, 0.45); box-shadow: 0 18px 38px -22px rgba(140, 28, 19, 0.45); transform: translateY(-2px); }
+    .validator-card input[type="radio"]:checked + .card-content { border-color: var(--mm-primary); box-shadow: 0 20px 50px -25px rgba(140, 28, 19, 0.55); background: linear-gradient(135deg, rgba(140, 28, 19, 0.06), rgba(255, 255, 255, 0.85)); }
+    .form-actions { display: flex; justify-content: flex-end; }
+    .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 28px; border-radius: 999px; background: var(--mm-primary); color: #fff; font-size: 1rem; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 20px 40px -25px rgba(140, 28, 19, 0.75); transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; }
+    .btn-primary:hover { background: var(--mm-primary-hover); box-shadow: 0 24px 45px -22px rgba(116, 20, 14, 0.65); transform: translateY(-2px); }
+    .empty-state { padding: 24px; text-align: center; border-radius: var(--mm-radius-md); border: 1px dashed rgba(140, 28, 19, 0.25); background: rgba(140, 28, 19, 0.05); color: rgba(140, 28, 19, 0.85); font-weight: 600; }
+    @media (max-width: 900px) { main.page-wrapper { padding: calc(var(--header-h, 64px) + 24px) 22px 48px; align-items: stretch; } .page-frame { padding: 32px 26px 38px; } .detail-row { flex-direction: column; align-items: flex-start; } .detail-value { text-align: left; } }
+    @media (max-width: 640px) { main.page-wrapper { margin-left: 0; padding: calc(var(--header-h, 64px) + 18px) 18px 48px; } .page-header h1 { font-size: 1.65rem; } .cards-grid { grid-template-columns: 1fr; } }
+    .hint { color:#6B7280; font-size:.92rem; margin-top:8px; }
+  </style>
+
+>>>>>>> f8c4ad6b488c9d7b7c6659390be7d0ba655e2d24
 </head>
 <body>
 
@@ -205,35 +331,49 @@ $validators = $conn->query($vlistSql);
           <div class="info-card__inner">
             <span class="badge">Violation</span>
             <div class="detail-stack">
-              <div class="detail-row">
-                <span class="detail-label">Violation ID</span>
-                <span class="detail-value"><span>#<?= htmlspecialchars((string)$violation_id) ?></span></span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Category</span>
-                <span class="detail-value"><span><?= $cat ? ucfirst($cat) : 'None' ?></span></span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Type</span>
-                <span class="detail-value"><span><?= $type ?: 'None' ?></span></span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Reported On</span>
-                <span class="detail-value"><span><?= $datePretty ?></span></span>
-              </div>
-            </div>
-            <div class="violation-notes">
-              <p><strong>Details:</strong> <?= $detailsText ?></p>
-              <p><strong>Description:</strong><br><?= $desc ? nl2br($desc) : 'None' ?></p>
-            </div>
-            <?php if ($photoRel): ?>
-              <div class="violation-notes">
-                <p><strong>Photo Evidence:</strong></p>
-                <div class="photo-preview">
-                  <img src="<?= htmlspecialchars($photoRel) ?>" alt="Evidence photo for violation #<?= htmlspecialchars((string)$violation_id) ?>">
+              <?php if ($violation): ?>
+                <div class="detail-row">
+                  <span class="detail-label">Violation ID</span>
+                  <span class="detail-value"><span>#<?= htmlspecialchars((string)$violation_id) ?></span></span>
                 </div>
-              </div>
-            <?php endif; ?>
+                <div class="detail-row">
+                  <span class="detail-label">Category</span>
+                  <span class="detail-value"><span><?= $cat ? ucfirst($cat) : 'None' ?></span></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Type</span>
+                  <span class="detail-value"><span><?= $type ?: 'None' ?></span></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Reported On</span>
+                  <span class="detail-value"><span><?= $datePretty ?></span></span>
+                </div>
+                <div class="violation-notes">
+                  <p><strong>Details:</strong> <?= $detailsText ?></p>
+                  <p><strong>Description:</strong><br><?= $desc ? nl2br($desc) : 'None' ?></p>
+                </div>
+                <?php if ($photoRel): ?>
+                  <div class="violation-notes">
+                    <p><strong>Photo Evidence:</strong></p>
+                    <div class="photo-preview">
+                      <img src="<?= htmlspecialchars($photoRel) ?>" alt="Evidence photo for violation #<?= htmlspecialchars((string)$violation_id) ?>">
+                    </div>
+                  </div>
+                <?php endif; ?>
+              <?php else: ?>
+                <div class="detail-row">
+                  <span class="detail-label">Violation</span>
+                  <span class="detail-value"><span>— (using grouped 3-for-10 set)</span></span>
+                </div>
+              <?php endif; ?>
+
+              <?php if (!empty($groupIds) && count($groupIds) === 3): ?>
+                <div class="violation-notes">
+                  <p><strong>Grouped 3-for-10 set:</strong> #<?= (int)$groupIds[0] ?>, #<?= (int)$groupIds[1] ?>, #<?= (int)$groupIds[2] ?></p>
+                  <p class="hint">These three (non-grave) violations will be assigned together for a single 10-hour community service set.</p>
+                </div>
+              <?php endif; ?>
+            </div>
           </div>
         </article>
       </section>
@@ -246,7 +386,12 @@ $validators = $conn->query($vlistSql);
 
         <form class="assign-form" method="post" action="" onsubmit="return confirmAssign();">
           <input type="hidden" name="student_id" value="<?= htmlspecialchars($student_id) ?>">
-          <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violation_id) ?>">
+          <input type="hidden" name="violation_id" value="<?= $violation_id > 0 ? htmlspecialchars((string)$violation_id) : '' ?>">
+          <?php if (!empty($groupIds) && count($groupIds) === 3): ?>
+            <?php foreach ($groupIds as $gid): ?>
+              <input type="hidden" name="group_ids[]" value="<?= (int)$gid ?>">
+            <?php endforeach; ?>
+          <?php endif; ?>
 
           <div class="cards-grid">
             <?php
@@ -287,7 +432,9 @@ $validators = $conn->query($vlistSql);
   </main>
 
   <script>
-    function confirmAssign() { return confirm("Assign validator to student?"); }
+    function confirmAssign() {
+      return confirm("Assign validator to student?");
+    }
   </script>
 
 </body>
