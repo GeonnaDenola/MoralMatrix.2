@@ -117,6 +117,79 @@ $resv = $stmtv->get_result();
 while ($row = $resv->fetch_assoc()) { $violations[] = $row; }
 $stmtv->close();
 
+/* ==== COMPUTE REQUIRED HOURS + FIND ELIGIBLE 3-FOR-10 GROUPS ==== */
+
+/* 1) Recompute required hours here (3 light/moderate/less-grave => 10h; each grave => 20h) */
+$modLightCount = 0;
+$graveCount    = 0;
+
+foreach ($violations as $vv) {
+    $raw = strtolower((string)($vv['offense_category'] ?? ''));
+    $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
+    if ($isGrave) { $graveCount++; } else { $modLightCount++; }
+}
+$hours = intdiv($modLightCount, 3) * 10 + ($graveCount * 20);
+
+/* 2) Build a set of already-assigned violation IDs so we don’t group them again */
+$assignedIds = [];
+$hasAssignCol = $hasViolCol = false;
+if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'assignment_id'")) { $hasAssignCol = ($res->num_rows > 0); $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'violation_id'")) { $hasViolCol   = ($res->num_rows > 0); $res->close(); }
+
+if ($hasAssignCol && $hasViolCol) {
+    $sqlA = "SELECT COALESCE(violation_id, assignment_id) AS vid
+             FROM validator_student_assignment
+             WHERE student_id = ?";
+    $stA = $conn->prepare($sqlA);
+    $stA->bind_param("s", $student_id);
+    $stA->execute();
+    $rsA = $stA->get_result();
+    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
+    $stA->close();
+} elseif ($hasViolCol) {
+    $sqlA = "SELECT violation_id AS vid FROM validator_student_assignment WHERE student_id = ?";
+    $stA = $conn->prepare($sqlA);
+    $stA->bind_param("s", $student_id);
+    $stA->execute();
+    $rsA = $stA->get_result();
+    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
+    $stA->close();
+} elseif ($hasAssignCol) {
+    $sqlA = "SELECT assignment_id AS vid FROM validator_student_assignment WHERE student_id = ?";
+    $stA = $conn->prepare($sqlA);
+    $stA->bind_param("s", $student_id);
+    $stA->execute();
+    $rsA = $stA->get_result();
+    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
+    $stA->close();
+}
+
+/* 3) Collect *unassigned* light/moderate/less-grave violations (skip grave) in chronological order */
+$eligible = $violations;
+usort($eligible, function($a,$b){
+    $ta = strtotime($a['reported_at'] ?? '1970-01-01');
+    $tb = strtotime($b['reported_at'] ?? '1970-01-01');
+    if ($ta === $tb) return ($a['violation_id'] <=> $b['violation_id']);
+    return $ta <=> $tb; // oldest first
+});
+
+$lightModPool = [];
+foreach ($eligible as $vv) {
+    $vid = (int)$vv['violation_id'];
+    if (isset($assignedIds[$vid])) continue; // already in a CS assignment
+    $raw = strtolower((string)($vv['offense_category'] ?? ''));
+    $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
+    if ($isGrave) continue; // only pool non-grave
+    $lightModPool[] = $vv;
+}
+
+/* 4) Make as many full groups of 3 as possible */
+$csGroups = [];
+for ($i = 0; $i + 2 < count($lightModPool); $i += 3) {
+    $csGroups[] = array_slice($lightModPool, $i, 3);
+}
+/* $csGroups is an array of groups; each group has 3 violations: [ [v1,v2,v3], [v4,v5,v6], ... ] */
+
 /* --- Robust photo path (fallback if file is missing) --- */
 $photoFile = !empty($student['photo']) ? $student['photo'] : 'placeholder.png';
 $photoPath = __DIR__ . '/../admin/uploads/' . $photoFile;
@@ -205,6 +278,42 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
         Add Violation
       </a>
     </section>
+
+    <?php if (!empty($csGroups)): ?>
+  <section class="card" style="margin-bottom:12px">
+    <div class="section-head">
+      <h3>Eligible 3-for-10 Community Service Sets</h3>
+      <p class="muted" style="margin:6px 0 0">These are unassigned light/moderate/less-grave violations, grouped in 3s (10 hours per set).</p>
+    </div>
+
+    <div class="cards-grid">
+      <?php foreach ($csGroups as $group): 
+        $ids = array_map(fn($x)=>(int)$x['violation_id'], $group);
+        $csv = implode(',', $ids);
+        $setUrl = $selfDir . "/set_community_service.php?student_id=" . urlencode($student_id)
+                . "&group=" . urlencode($csv)
+                . "&return=" . urlencode($scheme.'://'.$host.$currentPath.'?'.$canonicalQS);
+      ?>
+        <div class="violation-card" style="display:block">
+          <div class="violation-card__body">
+            <p class="title"><strong>Group:</strong><span class="badge">10 hours</span></p>
+            <ul class="muted" style="margin:8px 0 10px; padding-left:18px;">
+              <?php foreach ($group as $g): ?>
+                <li>
+                  • <?= htmlspecialchars(ucfirst(strtolower((string)$g['offense_category']))) ?>
+                  — <?= htmlspecialchars($g['offense_type'] ?: '—') ?> 
+                  (<?= htmlspecialchars(date('M d, Y', strtotime($g['reported_at']))) ?>)
+                </li>
+              <?php endforeach; ?>
+            </ul>
+            <a class="btn btn-primary" href="<?= $setUrl ?>">Assign this 10-hour set</a>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </section>
+<?php endif; ?>
+
 
     <!-- Violations -->
     <section aria-labelledby="violationsTitle" class="card">
