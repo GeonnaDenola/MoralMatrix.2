@@ -1,480 +1,636 @@
 <?php
-include '../includes/header.php';
-require '../config.php';
-require __DIR__.'/_scanner.php';
-require 'violation_hrs.php';
+declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-if (!empty($_SESSION['sms_alert']) && is_array($_SESSION['sms_alert'])) {
-    // sanitize values to avoid XSS — json_encode will escape correctly
-    $smsFlash = $_SESSION['sms_alert'];
-    unset($_SESSION['sms_alert']);
-    // export it to JS so the page's showSmsAlert listener can pick it up
-    echo '<script>window.__sms_alert_from_server = ' . json_encode($smsFlash, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) . ';</script>';
-}
-
-$hours = 0;
-
+require '../auth.php';
+require_role('security');
+include __DIR__ . '/_scanner.php';
+include '../config.php';
+include '../includes/security_header.php';
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+if ($conn->connect_error) {
+    die('Connection failed: ' . $conn->connect_error);
+}
+$conn->set_charset('utf8mb4');
 
-/* Accept either student_id (####-####) or k=qr_key, and be tolerant of legacy hex in student_id */
-$origStudent = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
-$kParam      = isset($_GET['k']) ? trim($_GET['k']) : '';
-
-$ID_PATTERN    = '/^\d{4}-\d{4}$/';
-$KEY64_PATTERN = '/^[a-f0-9]{64}$/i';
-$HEX_FLEX      = '/^[a-f0-9]{10,64}$/i'; // legacy shorter hex from old cards
-
-$student_id = $origStudent;
-
-/* 1) If k= is present and valid, resolve it */
-if ($student_id === '' && $kParam !== '' && preg_match($KEY64_PATTERN, $kParam)) {
-    $stmtK = $conn->prepare('SELECT student_id FROM student_qr_keys WHERE qr_key = ? LIMIT 1');
-    $stmtK->bind_param('s', $kParam);
-    $stmtK->execute();
-    $rowK = $stmtK->get_result()->fetch_assoc();
-    $stmtK->close();
-    if (!empty($rowK['student_id'])) {
-        $student_id = $rowK['student_id'];
-    }
+$securityId = $_SESSION['actor_id'] ?? null;
+if (!$securityId) {
+    die('No security id in session. Please login again.');
 }
 
-/* 2) If student_id looks hex-y (old behavior), try resolving as qr_key too */
-if ($student_id !== '' && !preg_match($ID_PATTERN, $student_id) && preg_match($HEX_FLEX, $student_id)) {
-    $legacyKey = $student_id;
-    $stmtL = $conn->prepare('SELECT student_id FROM student_qr_keys WHERE qr_key = ? LIMIT 1');
-    $stmtL->bind_param('s', $legacyKey);
-    $stmtL->execute();
-    $rowL = $stmtL->get_result()->fetch_assoc();
-    $stmtL->close();
-    if (!empty($rowL['student_id'])) {
-        $student_id = $rowL['student_id'];
-    }
-}
+$sql = "
+SELECT sv.violation_id,
+       sv.student_id,
+       s.photo AS student_photo,
+       s.first_name,
+       s.last_name,
+       sv.offense_category,
+       sv.offense_type,
+       sv.description,
+       sv.reported_at,
+       sv.status
+FROM student_violation sv
+JOIN student_account s ON sv.student_id = s.student_id
+WHERE sv.submitted_by = ?
+  AND LOWER(sv.status) = 'approved'
+ORDER BY sv.reported_at DESC, sv.violation_id DESC
+";
 
-/* 3) Guard */
-if ($student_id === '') {
-    http_response_code(400);
-    die("No student selected.");
-}
-
-$hours = communityServiceHours($conn, $student_id);
-
-/* 4) Canonicalize URL only if current URL is NOT already canonical */
-$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host   = $_SERVER['HTTP_HOST'];
-$base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'); // e.g. /MoralMatrix/ccdu
-
-$canonicalPath = $base . '/view_student.php';
-$canonicalQS   = 'student_id=' . rawurlencode($student_id);
-$currentPath   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$currentQS     = (string)($_SERVER['QUERY_STRING'] ?? '');
-
-/* Decide if we need to redirect: we used k=... or hex, OR the qs isn’t exactly student_id=... */
-$triggeredByKey = ($kParam !== '') || ($origStudent !== '' && !preg_match($ID_PATTERN, $origStudent)) || ($origStudent !== '' && $origStudent !== $student_id);
-
-/* Are we already at the canonical path+query? */
-$alreadyCanonical = ($currentPath === $canonicalPath) && ($currentQS === $canonicalQS);
-
-if ($triggeredByKey && !$alreadyCanonical) {
-    header('Location: '.$scheme.'://'.$host.$canonicalPath.'?'.$canonicalQS, true, 302);
-    $conn->close();
-    exit;
-}
-
-/* === FETCH STUDENT === */
-$sql = "SELECT * FROM student_account WHERE student_id = ?";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $student_id);
-$stmt->execute();
-$result  = $stmt->get_result();
-$student = $result->fetch_assoc();
-$stmt->close();
+if (!$stmt) {
+    die('Prepare failed: ' . $conn->error);
+}
+$stmt->bind_param('s', $securityId);
+if (!$stmt->execute()) {
+    die('Execute failed: ' . $stmt->error);
+}
+$result = $stmt->get_result();
 
-/* ==== FETCH VIOLATIONS ==== */
-/* ⬇⬇⬇ CHANGED: include `photo` so we can render card images */
 $violations = [];
-$sqlv = "SELECT violation_id,
-                offense_category,
-                offense_type,
-                offense_details,
-                description,
-                reported_at,
-                photo
-         FROM student_violation
-         WHERE student_id = ?
-         ORDER BY reported_at DESC, violation_id DESC";
-$stmtv = $conn->prepare($sqlv);
-$stmtv->bind_param("s", $student_id);
-$stmtv->execute();
-$resv = $stmtv->get_result();
-while ($row = $resv->fetch_assoc()) { $violations[] = $row; }
-$stmtv->close();
+$categoryCounts = [];
+$typeCounts = [];
+$studentIds = [];
+$latestReportedAt = null;
+$recentWindow = new DateTimeImmutable('-7 days');
+$recentCount = 0;
 
-/* ==== COMPUTE REQUIRED HOURS + FIND ELIGIBLE 3-FOR-10 GROUPS ==== */
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $violations[] = $row;
 
-/* 1) Recompute required hours here (3 light/moderate/less-grave => 10h; each grave => 20h) */
-$modLightCount = 0;
-$graveCount    = 0;
+        $studentId = (string)($row['student_id'] ?? '');
+        if ($studentId !== '') {
+            $studentIds[$studentId] = true;
+        }
 
-foreach ($violations as $vv) {
-    $raw = strtolower((string)($vv['offense_category'] ?? ''));
-    $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
-    if ($isGrave) { $graveCount++; } else { $modLightCount++; }
-}
-$hours = intdiv($modLightCount, 3) * 10 + ($graveCount * 20);
+        $categoryLabel = trim((string)($row['offense_category'] ?? ''));
+        if ($categoryLabel === '') {
+            $categoryLabel = 'Uncategorized';
+        }
+        $categoryCounts[$categoryLabel] = ($categoryCounts[$categoryLabel] ?? 0) + 1;
 
-/* 2) Build a set of already-assigned violation IDs so we don’t group them again */
-$assignedIds = [];
-$hasAssignCol = $hasViolCol = false;
-if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'assignment_id'")) { $hasAssignCol = ($res->num_rows > 0); $res->close(); }
-if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'violation_id'")) { $hasViolCol   = ($res->num_rows > 0); $res->close(); }
+        $typeLabel = trim((string)($row['offense_type'] ?? ''));
+        if ($typeLabel === '') {
+            $typeLabel = 'Unspecified';
+        }
+        $typeCounts[$typeLabel] = ($typeCounts[$typeLabel] ?? 0) + 1;
 
-if ($hasAssignCol && $hasViolCol) {
-    $sqlA = "SELECT COALESCE(violation_id, assignment_id) AS vid
-             FROM validator_student_assignment
-             WHERE student_id = ?";
-    $stA = $conn->prepare($sqlA);
-    $stA->bind_param("s", $student_id);
-    $stA->execute();
-    $rsA = $stA->get_result();
-    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
-    $stA->close();
-} elseif ($hasViolCol) {
-    $sqlA = "SELECT violation_id AS vid FROM validator_student_assignment WHERE student_id = ?";
-    $stA = $conn->prepare($sqlA);
-    $stA->bind_param("s", $student_id);
-    $stA->execute();
-    $rsA = $stA->get_result();
-    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
-    $stA->close();
-} elseif ($hasAssignCol) {
-    $sqlA = "SELECT assignment_id AS vid FROM validator_student_assignment WHERE student_id = ?";
-    $stA = $conn->prepare($sqlA);
-    $stA->bind_param("s", $student_id);
-    $stA->execute();
-    $rsA = $stA->get_result();
-    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
-    $stA->close();
+        $reportedRaw = $row['reported_at'] ?? null;
+        if ($reportedRaw) {
+            try {
+                $reportedAt = new DateTimeImmutable($reportedRaw);
+                if ($latestReportedAt === null || $reportedAt > $latestReportedAt) {
+                    $latestReportedAt = $reportedAt;
+                }
+                if ($reportedAt >= $recentWindow) {
+                    $recentCount++;
+                }
+            } catch (Exception $e) {
+                // ignore parse issues
+            }
+        }
+    }
 }
 
-/* 3) Collect *unassigned* light/moderate/less-grave violations (skip grave) in chronological order */
-$eligible = $violations;
-usort($eligible, function($a,$b){
-    $ta = strtotime($a['reported_at'] ?? '1970-01-01');
-    $tb = strtotime($b['reported_at'] ?? '1970-01-01');
-    if ($ta === $tb) return ($a['violation_id'] <=> $b['violation_id']);
-    return $ta <=> $tb; // oldest first
-});
+$totalReports   = count($violations);
+$uniqueStudents = count($studentIds);
 
-$lightModPool = [];
-foreach ($eligible as $vv) {
-    $vid = (int)$vv['violation_id'];
-    if (isset($assignedIds[$vid])) continue; // already in a CS assignment
-    $raw = strtolower((string)($vv['offense_category'] ?? ''));
-    $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
-    if ($isGrave) continue; // only pool non-grave
-    $lightModPool[] = $vv;
+$categoryCountsDesc = $categoryCounts;
+arsort($categoryCountsDesc);
+$topCategoryName = $categoryCountsDesc ? array_key_first($categoryCountsDesc) : '';
+$topCategoryShare = ($totalReports > 0 && $topCategoryName !== '')
+    ? round(($categoryCountsDesc[$topCategoryName] / $totalReports) * 100)
+    : 0;
+$topCategories = array_slice($categoryCountsDesc, 0, 3, true);
+
+$typeCountsDesc = $typeCounts;
+arsort($typeCountsDesc);
+$uniqueTypes = count($typeCountsDesc);
+
+$categoryOptions = buildFilterOptions($categoryCounts);
+$typeOptions = buildFilterOptions($typeCounts);
+
+$stmt->close();
+$conn->close();
+
+/**
+ * @param array<string,int> $counts
+ * @return array<int,array{label:string,value:string,count:int}>
+ */
+function buildFilterOptions(array $counts): array
+{
+    $options = [];
+    foreach ($counts as $label => $count) {
+        $options[] = [
+            'label' => $label,
+            'value' => normaliseKey($label),
+            'count' => $count,
+        ];
+    }
+
+    usort(
+        $options,
+        static fn (array $a, array $b): int => strcasecmp($a['label'], $b['label'])
+    );
+
+    return $options;
 }
 
-/* 4) Make as many full groups of 3 as possible */
-$csGroups = [];
-for ($i = 0; $i + 2 < count($lightModPool); $i += 3) {
-    $csGroups[] = array_slice($lightModPool, $i, 3);
-}
-/* $csGroups is an array of groups; each group has 3 violations: [ [v1,v2,v3], [v4,v5,v6], ... ] */
-
-/* --- Robust photo path (fallback if file is missing) --- */
-$photoFile = !empty($student['photo']) ? $student['photo'] : 'placeholder.png';
-$photoPath = __DIR__ . '/../admin/uploads/' . $photoFile;
-
-if (!is_file($photoPath)) {
-    $photoFile = 'placeholder.png'; // fallback if file missing
+function safeText(?string $text): string
+{
+    return htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-$photo = '../admin/uploads/' . $photoFile;
+function normaliseKey(string $value): string
+{
+    $value = trim($value);
+    if (function_exists('mb_strtolower')) {
+        $value = mb_strtolower($value, 'UTF-8');
+    } else {
+        $value = strtolower($value);
+    }
+    $value = preg_replace('/[^a-z0-9]+/u', '-', $value) ?? '';
+    $value = trim($value, '-');
+    return $value !== '' ? $value : 'na';
+}
 
-/* Build a root-absolute directory path for this folder (e.g., /MoralMatrix/ccdu) */
-$selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
+function toSearchIndex(string $value): string
+{
+    $value = preg_replace('/\s+/u', ' ', trim($value)) ?? '';
+    if (function_exists('mb_strtolower')) {
+        return mb_strtolower($value, 'UTF-8');
+    }
+    return strtolower($value);
+}
 
-/* Now it’s safe to include files that output HTML */
+/**
+ * @return array{iso:string,full:string,relative:string}
+ */
+function describeDate(?string $raw): array
+{
+    if (!$raw) {
+        return ['iso' => '', 'full' => '—', 'relative' => ''];
+    }
 
+    try {
+        $dt = new DateTimeImmutable($raw);
+    } catch (Exception $e) {
+        return ['iso' => '', 'full' => safeText($raw), 'relative' => ''];
+    }
+
+    return [
+        'iso' => $dt->format(DateTimeInterface::ATOM),
+        'full' => $dt->format('M j, Y • g:i A'),
+        'relative' => formatRelativeFromDate($dt),
+    ];
+}
+
+function formatRelativeFromDate(DateTimeImmutable $dt): string
+{
+    $now  = new DateTimeImmutable();
+    $diff = $now->diff($dt);
+
+    $units = [
+        'y' => 'year',
+        'm' => 'month',
+        'd' => 'day',
+        'h' => 'hour',
+        'i' => 'minute',
+    ];
+
+    foreach ($units as $property => $label) {
+        $value = $diff->$property;
+        if ($value > 0) {
+            $plural = $value === 1 ? '' : 's';
+            $suffix = $diff->invert === 1 ? ' ago' : ' from now';
+            return $value . ' ' . $label . $plural . $suffix;
+        }
+    }
+
+    return 'Just now';
+}
+
+$latestDescriptor = $latestReportedAt
+    ? [
+        'full' => $latestReportedAt->format('M j, Y • g:i A'),
+        'relative' => formatRelativeFromDate($latestReportedAt),
+    ]
+    : ['full' => 'Awaiting first approval', 'relative' => ''];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Student Profile</title>
-  <link rel="stylesheet" href="../css/view_student.css" />
-  <!-- Theme color matches red header tone -->
-  <meta name="theme-color" content="#b91c1c">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security · Approved Violations</title>
+  <link rel="stylesheet" href="../css/security_dashboard.css">
+  
 </head>
 <body>
 
-  <!-- Your global header/nav stays as-is above this file -->
-
-  <main class="page container content-safe">
-    <!-- Optional on-page title (NOT a header element) -->
-    <h2 class="page-title">Student Profile</h2>
-
-    <?php if ($student): ?>
-      <!-- Student profile -->
-      <section class="card student-card">
-        <div class="student-card__media">
-          <img src="<?= htmlspecialchars($photo) ?>"
-               alt="Profile Image"
-               class="profile-img"
-               loading="lazy">
+  <main class="page">
+    <div class="dashboard-shell">
+      <section class="page-heading">
+        <div class="page-heading__intro">
+          <span class="page-heading__eyebrow">Security Command Center</span>
+          <h1>Approved violation overview</h1>
+          <p>Monitor the cases that cleared review, track recurring offenses, and jump straight into the details you need when it matters.</p>
         </div>
-
-        <div class="student-card__body">
-          <p class="muted"><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
-
-          <h3 class="student-name">
-            <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
-          </h3>
-
-          <div class="facts-grid">
-            <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-            <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-            <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
-
-            <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-            <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
-            <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
-
-            <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-            <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
-          </div>
+        <div class="page-heading__actions">
+          <a class="button button--ghost" href="pending_reports.php">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <line x1="12" y1="7" x2="12" y2="13"></line>
+              <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"></circle>
+            </svg>
+            Review pending
+          </a>
+          <a class="button button--primary" href="/moralmatrix/security/report_student.php">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Report new case
+          </a>
         </div>
       </section>
 
-      <!-- Community service stat -->
-      <section class="stat card">
-        <div class="stat__value">
-          <?= htmlspecialchars((string)$hours) ?>
-        </div>
-        <div class="stat__label">
-         <?= $hours === 1 ? 'hour' : 'hours' ?> Community Service 
-        </div>
+      <section class="stats-grid">
+        <article class="stat-card stat-card--accent">
+          <span class="stat-label">Approved reports</span>
+          <span class="stat-value"><?= number_format($totalReports); ?></span>
+          <span class="stat-caption">
+            <span class="stat-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Last 7 days: <?= number_format($recentCount); ?>
+            </span>
+            Reviewed submissions promoted to the approved queue.
+          </span>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-label">Students involved</span>
+          <span class="stat-value"><?= number_format($uniqueStudents); ?></span>
+          <span class="stat-caption">
+            <?= $uniqueTypes === 1 ? 'Single offense type recorded' : $uniqueTypes . ' distinct offense types tracked'; ?>
+          </span>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-label">Latest update</span>
+          <span class="stat-value"><?= safeText($latestDescriptor['full']); ?></span>
+          <?php if ($latestDescriptor['relative'] !== ''): ?>
+            <span class="stat-caption">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 6v6l3 3"/>
+                <circle cx="12" cy="12" r="9"/>
+              </svg>
+              <?= safeText($latestDescriptor['relative']); ?>
+            </span>
+          <?php else: ?>
+            <span class="stat-caption">No approvals logged yet.</span>
+          <?php endif; ?>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-label">Top category</span>
+          <?php if ($topCategoryName !== ''): ?>
+            <span class="stat-value"><?= safeText($topCategoryName); ?></span>
+            <span class="stat-caption">
+              <span class="stat-badge"><?= $topCategoryShare; ?>%</span>
+              of approved reports this cycle
+            </span>
+          <?php else: ?>
+            <span class="stat-value">—</span>
+            <span class="stat-caption">Insights will appear once approvals start coming in.</span>
+          <?php endif; ?>
+        </article>
       </section>
-    <?php else: ?>
-      <section class="card">
-        <p>Student not found.</p>
-      </section>
-    <?php endif; ?>
 
-    <!-- Actions -->
-    <section class="actions">
-      <a class="btn btn-primary"
-         href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
-        Add Violation
-      </a>
-    </section>
+      <?php if ($totalReports > 0): ?>
+        <section class="filter-panel" aria-label="Filtering tools">
+          <label class="search-input" for="searchInput">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" id="searchInput" name="search" placeholder="Search by name, student ID, or keywords…">
+          </label>
 
-    <?php if (!empty($csGroups)): ?>
-  <section class="card" style="margin-bottom:12px">
-    <div class="section-head">
-      <h3>Eligible 3-for-10 Community Service Sets</h3>
-      <p class="muted" style="margin:6px 0 0">These are unassigned light/moderate/less-grave violations, grouped in 3s (10 hours per set).</p>
-    </div>
-
-    <div class="cards-grid">
-      <?php foreach ($csGroups as $group): 
-        $ids = array_map(fn($x)=>(int)$x['violation_id'], $group);
-        $csv = implode(',', $ids);
-        $setUrl = $selfDir . "/set_community_service.php?student_id=" . urlencode($student_id)
-                . "&group=" . urlencode($csv)
-                . "&return=" . urlencode($scheme.'://'.$host.$currentPath.'?'.$canonicalQS);
-      ?>
-        <div class="violation-card" style="display:block">
-          <div class="violation-card__body">
-            <p class="title"><strong>Group:</strong><span class="badge">10 hours</span></p>
-            <ul class="muted" style="margin:8px 0 10px; padding-left:18px;">
-              <?php foreach ($group as $g): ?>
-                <li>
-                  • <?= htmlspecialchars(ucfirst(strtolower((string)$g['offense_category']))) ?>
-                  — <?= htmlspecialchars($g['offense_type'] ?: '—') ?> 
-                  (<?= htmlspecialchars(date('M d, Y', strtotime($g['reported_at']))) ?>)
-                </li>
+          <div class="filter-group">
+            <span class="filter-label">Category</span>
+            <select id="categoryFilter" name="category">
+              <option value="">All categories</option>
+              <?php foreach ($categoryOptions as $option): ?>
+                <option value="<?= safeText($option['value']); ?>">
+                  <?= safeText($option['label']); ?> (<?= $option['count']; ?>)
+                </option>
               <?php endforeach; ?>
-            </ul>
-            <a class="btn btn-primary" href="<?= $setUrl ?>">Assign this 10-hour set</a>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Offense type</span>
+            <select id="typeFilter" name="type">
+              <option value="">All types</option>
+              <?php foreach ($typeOptions as $option): ?>
+                <option value="<?= safeText($option['value']); ?>">
+                  <?= safeText($option['label']); ?> (<?= $option['count']; ?>)
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Sort</span>
+            <select id="sortSelect" name="sort">
+              <option value="newest" selected>Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="student">Student name</option>
+              <option value="category">Category</option>
+            </select>
+          </div>
+
+          <div class="filters-actions">
+            <button type="button" class="button button--subtle" id="resetFilters" hidden>Clear filters</button>
+          </div>
+        </section>
+
+        <?php if (!empty($topCategories)): ?>
+          <section class="insights" aria-label="Category insights">
+            <h2>Most frequent categories</h2>
+            <div class="insight-chips">
+              <?php foreach ($topCategories as $label => $count): ?>
+                <span class="insight-chip">
+                  <?= safeText($label); ?>
+                  <span class="chip-count"><?= number_format($count); ?></span>
+                </span>
+              <?php endforeach; ?>
+            </div>
+          </section>
+        <?php endif; ?>
+
+        <div class="results-meta" aria-live="polite">
+          <div>
+            Showing <strong id="resultsCount"><?= $totalReports; ?></strong> of <strong id="totalCount"><?= $totalReports; ?></strong> approved reports
           </div>
         </div>
-      <?php endforeach; ?>
-    </div>
-  </section>
-<?php endif; ?>
 
-
-    <!-- Violations -->
-    <section aria-labelledby="violationsTitle" class="card">
-      <div class="section-head">
-        <h3 id="violationsTitle">Violation History</h3>
-      </div>
-
-      <?php if (empty($violations)): ?>
-        <p class="muted">No Violations Recorded.</p>
-      <?php else: ?>
-        <div class="cards-grid">
-          <?php foreach ($violations as $v):
-            $cat  = htmlspecialchars($v['offense_category']);
-            $type = htmlspecialchars($v['offense_type']);
-            $desc = htmlspecialchars($v['description'] ?? '');
-            $date = date('M d, Y h:i A', strtotime($v['reported_at']));
-
-            /* CHANGED: build a reliable image path for this violation */
-            $photoRel = $selfDir . '/uploads/placeholder.png';
-            if (!empty($v['photo'])) {
-              $tryAbs = __DIR__ . '/uploads/' . $v['photo'];
-              if (is_file($tryAbs)) {
-                $photoRel = $selfDir . '/uploads/' . rawurlencode($v['photo']);
+        <section class="cards-grid" id="violationsGrid" aria-label="Approved reports">
+          <?php foreach ($violations as $violation):
+              $firstName = trim((string)($violation['first_name'] ?? ''));
+              $lastName  = trim((string)($violation['last_name'] ?? ''));
+              $studentName = trim($firstName . ' ' . $lastName);
+              if ($studentName === '') {
+                  $studentName = 'Unnamed student';
               }
-            }
-
-            $chips = [];
-            if (!empty($v['offense_details'])) {
-              $decoded = json_decode($v['offense_details'], true);
-              if (is_array($decoded)) {
-                foreach ($decoded as $d) { $chips[] = htmlspecialchars($d); }
+              $studentId = (string)($violation['student_id'] ?? '—');
+              $categoryLabel = trim((string)($violation['offense_category'] ?? ''));
+              if ($categoryLabel === '') {
+                  $categoryLabel = 'Uncategorized';
               }
-            }
-            $href = $selfDir . "/violation_view.php?id=" . urlencode($v['violation_id']) . "&student_id=" . urlencode($student_id);
+              $typeLabel = trim((string)($violation['offense_type'] ?? ''));
+              if ($typeLabel === '') {
+                  $typeLabel = 'Unspecified';
+              }
+              $statusLabelRaw = trim((string)($violation['status'] ?? ''));
+              $statusLabel = $statusLabelRaw !== ''
+                  ? ucwords(str_replace('_', ' ', strtolower($statusLabelRaw)))
+                  : 'Approved';
+
+              $photoFile = trim((string)($violation['student_photo'] ?? ''));
+              $photoSrc = $photoFile !== '' ? '../admin/uploads/' . $photoFile : 'placeholder.png';
+
+              $description = trim((string)($violation['description'] ?? ''));
+              $dateInfo = describeDate($violation['reported_at'] ?? null);
+
+              $searchIndex = toSearchIndex($studentName . ' ' . $studentId . ' ' . $categoryLabel . ' ' . $typeLabel . ' ' . $description);
+              $categoryKey = normaliseKey($categoryLabel);
+              $typeKey = normaliseKey($typeLabel);
+              $studentSort = toSearchIndex($studentName);
           ?>
-            <a class="violation-card" data-violation-link href="<?= $href ?>">
-              <div class="violation-card__media">
-                <!-- CHANGED: show actual image (or placeholder) directly -->
-                <img
-                  src="<?= htmlspecialchars($photoRel) ?>"
-                  alt="Evidence for violation #<?= (int)$v['violation_id'] ?>"
-                  loading="lazy">
+            <article
+              class="violation-card"
+              data-category="<?= safeText($categoryKey); ?>"
+              data-category-label="<?= safeText($categoryLabel); ?>"
+              data-type="<?= safeText($typeKey); ?>"
+              data-type-label="<?= safeText($typeLabel); ?>"
+              data-student="<?= safeText($studentSort); ?>"
+              data-search="<?= safeText($searchIndex); ?>"
+              data-reported-at="<?= safeText($dateInfo['iso']); ?>"
+            >
+              <div class="card-header">
+                <div class="student">
+                  <div class="avatar">
+                    <img src="<?= safeText($photoSrc); ?>" alt="Student photo for <?= safeText($studentName); ?>" onerror="this.src='placeholder.png'">
+                  </div>
+                  <div>
+                    <h3><?= safeText($studentName); ?></h3>
+                    <div class="student-id"><?= safeText($studentId); ?></div>
+                    <div class="meta">
+                      <span><?= safeText($categoryLabel); ?></span>
+                      <span>•</span>
+                      <span><?= safeText($typeLabel); ?></span>
+                    </div>
+                  </div>
+                </div>
+                <span class="status-pill">
+                  <?= safeText($statusLabel); ?>
+                </span>
               </div>
 
-              <div class="violation-card__body">
-                <p class="chip-row">
-                  <span class="badge badge-<?= strtolower($cat) ?>"><?= ucfirst($cat) ?></span>
-                </p>
-
-                <p class="title"><strong>Type:</strong> <?= $type ?></p>
-
-                <?php if (!empty($chips)): ?>
-                  <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
-                <?php endif; ?>
-
-                <p class="muted">
-                  <strong>Reported:</strong>
-                  <span class="nowrap"><?= htmlspecialchars($date) ?></span>
-                </p>
-
-                <?php if ($desc): ?>
-                  <p class="description"><strong>Description:</strong> <?= $desc ?></p>
+              <div class="card-body">
+                <?php if ($description !== ''): ?>
+                  <p><?= nl2br(safeText($description)); ?></p>
+                <?php else: ?>
+                  <p><em>No additional notes provided.</em></p>
                 <?php endif; ?>
               </div>
-            </a>
+
+              <div class="card-footer">
+                <div>
+                  <time datetime="<?= safeText($dateInfo['iso']); ?>">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="9"/>
+                      <polyline points="12 7 12 12 16 14"/>
+                    </svg>
+                    <?= safeText($dateInfo['full']); ?>
+                  </time>
+                  <?php if ($dateInfo['relative'] !== ''): ?>
+                    <span class="relative">· <?= safeText($dateInfo['relative']); ?></span>
+                  <?php endif; ?>
+                </div>
+                <a href="view_violation_approved.php?id=<?= urlencode((string)($violation['violation_id'] ?? '')); ?>">
+                  View details
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                </a>
+              </div>
+            </article>
           <?php endforeach; ?>
+        </section>
+
+        <div class="no-results" id="noResults" hidden>
+          No matches found for your current filters. Try adjusting the search or clear all filters.
         </div>
+      <?php else: ?>
+        <section class="empty-state">
+          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" stroke-dasharray="2 4"/>
+            <path d="M9 10.5l3 3 3-3"/>
+          </svg>
+          <h2>No approved reports yet</h2>
+          <p>Once cases have been reviewed and approved they will appear here with quick filters and insights. You can still register a new concern or review pending submissions.</p>
+          <div class="tips">
+            <span>Use the scanner to capture new reports</span>
+            <span>Follow up on pending reviews</span>
+          </div>
+          <div class="page-heading__actions">
+            <a class="button button--ghost" href="pending_reports.php">Go to pending queue</a>
+            <a class="button button--primary" href="/moralmatrix/security/report_student.php">Report new case</a>
+          </div>
+        </section>
       <?php endif; ?>
-    </section>
-  </main>
-
-  <!-- Backdrop for the violation modal -->
-  <div id="violationBackdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
-
-  <!-- Modal -->
-  <div id="violationModal"
-       class="modal hidden"
-       role="dialog"
-       aria-modal="true"
-       aria-labelledby="violationModalTitle">
-    <button type="button" class="modal-close" id="violationClose" aria-label="Close">✕</button>
-    <div id="violationContent" class="modal-content" style ="margin-top: 20px; margin-left:200px;">
-      <!-- violation_view.php?modal=1 will be injected here -->
     </div>
-  </div>
-
-  <!-- JS: violation modal loader -->
+  </main>
   <script>
-    // Ensure modal is hidden at start
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('violationBackdrop')?.classList.add('hidden');
-      document.getElementById('violationModal')?.classList.add('hidden');
-      document.body.classList.remove('modal-open');
-    });
-
-    (function () {
-      const backdrop = document.getElementById('violationBackdrop');
-      const modal    = document.getElementById('violationModal');
-      const content  = document.getElementById('violationContent');
-      const btnClose = document.getElementById('violationClose');
-
-      function openModalWith(url) {
-        fetch(url, { credentials: 'same-origin' })
-          .then(r => { if (!r.ok) throw new Error('Failed to load violation'); return r.text(); })
-          .then(html => {
-            content.innerHTML = html;
-            backdrop.classList.remove('hidden');
-            modal.classList.remove('hidden');
-            document.body.classList.add('modal-open');
-            if (!history.state || history.state.modalOpen !== true) {
-              history.pushState({ modalOpen: true }, '');
-            }
-          })
-          .catch(err => alert('Unable to load violation: ' + err.message));
-      }
-
-      function closeModal() {
-        backdrop.classList.add('hidden');
-        modal.classList.add('hidden');
-        document.body.classList.remove('modal-open');
-        if (history.state && history.state.modalOpen === true) history.back();
-      }
-
-      // Intercept clicks ONLY on links that opted-in via data-violation-link
-      document.addEventListener('click', function (e) {
-        const link = e.target.closest('a[data-violation-link]');
-        if (!link) return;
-
-        // allow new-tab/middle-click
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-
-        e.preventDefault();
-        const url = link.href + (link.href.includes('?') ? '&' : '?') + 'modal=1';
-        openModalWith(url);
-      });
-
-      btnClose.addEventListener('click', closeModal);
-      backdrop.addEventListener('click', closeModal);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-      // Handle back/forward
-      window.addEventListener('popstate', function () {
-        if (!backdrop.classList.contains('hidden') || !modal.classList.contains('hidden')) {
-          backdrop.classList.add('hidden');
-          modal.classList.add('hidden');
-          document.body.classList.remove('modal-open');
-        }
-      });
-    })();
-
   (function(){
-  // If server set a flash, show it now
-  if (window.__sms_alert_from_server && window.showSmsAlert) {
-    const payload = window.__sms_alert_from_server;
-    const status = Number(payload.status || 500);
-    const message = payload.message || (status === 200 ? 'SMS sent' : 'SMS failed');
-    window.showSmsAlert(status === 200 ? 'success' : 'error', (status === 200 ? '✅ ' : '⚠️ ') + message);
-    // optional: also clear it to be safe
-    try { delete window.__sms_alert_from_server; } catch(e) {}
-  }
-})();
+    const dropdown = document.getElementById('logoutDropdown');
+    if (!dropdown) return;
+    const summary = dropdown.querySelector('summary');
+
+    function sync(){
+      if (!summary) { return; }
+      summary.setAttribute('aria-expanded', dropdown.hasAttribute('open') ? 'true' : 'false');
+    }
+
+    dropdown.addEventListener('toggle', sync);
+    document.addEventListener('click', function(evt){
+      if (!dropdown.contains(evt.target)) {
+        dropdown.removeAttribute('open');
+        sync();
+      }
+    });
+    document.addEventListener('keydown', function(evt){
+      if (evt.key === 'Escape') {
+        dropdown.removeAttribute('open');
+        sync();
+      }
+    });
+  })();
   </script>
+
+  <?php if ($totalReports > 0): ?>
+  <script>
+    (function(){
+      const searchInput = document.getElementById('searchInput');
+      const categoryFilter = document.getElementById('categoryFilter');
+      const typeFilter = document.getElementById('typeFilter');
+      const sortSelect = document.getElementById('sortSelect');
+      const resetButton = document.getElementById('resetFilters');
+      const grid = document.getElementById('violationsGrid');
+      const resultsCount = document.getElementById('resultsCount');
+      const totalCount = document.getElementById('totalCount');
+      const noResults = document.getElementById('noResults');
+      const cards = Array.from(document.querySelectorAll('.violation-card'));
+      const totalRecords = Number(totalCount ? totalCount.textContent : cards.length);
+
+      function parseTime(value){
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? 0 : parsed;
+      }
+
+      function sortCards(list){
+        const mode = sortSelect ? sortSelect.value : 'newest';
+        const sorted = list.slice();
+
+        switch(mode){
+          case 'oldest':
+            sorted.sort((a, b) => parseTime(a.dataset.reportedAt || '') - parseTime(b.dataset.reportedAt || ''));
+            break;
+          case 'student':
+            sorted.sort((a, b) => (a.dataset.student || '').localeCompare(b.dataset.student || ''));
+            break;
+          case 'category':
+            sorted.sort((a, b) => (a.dataset.categoryLabel || '').localeCompare(b.dataset.categoryLabel || ''));
+            break;
+          case 'newest':
+          default:
+            sorted.sort((a, b) => parseTime(b.dataset.reportedAt || '') - parseTime(a.dataset.reportedAt || ''));
+            break;
+        }
+        return sorted;
+      }
+
+      function applyFilters(){
+        const query = (searchInput?.value || '').trim().toLowerCase();
+        const category = categoryFilter?.value || '';
+        const type = typeFilter?.value || '';
+
+        let visible = [];
+
+        cards.forEach(card => {
+          const matchesSearch = !query || (card.dataset.search || '').includes(query);
+          const matchesCategory = !category || card.dataset.category === category;
+          const matchesType = !type || card.dataset.type === type;
+
+          const shouldShow = matchesSearch && matchesCategory && matchesType;
+          card.hidden = !shouldShow;
+          card.classList.toggle('is-hidden', !shouldShow);
+          if (shouldShow) {
+            visible.push(card);
+          }
+        });
+
+        visible = sortCards(visible);
+        const hiddenCards = cards.filter(card => card.hidden);
+        [...visible, ...hiddenCards].forEach(card => grid?.appendChild(card));
+
+        const visibleCount = visible.length;
+        if (resultsCount) {
+          resultsCount.textContent = visibleCount.toString();
+        }
+
+        if (noResults) {
+          noResults.hidden = visibleCount !== 0;
+        }
+
+        const hasFilters = !!query || !!category || !!type || (sortSelect && sortSelect.value !== 'newest');
+        if (resetButton) {
+          resetButton.hidden = !hasFilters;
+        }
+      }
+
+      if (resetButton) {
+        resetButton.addEventListener('click', function(){
+          if (searchInput) searchInput.value = '';
+          if (categoryFilter) categoryFilter.selectedIndex = 0;
+          if (typeFilter) typeFilter.selectedIndex = 0;
+          if (sortSelect) sortSelect.value = 'newest';
+          applyFilters();
+          if (searchInput) searchInput.focus();
+        });
+      }
+
+      searchInput?.addEventListener('input', applyFilters);
+      categoryFilter?.addEventListener('change', applyFilters);
+      typeFilter?.addEventListener('change', applyFilters);
+      sortSelect?.addEventListener('change', applyFilters);
+
+      if (totalCount) {
+        totalCount.textContent = totalRecords.toString();
+      }
+      applyFilters();
+    })();
+  </script>
+  <?php endif; ?>
 </body>
 </html>
+

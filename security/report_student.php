@@ -1,7 +1,7 @@
 <?php
 
 include '../config.php';
-include '../includes/security_header.php';
+
 include __DIR__ . '/_scanner.php';
 
 
