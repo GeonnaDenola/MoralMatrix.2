@@ -220,169 +220,221 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 
   <!-- Your global header/nav stays as-is above this file -->
 
-  <main class="page container content-safe">
-    <!-- Optional on-page title (NOT a header element) -->
-    <h2 class="page-title">Student Profile</h2>
-
-    <?php if ($student): ?>
-      <!-- Student profile -->
-      <section class="card student-card">
-        <div class="student-card__media">
-          <img src="<?= htmlspecialchars($photo) ?>"
-               alt="Profile Image"
-               class="profile-img"
-               loading="lazy">
-        </div>
-
-        <div class="student-card__body">
-          <p class="muted"><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
-
-          <h3 class="student-name">
-            <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
-          </h3>
-
-          <div class="facts-grid">
-            <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-            <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-            <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
-
-            <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-            <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
-            <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
-
-            <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-            <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Community service stat -->
-      <section class="stat card">
-        <div class="stat__value">
-          <?= htmlspecialchars((string)$hours) ?>
-        </div>
-        <div class="stat__label">
-         <?= $hours === 1 ? 'hour' : 'hours' ?> Community Service 
-        </div>
-      </section>
-    <?php else: ?>
-      <section class="card">
-        <p>Student not found.</p>
-      </section>
-    <?php endif; ?>
-
-    <!-- Actions -->
-    <section class="actions">
-      <a class="btn btn-primary"
-         href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
-        Add Violation
-      </a>
-    </section>
-
-    <?php if (!empty($csGroups)): ?>
-  <section class="card" style="margin-bottom:12px">
-    <div class="section-head">
-      <h3>Eligible 3-for-10 Community Service Sets</h3>
-      <p class="muted" style="margin:6px 0 0">These are unassigned light/moderate/less-grave violations, grouped in 3s (10 hours per set).</p>
-    </div>
-
-    <div class="cards-grid">
-      <?php foreach ($csGroups as $group): 
-        $ids = array_map(fn($x)=>(int)$x['violation_id'], $group);
-        $csv = implode(',', $ids);
-        $setUrl = $selfDir . "/set_community_service.php?student_id=" . urlencode($student_id)
-                . "&group=" . urlencode($csv)
-                . "&return=" . urlencode($scheme.'://'.$host.$currentPath.'?'.$canonicalQS);
-      ?>
-        <div class="violation-card" style="display:block">
-          <div class="violation-card__body">
-            <p class="title"><strong>Group:</strong><span class="badge">10 hours</span></p>
-            <ul class="muted" style="margin:8px 0 10px; padding-left:18px;">
-              <?php foreach ($group as $g): ?>
-                <li>
-                  • <?= htmlspecialchars(ucfirst(strtolower((string)$g['offense_category']))) ?>
-                  — <?= htmlspecialchars($g['offense_type'] ?: '—') ?> 
-                  (<?= htmlspecialchars(date('M d, Y', strtotime($g['reported_at']))) ?>)
-                </li>
-              <?php endforeach; ?>
-            </ul>
-            <a class="btn btn-primary" href="<?= $setUrl ?>">Assign this 10-hour set</a>
-          </div>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  </section>
-<?php endif; ?>
-
-
-    <!-- Violations -->
-    <section aria-labelledby="violationsTitle" class="card">
-      <div class="section-head">
-        <h3 id="violationsTitle">Violation History</h3>
+  <main class="page content-safe">
+    <div class="page-shell">
+      <div class="page-title-row">
+        <h2 class="page-title">Student Profile</h2>
       </div>
 
-      <?php if (empty($violations)): ?>
-        <p class="muted">No Violations Recorded.</p>
+      <?php if ($student): ?>
+        <section class="profile-layout">
+          <article class="card profile-card">
+            <div class="profile-card__media">
+              <img src="<?= htmlspecialchars($photo) ?>"
+                   alt="Profile Image"
+                   class="profile-img"
+                   loading="lazy">
+            </div>
+
+            <div class="profile-card__body">
+              <p class="eyebrow">Student ID: <?= htmlspecialchars($student['student_id']) ?></p>
+
+              <h3 class="profile-card__name">
+                <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
+              </h3>
+
+              <div class="facts-grid profile-card__meta">
+                <p>
+                  <strong>Course</strong>
+                  <span><?= htmlspecialchars(($student['course'] ?? '') ?: 'N/A') ?></span>
+                </p>
+                <p>
+                  <strong>Year Level</strong>
+                  <span><?= htmlspecialchars(($student['level'] ?? '') ?: 'N/A') ?></span>
+                </p>
+                <p>
+                  <strong>Section</strong>
+                  <span><?= htmlspecialchars(($student['section'] ?? '') ?: 'N/A') ?></span>
+                </p>
+                <p>
+                  <strong>Institute</strong>
+                  <span><?= htmlspecialchars(($student['institute'] ?? '') ?: 'N/A') ?></span>
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <aside class="profile-sidebar">
+            <article class="card metric-card">
+              <p class="eyebrow">Community Service</p>
+              <p class="metric-card__value">
+                <?= htmlspecialchars((string)$hours) ?>
+                <span><?= $hours === 1 ? 'hour logged' : 'hours logged' ?></span>
+              </p>
+              <p class="metric-card__hint">Keep this student aligned with their outstanding service requirements.</p>
+              <a class="btn btn-primary btn-block"
+                 href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
+                Add Violation
+              </a>
+            </article>
+
+            <article class="card contact-card">
+              <h4>Contact Details</h4>
+              <div class="contact-list">
+                <div class="contact-list__item">
+                  <span class="label">Guardian</span>
+                  <span class="value"><?= htmlspecialchars(($student['guardian'] ?? '') ?: 'N/A') ?></span>
+                </div>
+                <div class="contact-list__item">
+                  <span class="label">Guardian Mobile</span>
+                  <span class="value"><?= htmlspecialchars(($student['guardian_mobile'] ?? '') ?: 'N/A') ?></span>
+                </div>
+                <div class="contact-list__item">
+                  <span class="label">Email</span>
+                  <?php if (!empty($student['email'])): ?>
+                    <a class="value link" href="mailto:<?= htmlspecialchars($student['email']) ?>">
+                      <?= htmlspecialchars($student['email']) ?>
+                    </a>
+                  <?php else: ?>
+                    <span class="value">N/A</span>
+                  <?php endif; ?>
+                </div>
+                <div class="contact-list__item">
+                  <span class="label">Mobile</span>
+                  <?php if (!empty($student['mobile'])): ?>
+                    <a class="value link" href="tel:<?= htmlspecialchars($student['mobile']) ?>">
+                      <?= htmlspecialchars($student['mobile']) ?>
+                    </a>
+                  <?php else: ?>
+                    <span class="value">N/A</span>
+                  <?php endif; ?>
+                </div>
+              </div>
+            </article>
+          </aside>
+        </section>
       <?php else: ?>
-        <div class="cards-grid">
-          <?php foreach ($violations as $v):
-            $cat  = htmlspecialchars($v['offense_category']);
-            $type = htmlspecialchars($v['offense_type']);
-            $desc = htmlspecialchars($v['description'] ?? '');
-            $date = date('M d, Y h:i A', strtotime($v['reported_at']));
-
-            /* CHANGED: build a reliable image path for this violation */
-            $photoRel = $selfDir . '/uploads/placeholder.png';
-            if (!empty($v['photo'])) {
-              $tryAbs = __DIR__ . '/uploads/' . $v['photo'];
-              if (is_file($tryAbs)) {
-                $photoRel = $selfDir . '/uploads/' . rawurlencode($v['photo']);
-              }
-            }
-
-            $chips = [];
-            if (!empty($v['offense_details'])) {
-              $decoded = json_decode($v['offense_details'], true);
-              if (is_array($decoded)) {
-                foreach ($decoded as $d) { $chips[] = htmlspecialchars($d); }
-              }
-            }
-            $href = $selfDir . "/violation_view.php?id=" . urlencode($v['violation_id']) . "&student_id=" . urlencode($student_id);
-          ?>
-            <a class="violation-card" data-violation-link href="<?= $href ?>">
-              <div class="violation-card__media">
-                <!-- CHANGED: show actual image (or placeholder) directly -->
-                <img
-                  src="<?= htmlspecialchars($photoRel) ?>"
-                  alt="Evidence for violation #<?= (int)$v['violation_id'] ?>"
-                  loading="lazy">
-              </div>
-
-              <div class="violation-card__body">
-                <p class="chip-row">
-                  <span class="badge badge-<?= strtolower($cat) ?>"><?= ucfirst($cat) ?></span>
-                </p>
-
-                <p class="title"><strong>Type:</strong> <?= $type ?></p>
-
-                <?php if (!empty($chips)): ?>
-                  <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
-                <?php endif; ?>
-
-                <p class="muted">
-                  <strong>Reported:</strong>
-                  <span class="nowrap"><?= htmlspecialchars($date) ?></span>
-                </p>
-
-                <?php if ($desc): ?>
-                  <p class="description"><strong>Description:</strong> <?= $desc ?></p>
-                <?php endif; ?>
-              </div>
-            </a>
-          <?php endforeach; ?>
-        </div>
+        <section class="card empty-state">
+          <p>Student not found.</p>
+        </section>
       <?php endif; ?>
-    </section>
+
+      <?php if (!empty($csGroups)): ?>
+        <section class="card cs-sets">
+          <div class="section-head section-head--stacked">
+            <div>
+              <h3>Eligible 3-for-10 Community Service Sets</h3>
+            </div>
+            <p class="muted">These are unassigned light/moderate/less-grave violations, grouped in 3s (10 hours per set).</p>
+          </div>
+
+          <div class="sets-grid">
+            <?php foreach ($csGroups as $group):
+              $ids = array_map(fn($x) => (int)$x['violation_id'], $group);
+              $csv = implode(',', $ids);
+              $setUrl = $selfDir . "/set_community_service.php?student_id=" . urlencode($student_id)
+                      . "&group=" . urlencode($csv)
+                      . "&return=" . urlencode($scheme.'://'.$host.$currentPath.'?'.$canonicalQS);
+            ?>
+              <article class="set-card">
+                <header class="set-card__header">
+                  <span class="set-card__title">Group</span>
+                  <span class="badge badge-neutral">10 hours</span>
+                </header>
+
+                <ul class="set-card__list">
+                  <?php foreach ($group as $g): ?>
+                    <?php
+                      $category   = htmlspecialchars(ucwords(strtolower((string)$g['offense_category'])));
+                      $offense    = htmlspecialchars($g['offense_type'] ?: 'No type recorded');
+                      $reportedAt = htmlspecialchars(date('M d, Y', strtotime($g['reported_at'])));
+                    ?>
+                    <li>
+                      <span class="badge badge-<?= strtolower((string)$g['offense_category']) ?>"><?= $category ?></span>
+                      <span class="set-card__offense"><?= $offense ?></span>
+                      <span class="set-card__date"><?= $reportedAt ?></span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+
+                <a class="btn btn-outline btn-block" href="<?= $setUrl ?>">
+                  Assign this 10-hour set
+                </a>
+              </article>
+            <?php endforeach; ?>
+          </div>
+        </section>
+      <?php endif; ?>
+
+      <!-- Violations -->
+      <section aria-labelledby="violationsTitle" class="card">
+        <div class="section-head">
+          <h3 id="violationsTitle">Violation History</h3>
+        </div>
+
+        <?php if (empty($violations)): ?>
+          <p class="muted">No Violations Recorded.</p>
+        <?php else: ?>
+          <div class="cards-grid">
+            <?php foreach ($violations as $v):
+              $cat  = htmlspecialchars($v['offense_category']);
+              $type = htmlspecialchars($v['offense_type']);
+              $desc = htmlspecialchars($v['description'] ?? '');
+              $date = date('M d, Y h:i A', strtotime($v['reported_at']));
+
+              /* CHANGED: build a reliable image path for this violation */
+              $photoRel = $selfDir . '/uploads/placeholder.png';
+              if (!empty($v['photo'])) {
+                $tryAbs = __DIR__ . '/uploads/' . $v['photo'];
+                if (is_file($tryAbs)) {
+                  $photoRel = $selfDir . '/uploads/' . rawurlencode($v['photo']);
+                }
+              }
+
+              $chips = [];
+              if (!empty($v['offense_details'])) {
+                $decoded = json_decode($v['offense_details'], true);
+                if (is_array($decoded)) {
+                  foreach ($decoded as $d) { $chips[] = htmlspecialchars($d); }
+                }
+              }
+              $href = $selfDir . "/violation_view.php?id=" . urlencode($v['violation_id']) . "&student_id=" . urlencode($student_id);
+            ?>
+              <a class="violation-card" data-violation-link href="<?= $href ?>">
+                <div class="violation-card__media">
+                  <!-- CHANGED: show actual image (or placeholder) directly -->
+                  <img
+                    src="<?= htmlspecialchars($photoRel) ?>"
+                    alt="Evidence for violation #<?= (int)$v['violation_id'] ?>"
+                    loading="lazy">
+                </div>
+
+                <div class="violation-card__body">
+                  <p class="chip-row">
+                    <span class="badge badge-<?= strtolower($cat) ?>"><?= ucfirst($cat) ?></span>
+                  </p>
+
+                  <p class="title"><strong>Type:</strong> <?= $type ?></p>
+
+                  <?php if (!empty($chips)): ?>
+                    <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
+                  <?php endif; ?>
+
+                  <p class="muted">
+                    <strong>Reported:</strong>
+                    <span class="nowrap"><?= htmlspecialchars($date) ?></span>
+                  </p>
+
+                  <?php if ($desc): ?>
+                    <p class="description"><strong>Description:</strong> <?= $desc ?></p>
+                  <?php endif; ?>
+                </div>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </section>
+    </div>
   </main>
 
   <!-- Backdrop for the violation modal -->
