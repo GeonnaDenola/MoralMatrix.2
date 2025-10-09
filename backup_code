@@ -1,775 +1,480 @@
 <?php
 include '../includes/header.php';
-include '../config.php';
-include __DIR__ . '/_scanner.php';
+require '../config.php';
+require __DIR__.'/_scanner.php';
+require 'violation_hrs.php';
 
-$active = basename($_SERVER['PHP_SELF']);
-function activeClass($file){ global $active; return $active === $file ? ' is-active' : ''; }
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+if (!empty($_SESSION['sms_alert']) && is_array($_SESSION['sms_alert'])) {
+    // sanitize values to avoid XSS — json_encode will escape correctly
+    $smsFlash = $_SESSION['sms_alert'];
+    unset($_SESSION['sms_alert']);
+    // export it to JS so the page's showSmsAlert listener can pick it up
+    echo '<script>window.__sms_alert_from_server = ' . json_encode($smsFlash, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) . ';</script>';
+}
+
+$hours = 0;
+
+$servername = $database_settings['servername'];
+$username   = $database_settings['username'];
+$password   = $database_settings['password'];
+$dbname     = $database_settings['dbname'];
+
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+
+/* Accept either student_id (####-####) or k=qr_key, and be tolerant of legacy hex in student_id */
+$origStudent = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
+$kParam      = isset($_GET['k']) ? trim($_GET['k']) : '';
+
+$ID_PATTERN    = '/^\d{4}-\d{4}$/';
+$KEY64_PATTERN = '/^[a-f0-9]{64}$/i';
+$HEX_FLEX      = '/^[a-f0-9]{10,64}$/i'; // legacy shorter hex from old cards
+
+$student_id = $origStudent;
+
+/* 1) If k= is present and valid, resolve it */
+if ($student_id === '' && $kParam !== '' && preg_match($KEY64_PATTERN, $kParam)) {
+    $stmtK = $conn->prepare('SELECT student_id FROM student_qr_keys WHERE qr_key = ? LIMIT 1');
+    $stmtK->bind_param('s', $kParam);
+    $stmtK->execute();
+    $rowK = $stmtK->get_result()->fetch_assoc();
+    $stmtK->close();
+    if (!empty($rowK['student_id'])) {
+        $student_id = $rowK['student_id'];
+    }
+}
+
+/* 2) If student_id looks hex-y (old behavior), try resolving as qr_key too */
+if ($student_id !== '' && !preg_match($ID_PATTERN, $student_id) && preg_match($HEX_FLEX, $student_id)) {
+    $legacyKey = $student_id;
+    $stmtL = $conn->prepare('SELECT student_id FROM student_qr_keys WHERE qr_key = ? LIMIT 1');
+    $stmtL->bind_param('s', $legacyKey);
+    $stmtL->execute();
+    $rowL = $stmtL->get_result()->fetch_assoc();
+    $stmtL->close();
+    if (!empty($rowL['student_id'])) {
+        $student_id = $rowL['student_id'];
+    }
+}
+
+/* 3) Guard */
+if ($student_id === '') {
+    http_response_code(400);
+    die("No student selected.");
+}
+
+$hours = communityServiceHours($conn, $student_id);
+
+/* 4) Canonicalize URL only if current URL is NOT already canonical */
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST'];
+$base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\'); // e.g. /MoralMatrix/ccdu
+
+$canonicalPath = $base . '/view_student.php';
+$canonicalQS   = 'student_id=' . rawurlencode($student_id);
+$currentPath   = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$currentQS     = (string)($_SERVER['QUERY_STRING'] ?? '');
+
+/* Decide if we need to redirect: we used k=... or hex, OR the qs isn’t exactly student_id=... */
+$triggeredByKey = ($kParam !== '') || ($origStudent !== '' && !preg_match($ID_PATTERN, $origStudent)) || ($origStudent !== '' && $origStudent !== $student_id);
+
+/* Are we already at the canonical path+query? */
+$alreadyCanonical = ($currentPath === $canonicalPath) && ($currentQS === $canonicalQS);
+
+if ($triggeredByKey && !$alreadyCanonical) {
+    header('Location: '.$scheme.'://'.$host.$canonicalPath.'?'.$canonicalQS, true, 302);
+    $conn->close();
+    exit;
+}
+
+/* === FETCH STUDENT === */
+$sql = "SELECT * FROM student_account WHERE student_id = ?";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $student_id);
+$stmt->execute();
+$result  = $stmt->get_result();
+$student = $result->fetch_assoc();
+$stmt->close();
+
+/* ==== FETCH VIOLATIONS ==== */
+/* ⬇⬇⬇ CHANGED: include `photo` so we can render card images */
+$violations = [];
+$sqlv = "SELECT violation_id,
+                offense_category,
+                offense_type,
+                offense_details,
+                description,
+                reported_at,
+                photo
+         FROM student_violation
+         WHERE student_id = ?
+         ORDER BY reported_at DESC, violation_id DESC";
+$stmtv = $conn->prepare($sqlv);
+$stmtv->bind_param("s", $student_id);
+$stmtv->execute();
+$resv = $stmtv->get_result();
+while ($row = $resv->fetch_assoc()) { $violations[] = $row; }
+$stmtv->close();
+
+/* ==== COMPUTE REQUIRED HOURS + FIND ELIGIBLE 3-FOR-10 GROUPS ==== */
+
+/* 1) Recompute required hours here (3 light/moderate/less-grave => 10h; each grave => 20h) */
+$modLightCount = 0;
+$graveCount    = 0;
+
+foreach ($violations as $vv) {
+    $raw = strtolower((string)($vv['offense_category'] ?? ''));
+    $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
+    if ($isGrave) { $graveCount++; } else { $modLightCount++; }
+}
+$hours = intdiv($modLightCount, 3) * 10 + ($graveCount * 20);
+
+/* 2) Build a set of already-assigned violation IDs so we don’t group them again */
+$assignedIds = [];
+$hasAssignCol = $hasViolCol = false;
+if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'assignment_id'")) { $hasAssignCol = ($res->num_rows > 0); $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM validator_student_assignment LIKE 'violation_id'")) { $hasViolCol   = ($res->num_rows > 0); $res->close(); }
+
+if ($hasAssignCol && $hasViolCol) {
+    $sqlA = "SELECT COALESCE(violation_id, assignment_id) AS vid
+             FROM validator_student_assignment
+             WHERE student_id = ?";
+    $stA = $conn->prepare($sqlA);
+    $stA->bind_param("s", $student_id);
+    $stA->execute();
+    $rsA = $stA->get_result();
+    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
+    $stA->close();
+} elseif ($hasViolCol) {
+    $sqlA = "SELECT violation_id AS vid FROM validator_student_assignment WHERE student_id = ?";
+    $stA = $conn->prepare($sqlA);
+    $stA->bind_param("s", $student_id);
+    $stA->execute();
+    $rsA = $stA->get_result();
+    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
+    $stA->close();
+} elseif ($hasAssignCol) {
+    $sqlA = "SELECT assignment_id AS vid FROM validator_student_assignment WHERE student_id = ?";
+    $stA = $conn->prepare($sqlA);
+    $stA->bind_param("s", $student_id);
+    $stA->execute();
+    $rsA = $stA->get_result();
+    while ($row = $rsA->fetch_assoc()) { if (!empty($row['vid'])) $assignedIds[(int)$row['vid']] = true; }
+    $stA->close();
+}
+
+/* 3) Collect *unassigned* light/moderate/less-grave violations (skip grave) in chronological order */
+$eligible = $violations;
+usort($eligible, function($a,$b){
+    $ta = strtotime($a['reported_at'] ?? '1970-01-01');
+    $tb = strtotime($b['reported_at'] ?? '1970-01-01');
+    if ($ta === $tb) return ($a['violation_id'] <=> $b['violation_id']);
+    return $ta <=> $tb; // oldest first
+});
+
+$lightModPool = [];
+foreach ($eligible as $vv) {
+    $vid = (int)$vv['violation_id'];
+    if (isset($assignedIds[$vid])) continue; // already in a CS assignment
+    $raw = strtolower((string)($vv['offense_category'] ?? ''));
+    $isGrave = (preg_match('/\bgrave\b/', $raw) && !preg_match('/\bless\b/', $raw));
+    if ($isGrave) continue; // only pool non-grave
+    $lightModPool[] = $vv;
+}
+
+/* 4) Make as many full groups of 3 as possible */
+$csGroups = [];
+for ($i = 0; $i + 2 < count($lightModPool); $i += 3) {
+    $csGroups[] = array_slice($lightModPool, $i, 3);
+}
+/* $csGroups is an array of groups; each group has 3 violations: [ [v1,v2,v3], [v4,v5,v6], ... ] */
+
+/* --- Robust photo path (fallback if file is missing) --- */
+$photoFile = !empty($student['photo']) ? $student['photo'] : 'placeholder.png';
+$photoPath = __DIR__ . '/../admin/uploads/' . $photoFile;
+
+if (!is_file($photoPath)) {
+    $photoFile = 'placeholder.png'; // fallback if file missing
+}
+
+$photo = '../admin/uploads/' . $photoFile;
+
+/* Build a root-absolute directory path for this folder (e.g., /MoralMatrix/ccdu) */
+$selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
+
+/* Now it’s safe to include files that output HTML */
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="../css/dashboard_ccd.css?v=3"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Profile</title>
+  <link rel="stylesheet" href="../css/view_student.css" />
+  <!-- Theme color matches red header tone -->
+  <meta name="theme-color" content="#b91c1c">
 </head>
 <body>
-  <main class="page-wrapper">
-    <div class="page-shell">
-      <header class="page-head">
-        <div class="page-head__info">
-          <h1>Dashboard</h1>
-          <p>Monitor community service students and quickly jump to their profiles.</p>
+
+  <!-- Your global header/nav stays as-is above this file -->
+
+  <main class="page container content-safe">
+    <!-- Optional on-page title (NOT a header element) -->
+    <h2 class="page-title">Student Profile</h2>
+
+    <?php if ($student): ?>
+      <!-- Student profile -->
+      <section class="card student-card">
+        <div class="student-card__media">
+          <img src="<?= htmlspecialchars($photo) ?>"
+               alt="Profile Image"
+               class="profile-img"
+               loading="lazy">
         </div>
-        <div class="page-head__actions">
-          <button class="btn btn-ghost" id="toggleFilters" type="button" aria-expanded="false" aria-controls="filters">
-            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Filters
-          </button>
-          <button class="btn btn-muted" id="btnClear" type="button" aria-label="Clear filters">
-            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 18L18 6M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Clear
-          </button>
-        </div>
-      </header>
 
-      <section class="filters-panel" id="filters" data-collapsed="true" aria-label="Filters">
-        <div class="filters-grid">
-          <label class="field field--search">
-            <span class="field-label sr-only">Search</span>
-            <div class="input-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21 21l-4.2-4.2m1.2-4.8A7 7 0 1 1 5 5a7 7 0 0 1 13 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <input type="text" id="search" class="input" placeholder="Search by ID or name..." aria-label="Search students by ID or name" autocomplete="off">
-            </div>
-          </label>
+        <div class="student-card__body">
+          <p class="muted"><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
 
-          <label class="field">
-            <span class="field-label">Institute</span>
-            <select class="input institute" aria-label="Filter by Institute">
-              <option value="">All Institutes</option>
-              <option value="IBCE">IBCE</option>
-              <option value="IHTM">IHTM</option>
-              <option value="IAS">IAS</option>
-              <option value="ITE">ITE</option>
-            </select>
-          </label>
+          <h3 class="student-name">
+            <?= htmlspecialchars(trim($student['first_name'].' '.$student['middle_name'].' '.$student['last_name'])) ?>
+          </h3>
 
-          <label class="field">
-            <span class="field-label">Course</span>
-            <select class="input course" aria-label="Filter by Course">
-              <option value="">All Courses</option>
-            </select>
-          </label>
+          <div class="facts-grid">
+            <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
+            <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
+            <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
 
-          <label class="field">
-            <span class="field-label">Level</span>
-            <select class="input level" aria-label="Filter by Level">
-              <option value="">All Levels</option>
-            </select>
-          </label>
+            <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
+            <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?></p>
+            <p><strong>Guardian Mobile:</strong> <?= htmlspecialchars($student['guardian_mobile']) ?></p>
 
-          <label class="field">
-            <span class="field-label">Section</span>
-            <select class="input section" aria-label="Filter by Section">
-              <option value="">All Sections</option>
-            </select>
-          </label>
+            <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
+            <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+          </div>
         </div>
       </section>
 
-      <section class="cards-shell" aria-label="Students">
-        <div class="cardContainer" id="studentContainer" aria-live="polite"></div>
+      <!-- Community service stat -->
+      <section class="stat card">
+        <div class="stat__value">
+          <?= htmlspecialchars((string)$hours) ?>
+        </div>
+        <div class="stat__label">
+         <?= $hours === 1 ? 'hour' : 'hours' ?> Community Service 
+        </div>
       </section>
+    <?php else: ?>
+      <section class="card">
+        <p>Student not found.</p>
+      </section>
+    <?php endif; ?>
+
+    <!-- Actions -->
+    <section class="actions">
+      <a class="btn btn-primary"
+         href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
+        Add Violation
+      </a>
+    </section>
+
+    <?php if (!empty($csGroups)): ?>
+  <section class="card" style="margin-bottom:12px">
+    <div class="section-head">
+      <h3>Eligible 3-for-10 Community Service Sets</h3>
+      <p class="muted" style="margin:6px 0 0">These are unassigned light/moderate/less-grave violations, grouped in 3s (10 hours per set).</p>
     </div>
+
+    <div class="cards-grid">
+      <?php foreach ($csGroups as $group): 
+        $ids = array_map(fn($x)=>(int)$x['violation_id'], $group);
+        $csv = implode(',', $ids);
+        $setUrl = $selfDir . "/set_community_service.php?student_id=" . urlencode($student_id)
+                . "&group=" . urlencode($csv)
+                . "&return=" . urlencode($scheme.'://'.$host.$currentPath.'?'.$canonicalQS);
+      ?>
+        <div class="violation-card" style="display:block">
+          <div class="violation-card__body">
+            <p class="title"><strong>Group:</strong><span class="badge">10 hours</span></p>
+            <ul class="muted" style="margin:8px 0 10px; padding-left:18px;">
+              <?php foreach ($group as $g): ?>
+                <li>
+                  • <?= htmlspecialchars(ucfirst(strtolower((string)$g['offense_category']))) ?>
+                  — <?= htmlspecialchars($g['offense_type'] ?: '—') ?> 
+                  (<?= htmlspecialchars(date('M d, Y', strtotime($g['reported_at']))) ?>)
+                </li>
+              <?php endforeach; ?>
+            </ul>
+            <a class="btn btn-primary" href="<?= $setUrl ?>">Assign this 10-hour set</a>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </section>
+<?php endif; ?>
+
+
+    <!-- Violations -->
+    <section aria-labelledby="violationsTitle" class="card">
+      <div class="section-head">
+        <h3 id="violationsTitle">Violation History</h3>
+      </div>
+
+      <?php if (empty($violations)): ?>
+        <p class="muted">No Violations Recorded.</p>
+      <?php else: ?>
+        <div class="cards-grid">
+          <?php foreach ($violations as $v):
+            $cat  = htmlspecialchars($v['offense_category']);
+            $type = htmlspecialchars($v['offense_type']);
+            $desc = htmlspecialchars($v['description'] ?? '');
+            $date = date('M d, Y h:i A', strtotime($v['reported_at']));
+
+            /* CHANGED: build a reliable image path for this violation */
+            $photoRel = $selfDir . '/uploads/placeholder.png';
+            if (!empty($v['photo'])) {
+              $tryAbs = __DIR__ . '/uploads/' . $v['photo'];
+              if (is_file($tryAbs)) {
+                $photoRel = $selfDir . '/uploads/' . rawurlencode($v['photo']);
+              }
+            }
+
+            $chips = [];
+            if (!empty($v['offense_details'])) {
+              $decoded = json_decode($v['offense_details'], true);
+              if (is_array($decoded)) {
+                foreach ($decoded as $d) { $chips[] = htmlspecialchars($d); }
+              }
+            }
+            $href = $selfDir . "/violation_view.php?id=" . urlencode($v['violation_id']) . "&student_id=" . urlencode($student_id);
+          ?>
+            <a class="violation-card" data-violation-link href="<?= $href ?>">
+              <div class="violation-card__media">
+                <!-- CHANGED: show actual image (or placeholder) directly -->
+                <img
+                  src="<?= htmlspecialchars($photoRel) ?>"
+                  alt="Evidence for violation #<?= (int)$v['violation_id'] ?>"
+                  loading="lazy">
+              </div>
+
+              <div class="violation-card__body">
+                <p class="chip-row">
+                  <span class="badge badge-<?= strtolower($cat) ?>"><?= ucfirst($cat) ?></span>
+                </p>
+
+                <p class="title"><strong>Type:</strong> <?= $type ?></p>
+
+                <?php if (!empty($chips)): ?>
+                  <p><strong>Details:</strong> <?= implode(', ', $chips) ?></p>
+                <?php endif; ?>
+
+                <p class="muted">
+                  <strong>Reported:</strong>
+                  <span class="nowrap"><?= htmlspecialchars($date) ?></span>
+                </p>
+
+                <?php if ($desc): ?>
+                  <p class="description"><strong>Description:</strong> <?= $desc ?></p>
+                <?php endif; ?>
+              </div>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
   </main>
 
+  <!-- Backdrop for the violation modal -->
+  <div id="violationBackdrop" class="modal-backdrop hidden" aria-hidden="true"></div>
+
+  <!-- Modal -->
+  <div id="violationModal"
+       class="modal hidden"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="violationModalTitle">
+    <button type="button" class="modal-close" id="violationClose" aria-label="Close">✕</button>
+    <div id="violationContent" class="modal-content" style ="margin-top: 20px; margin-left:200px;">
+      <!-- violation_view.php?modal=1 will be injected here -->
+    </div>
+  </div>
+
+  <!-- JS: violation modal loader -->
   <script>
-    // --- Options (UI only) ---
-    const courses = {
-      'IBCE': ['BSIT','BSCA','BSA','BSOA','BSE','BSMA'],
-      'IHTM': ['BSTM','BSHM'],
-      'IAS' : ['BSBIO','ABH','BSLM'],
-      'ITE' : ['BSED-ENG','BSED-FIL','BSED-MATH','BEED','BSED-SS','BTVTE','BSED-SCI','BPED']
-    };
-    const levels = ["1","2","3","4"];
-    const sections = ["A","B","C","D"];
+    // Ensure modal is hidden at start
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('violationBackdrop')?.classList.add('hidden');
+      document.getElementById('violationModal')?.classList.add('hidden');
+      document.body.classList.remove('modal-open');
+    });
 
-    const instituteSelect = document.querySelector(".institute");
-    const courseSelect     = document.querySelector(".course");
-    const levelSelect      = document.querySelector(".level");
-    const sectionSelect    = document.querySelector(".section");
-    const searchInput      = document.getElementById("search");
-    const btnClear         = document.getElementById("btnClear");
-    const container        = document.getElementById("studentContainer");
-    const toggleFiltersBtn = document.getElementById("toggleFilters");
-    const filtersEl        = document.getElementById("filters");
+    (function () {
+      const backdrop = document.getElementById('violationBackdrop');
+      const modal    = document.getElementById('violationModal');
+      const content  = document.getElementById('violationContent');
+      const btnClose = document.getElementById('violationClose');
 
-    // --- Small helpers ---
-    function skeleton(count = 8){
-      const items = Array.from({length: count}).map(() => `
-        <div class="card skeleton" aria-hidden="true">
-          <div class="card-left">
-            <div class="avatar sk"></div>
-            <div class="meta">
-              <div class="sk sk-line"></div>
-              <div class="sk sk-line short"></div>
-              <div class="sk sk-line tiny"></div>
-            </div>
-          </div>
-          <div class="card-right">
-            <span class="pill sk sk-pill"></span>
-          </div>
-        </div>
-      `);
-      return items.join("");
-    }
-
-    function viewStudent(student_id){
-      window.location.href = "view_student.php?student_id=" + encodeURIComponent(student_id);
-    }
-
-    function loadStudents(filters = {}) {
-      container.innerHTML = skeleton();
-
-      fetch("get_students.php", { cache: "no-store" })
-        .then(response => response.json())
-        .then(data => {
-          container.innerHTML = "";
-
-          if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Try removing some filters or changing your search.</div></div>";
-            return;
-          }
-
-          const q = (filters.search || "").toLowerCase();
-          const filtered = data.filter(student => {
-            const s = student;
-            return (!filters.institute || s.institute === filters.institute) &&
-                   (!filters.course || s.course === filters.course) &&
-                   (!filters.level || s.level == filters.level) &&
-                   (!filters.section || String(s.section).toUpperCase() === String(filters.section).toUpperCase()) &&
-                   (!q || (
-                    String(s.student_id).toLowerCase().includes(q) ||
-                    String(s.first_name).toLowerCase().includes(q) ||
-                    String(s.last_name).toLowerCase().includes(q)
-                   ));
-          });
-
-          if (filtered.length === 0) {
-            container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Try removing some filters or changing your search.</div></div>";
-            return;
-          }
-
-          const frag = document.createDocumentFragment();
-
-          filtered.forEach(student => {
-            const card = document.createElement("button");
-            card.type = "button";
-            card.className = "card";
-            card.onclick = () => viewStudent(student.student_id);
-
-            const mid = student.middle_name ? ` ${student.middle_name}` : '';
-            const photo = student.photo ? `../admin/uploads/${student.photo}` : '../admin/uploads/placeholder.png';
-
-            // Level-Section: use non-breaking hyphen and uppercase section (e.g., 1-B)
-            const levelSection = `${student.level}\u2011${String(student.section).toUpperCase()}`;
-
-            card.innerHTML = `
-              <div class="card-left">
-                <img class="avatar" src="${photo}" alt="Photo of ${student.first_name} ${student.last_name}"
-                     loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='../admin/uploads/placeholder.png';">
-                <div class="meta">
-                  <div class="id">${student.student_id}</div>
-                  <div class="name">${student.last_name}, ${student.first_name}${mid}</div>
-                  <div class="sub">${student.institute} &bull; ${student.course} &bull; ${levelSection}</div>
-                </div>
-              </div>
-              <div class="card-right">
-                <span class="pill" title="Level & Section">${levelSection}</span>
-              </div>
-            `;
-            frag.appendChild(card);
-          });
-
-          container.appendChild(frag);
-        })
-        .catch(error => {
-          container.innerHTML = "<div class='empty error' role='alert'>Error loading data.</div>";
-          console.error("Error fetching student data:", error);
-        });
-    }
-
-    function filterStudents() {
-      const filters = {
-        institute: instituteSelect.value,
-        course:    courseSelect.value,
-        level:     levelSelect.value,
-        section:   sectionSelect.value,
-        search:    searchInput.value.trim()
-      };
-      loadStudents(filters);
-    }
-
-    // --- Wire up selects ---
-    function populateCourseSelect(inst){
-      courseSelect.innerHTML = '<option value="">All Courses</option>';
-      if (inst && courses[inst]) {
-        courses[inst].forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c; opt.textContent = c;
-          courseSelect.appendChild(opt);
-        });
+      function openModalWith(url) {
+        fetch(url, { credentials: 'same-origin' })
+          .then(r => { if (!r.ok) throw new Error('Failed to load violation'); return r.text(); })
+          .then(html => {
+            content.innerHTML = html;
+            backdrop.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+            if (!history.state || history.state.modalOpen !== true) {
+              history.pushState({ modalOpen: true }, '');
+            }
+          })
+          .catch(err => alert('Unable to load violation: ' + err.message));
       }
-    }
 
-    instituteSelect.addEventListener("change", function () {
-      populateCourseSelect(this.value);
-      filterStudents();
-    });
+      function closeModal() {
+        backdrop.classList.add('hidden');
+        modal.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        if (history.state && history.state.modalOpen === true) history.back();
+      }
 
-    levels.forEach(level => {
-      const opt = document.createElement("option");
-      opt.value = level; opt.textContent = level; levelSelect.appendChild(opt);
-    });
-    sections.forEach(section => {
-      const opt = document.createElement("option");
-      opt.value = section; opt.textContent = section; sectionSelect.appendChild(opt);
-    });
+      // Intercept clicks ONLY on links that opted-in via data-violation-link
+      document.addEventListener('click', function (e) {
+        const link = e.target.closest('a[data-violation-link]');
+        if (!link) return;
 
-    courseSelect.addEventListener("change", filterStudents);
-    levelSelect.addEventListener("change", filterStudents);
-    sectionSelect.addEventListener("change", filterStudents);
-    searchInput.addEventListener("input", filterStudents);
+        // allow new-tab/middle-click
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
-    // Clear filters button
-    btnClear.addEventListener("click", () => {
-      searchInput.value = "";
-      instituteSelect.value = "";
-      populateCourseSelect("");
-      levelSelect.value = "";
-      sectionSelect.value = "";
-      loadStudents();
-    });
+        e.preventDefault();
+        const url = link.href + (link.href.includes('?') ? '&' : '?') + 'modal=1';
+        openModalWith(url);
+      });
 
-    // Mobile filter toggle (UI only)
-    function setFiltersCollapsed(collapsed) {
-      filtersEl.dataset.collapsed = String(collapsed);
-      toggleFiltersBtn.setAttribute('aria-expanded', String(!collapsed));
-    }
-    toggleFiltersBtn.addEventListener('click', () => {
-      const collapsed = filtersEl.dataset.collapsed !== 'false';
-      setFiltersCollapsed(!collapsed);
-    });
+      btnClose.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-    // Auto toggle based on width (show on desktop)
-    const mq = window.matchMedia('(min-width: 900px)');
-    function handleMQ(e){ setFiltersCollapsed(!e.matches); }
-    mq.addEventListener ? mq.addEventListener('change', handleMQ) : mq.addListener(handleMQ);
+      // Handle back/forward
+      window.addEventListener('popstate', function () {
+        if (!backdrop.classList.contains('hidden') || !modal.classList.contains('hidden')) {
+          backdrop.classList.add('hidden');
+          modal.classList.add('hidden');
+          document.body.classList.remove('modal-open');
+        }
+      });
+    })();
 
-    // Initial load
-    document.addEventListener('DOMContentLoaded', () => {
-      handleMQ(mq);
-      loadStudents();
-    });
+  (function(){
+  // If server set a flash, show it now
+  if (window.__sms_alert_from_server && window.showSmsAlert) {
+    const payload = window.__sms_alert_from_server;
+    const status = Number(payload.status || 500);
+    const message = payload.message || (status === 200 ? 'SMS sent' : 'SMS failed');
+    window.showSmsAlert(status === 200 ? 'success' : 'error', (status === 200 ? '✅ ' : '⚠️ ') + message);
+    // optional: also clear it to be safe
+    try { delete window.__sms_alert_from_server; } catch(e) {}
+  }
+})();
   </script>
 </body>
 </html>
-
-
-:root{
-  --mm-primary: #8C1C13;
-  --mm-primary-strong: #74140E;
-  --mm-primary-soft: rgba(140, 28, 19, 0.12);
-  --mm-accent: #1D4ED8;
-
-  --mm-text: #1F2937;
-  --mm-muted: #6B7280;
-  --mm-soft: #94A3B8;
-
-  --mm-surface: #FFFFFF;
-  --mm-surface-alt: #F5F6FB;
-  --mm-border: #E4E7F3;
-
-  --mm-radius-lg: 22px;
-  --mm-radius-md: 16px;
-  --mm-radius-sm: 12px;
-
-  --mm-shadow-lg: 0 45px 85px -55px rgba(15, 23, 42, 0.65);
-  --mm-shadow-md: 0 28px 60px -45px rgba(15, 23, 42, 0.45);
-  --mm-shadow-sm: 0 14px 40px -30px rgba(15, 23, 42, 0.25);
-}
-
-*{ box-sizing: border-box; }
-html, body{ height: 100%; }
-body{
-  margin: 0;
-  font: 15px/1.55 "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
-  color: var(--mm-text);
-  background:
-    radial-gradient(1100px 520px at 12% -10%, rgba(140, 28, 19, 0.06), transparent 45%),
-    radial-gradient(900px 520px at 100% 0%, rgba(29, 78, 216, 0.05), transparent 55%),
-    var(--mm-surface-alt);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.sr-only{
-  position:absolute;
-  width:1px; height:1px;
-  padding:0; margin:-1px;
-  overflow:hidden; clip:rect(0,0,0,0);
-  white-space:nowrap; border:0;
-}
-
-main.page-wrapper{
-  margin: 0;
-  margin-left: var(--sidebar-w, 0px);
-  padding: calc(var(--header-h, 64px) + 36px) clamp(22px, 5vw, 56px) 80px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: calc(100vh - var(--header-h, 64px));
-}
-
-.page-shell{
-  width: 100%;
-  max-width: 1240px;
-  background: var(--mm-surface);
-  border-radius: var(--mm-radius-lg);
-  box-shadow: var(--mm-shadow-lg);
-  padding: 42px clamp(32px, 4vw, 54px) 54px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.page-head{
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--mm-border);
-}
-
-.page-head__info h1{
-  margin: 0;
-  font-size: clamp(1.95rem, 2.8vw, 2.35rem);
-  font-weight: 700;
-  color: var(--mm-text);
-}
-
-.page-head__info p{
-  margin: 6px 0 0;
-  color: var(--mm-muted);
-  font-size: 0.98rem;
-  max-width: 52ch;
-}
-
-.page-head__actions{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.btn{
-  appearance: none;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 10px 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  background: var(--mm-primary);
-  color: #fff;
-  box-shadow: var(--mm-shadow-sm);
-  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.btn:hover{
-  background: var(--mm-primary-strong);
-  transform: translateY(-1px);
-}
-
-.btn:active{
-  transform: translateY(0);
-}
-
-.btn:focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(140, 28, 19, 0.28);
-}
-
-.btn .btn-icon{
-  width: 18px;
-  height: 18px;
-  color: currentColor;
-}
-
-.btn-ghost{
-  background: var(--mm-primary-soft);
-  color: var(--mm-primary);
-  border-color: rgba(140, 28, 19, 0.24);
-  box-shadow: none;
-}
-
-.btn-ghost:hover{
-  background: rgba(140, 28, 19, 0.16);
-  color: var(--mm-primary-strong);
-}
-
-.btn-muted{
-  background: var(--mm-surface);
-  color: var(--mm-text);
-  border-color: var(--mm-border);
-  box-shadow: none;
-}
-
-.btn-muted:hover{
-  background: #f6f7fb;
-  border-color: color-mix(in srgb, var(--mm-border) 70%, var(--mm-primary) 30%);
-}
-
-.filters-panel{
-  border: 1px solid var(--mm-border);
-  border-radius: var(--mm-radius-md);
-  background: linear-gradient(180deg, rgba(248, 249, 254, 0.95), var(--mm-surface));
-  box-shadow: var(--mm-shadow-sm);
-  overflow: hidden;
-  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.25s ease, border-width 0.25s ease;
-}
-
-.filters-panel[data-collapsed="true"]{
-  max-height: 0;
-  opacity: 0;
-  margin-top: -12px;
-  border-width: 0;
-  pointer-events: none;
-}
-
-.filters-panel[data-collapsed="false"]{
-  max-height: 560px;
-  opacity: 1;
-  margin-top: 0;
-}
-
-.filters-grid{
-  display: grid;
-  gap: 16px;
-  padding: 26px clamp(18px, 3.4vw, 32px);
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-areas:
-    "search search search search search search search search search search search search"
-    "inst   inst   inst   course course course level  level  section section section section";
-}
-
-.filters-grid > .field:nth-child(1){ grid-area: search; }
-.filters-grid > .field:nth-child(2){ grid-area: inst; }
-.filters-grid > .field:nth-child(3){ grid-area: course; }
-.filters-grid > .field:nth-child(4){ grid-area: level; }
-.filters-grid > .field:nth-child(5){ grid-area: section; }
-
-.field{
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.field-label{
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
-  font-weight: 600;
-  color: var(--mm-muted);
-  text-transform: uppercase;
-}
-
-.input{
-  width: 100%;
-  height: 46px;
-  padding: 10px 14px;
-  border-radius: var(--mm-radius-sm);
-  border: 1px solid color-mix(in srgb, var(--mm-border) 65%, transparent);
-  background: rgba(246, 248, 252, 0.92);
-  color: var(--mm-text);
-  font-weight: 600;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-
-.input:focus{
-  outline: none;
-  border-color: color-mix(in srgb, var(--mm-primary) 45%, #d1d9ff);
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12);
-  background: #fff;
-}
-
-.input::placeholder{
-  color: var(--mm-soft);
-  font-weight: 500;
-}
-
-.input-icon{
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon > svg{
-  position: absolute;
-  left: 14px;
-  width: 18px;
-  height: 18px;
-  color: var(--mm-soft);
-}
-
-.input-icon > .input{
-  padding-left: 42px;
-}
-
-.cards-shell{
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.cardContainer{
-  display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-}
-
-.card{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: var(--mm-radius-md);
-  border: 1px solid transparent;
-  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,248,252,0.96));
-  box-shadow: var(--mm-shadow-sm);
-  cursor: pointer;
-  text-align: left;
-  transition: transform 0.18s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-.card:hover{
-  transform: translateY(-3px);
-  box-shadow: var(--mm-shadow-md);
-  border-color: color-mix(in srgb, var(--mm-primary) 25%, var(--mm-border));
-}
-
-.card:focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.16);
-}
-
-.card-left{
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.avatar{
-  width: 58px;
-  height: 58px;
-  object-fit: cover;
-  border-radius: 16px;
-  background: #f0f3fc;
-  border: 1px solid rgba(180, 192, 214, 0.55);
-}
-
-.meta{
-  min-width: 0;
-}
-
-.id{
-  font-weight: 700;
-  letter-spacing: 0.025em;
-  color: var(--mm-accent);
-  font-size: 0.92rem;
-}
-
-.name{
-  margin: 4px 0 0;
-  font-weight: 600;
-  color: var(--mm-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sub{
-  margin: 6px 0 0;
-  color: var(--mm-muted);
-  font-weight: 500;
-  font-size: 0.85rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-right{
-  margin-left: auto;
-}
-
-.pill{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 14px;
-  height: 30px;
-  border-radius: 999px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  color: var(--mm-primary);
-  background: rgba(140, 28, 19, 0.12);
-  border: 1px solid rgba(140, 28, 19, 0.18);
-}
-
-.empty{
-  text-align: center;
-  padding: 36px 24px;
-  border-radius: var(--mm-radius-md);
-  border: 1px dashed var(--mm-border);
-  background: rgba(244, 246, 251, 0.85);
-  color: var(--mm-muted);
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
-}
-
-.empty__title{
-  margin: 0 0 6px;
-  font-size: 1rem;
-  color: var(--mm-text);
-}
-
-.empty__text{
-  margin: 0 auto;
-  max-width: 42ch;
-  font-size: 0.9rem;
-}
-
-.empty.error{
-  color: #b91c1c;
-  border-color: rgba(185, 28, 28, 0.35);
-  background: rgba(254, 235, 235, 0.8);
-}
-
-.skeleton{
-  position: relative;
-  overflow: hidden;
-}
-
-.sk{
-  background: rgba(226, 232, 240, 0.7);
-  border-radius: 8px;
-}
-
-.sk-line{
-  width: 160px;
-  height: 12px;
-  margin: 6px 0;
-}
-
-.sk-line.short{ width: 120px; }
-.sk-line.tiny{ width: 90px; height: 10px; }
-
-.sk-pill{
-  width: 60px;
-  height: 26px;
-  border-radius: 999px;
-}
-
-.skeleton::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
-  transform: translateX(-100%);
-  animation: shimmer 1.3s infinite;
-}
-
-@keyframes shimmer{
-  100%{ transform: translateX(100%); }
-}
-
-*{ scrollbar-width: thin; scrollbar-color: #c5cfde transparent; }
-*::-webkit-scrollbar{ width: 10px; height: 10px; }
-*::-webkit-scrollbar-thumb{ background: #c5cfde; border-radius: 999px; }
-*::-webkit-scrollbar-track{ background: transparent; }
-
-@media (max-width: 1080px){
-  .cardContainer{
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  }
-}
-
-@media (max-width: 900px){
-  main.page-wrapper{
-    padding: calc(var(--header-h, 64px) + 24px) clamp(18px, 6vw, 32px) 70px;
-    align-items: stretch;
-  }
-
-  .page-shell{
-    padding: 36px clamp(22px, 6vw, 32px) 48px;
-  }
-
-  .filters-grid{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "search  search"
-      "inst    inst"
-      "course  course"
-      "level   section";
-  }
-
-  .page-head{
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .page-head__actions{
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 700px){
-  main.page-wrapper{
-    margin-left: 0;
-    padding: calc(var(--header-h, 64px) + 18px) 18px 64px;
-  }
-
-  .page-shell{
-    border-radius: 18px;
-  }
-
-  .cardContainer{
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-}
-
-@media (prefers-reduced-motion: reduce){
-  *, *::before, *::after{
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}

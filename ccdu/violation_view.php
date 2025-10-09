@@ -86,6 +86,12 @@ $assignedAt      = null;
 $requiredForThis = 0;   // per-violation required hours
 $loggedForThis   = 0.0; // sum of entries tied to this violation
 $remainingForThis= 0.0;
+$hasCsEntriesTable = false;
+
+if ($res = $conn->query("SHOW TABLES LIKE 'community_service_entries'")) {
+  $hasCsEntriesTable = ($res->num_rows > 0);
+  $res->close();
+}
 
 /* 1) Is this violation assigned to community service? (robust across schemas) */
 if ($r) {
@@ -149,11 +155,17 @@ $isGrave = (bool)(preg_match('/\bgrave\b/', $rawCat) && !preg_match('/\bless\b/'
 $requiredForThis = $isGrave ? 20 : 10;
 
 /* 3) Logged hours for THIS violation (from community_service_entries) */
-$stL = $conn->prepare("SELECT COALESCE(SUM(hours),0) AS total FROM community_service_entries WHERE student_id=? AND violation_id=?");
-$stL->bind_param("si", $r['student_id'], $violationId);
-$stL->execute();
-$loggedForThis = (float)($stL->get_result()->fetch_assoc()['total'] ?? 0);
-$stL->close();
+if ($hasCsEntriesTable) {
+  $stL = $conn->prepare("SELECT COALESCE(SUM(hours),0) AS total FROM community_service_entries WHERE student_id=? AND violation_id=?");
+  if ($stL) {
+    $stL->bind_param("si", $r['student_id'], $violationId);
+    $stL->execute();
+    $loggedForThis = (float)($stL->get_result()->fetch_assoc()['total'] ?? 0);
+    $stL->close();
+  }
+} else {
+  $loggedForThis = 0.0;
+}
 
 $remainingForThis = max(0, $requiredForThis - $loggedForThis);
 
