@@ -20,7 +20,7 @@ $validator_id = isset($_SESSION['validator_id']) ? (int)$_SESSION['validator_id'
 /* ---------- Inputs ---------- */
 $student_id    = $_GET['student_id']    ?? null;
 $violation_get = isset($_GET['violation_id']) ? (int)$_GET['violation_id'] : null; // optional deep-link from a violation
-$returnUrlIn   = $_GET['return']        ?? 'validator_dashboard.php';
+$returnUrlIn   = $_GET['return']        ?? 'dashboard.php';
 $returnUrl     = (is_string($returnUrlIn) && $returnUrlIn !== '' && strpos($returnUrlIn, '://') === false) ? $returnUrlIn : 'validator_dashboard.php';
 
 if (!$student_id) { die("No student selected."); }
@@ -569,7 +569,7 @@ if ($hasCsEntriesTable) {
 </style>
 </head>
 <body class="validator-student-page">
-<?php include '../includes/header.php'; ?>
+<?php include '../includes/validator_header.php'; ?>
 
 <main class="validator-content">
   <div class="back-link-wrapper">
