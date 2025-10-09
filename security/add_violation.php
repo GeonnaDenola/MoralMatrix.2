@@ -5,7 +5,7 @@ declare(strict_types=1);
 require '../auth.php';
 require_role('security');
 
-include '../includes/header.php';
+
 include '../config.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
