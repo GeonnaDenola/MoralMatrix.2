@@ -7,7 +7,7 @@ require_role('security');
 include __DIR__ . '/_scanner.php';
 
 include '../config.php';
-include '../includes/header.php';
+include '../includes/security_header.php';
 
 // --- DB connect ---
 $servername = $database_settings['servername'];

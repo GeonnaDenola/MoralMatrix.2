@@ -112,7 +112,7 @@ foreach ($assignments as $assignment) {
   <link rel="stylesheet" href="../css/validator_dashboard.css?v=2">
 </head>
 <body class="validator-dashboard">
-  <main class="vd-wrapper" role="main" aria-labelledby="page-title">
+  <main class="vd-wrapper" role="main" aria-labelledby="page-title" style = "padding-top: 0;">
     <div class="vd-shell">
       <header class="vd-header">
         <div class="vd-header__text">
