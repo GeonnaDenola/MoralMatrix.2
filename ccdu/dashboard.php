@@ -15,7 +15,7 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
   <link rel="stylesheet" href="../css/dashboard_ccd.css?v=3"/>
 </head>
 <body>
-  <main class="page-wrapper">
+  <main class="page-wrapper" style = "padding-top: 0;">
     <div class="page-shell">
       <header class="page-head">
         <div class="page-head__info">

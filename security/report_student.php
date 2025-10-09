@@ -1,10 +1,10 @@
 <?php
 
 include '../config.php';
-include '../includes/header.php';
+include '../includes/security_header.php';
 include __DIR__ . '/_scanner.php';
 
-include 'side_buttons.php';
+
 
 ?>
 <!DOCTYPE html>
