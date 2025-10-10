@@ -404,7 +404,7 @@ if ($studentId) {
           <!-- Actions -->
           <div class="form-actions">
             <a href="../ccdu/" class="btn btn-ghost">Cancel</a>
-            <button type="button" class="btn btn-primary">Save (UI only)</button>
+            <button type="button" class="btn btn-primary">Save</button>
           </div>
 
         </div>
