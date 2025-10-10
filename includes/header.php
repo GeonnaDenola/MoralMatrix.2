@@ -90,9 +90,9 @@ if (!function_exists('activeClass')) {
       <span class="nav-label">Community Service Validators</span>
     </a>
 
-    <a class="nav-item<?php echo activeClass('community_validators.php'); ?>"
+    <a class="nav-item<?php echo activeClass('community_service.php'); ?>"
        href="set_community_service.php"
-       <?php echo $active==='community_validators.php'?'aria-current="page"':''; ?>>
+       <?php echo $active==='community_service.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05C16.18 13.6 18 14.53 18 16V20h4v-3.5c0-2.33-4.67-3.5-6-3.5z"/></svg>
       </span>

@@ -59,7 +59,7 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="../css/pending_reports.css"/>
 </head>
 <body>
-    <main class="pr-page">
+    <main class="pr-page" style = "padding-top: var(--header-h);">
         <div class="pr-head">
             <h1 class="pr-title">Pending Reports</h1>
             <?php if ($result instanceof mysqli_result): ?>
