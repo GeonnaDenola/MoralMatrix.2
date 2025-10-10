@@ -199,314 +199,247 @@ if ($studentId) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Add Violation</title>
-  <link rel="stylesheet" href="../css/add_violation.css"/>
+  <meta charset="utf-8" />
+  <title>CCDU • Add Violation</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../css/add_violation.css">
 </head>
 <body>
 
-<main class="page">
-  <section class="card page__body">
-    <!-- Profile -->
-    <div class="profile">
-      <?php if (!empty($student)): ?>
-        <div class="profile__media">
-          <img
-            src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo'], ENT_QUOTES) : 'placeholder.png' ?>"
-            alt="Student photo"
-            class="profile__img"
-          >
+  <main class="page">
+    <div class="violation-shell">
+
+      <!-- LEFT: Student summary card -->
+      <aside class="student-card">
+        <div class="student-card__header">
+          <span class="card-label">CCDU</span>
+          <h1>Add Violation</h1>
+          <p class="student-card__subtitle">
+            Community Conduct &amp; Discipline Unit • Record new entry
+          </p>
         </div>
-        <div class="profile__info">
-          <div class="profile__name">
-            <strong><?= htmlspecialchars(trim(($student['first_name'] ?? '').' '.($student['middle_name'] ?? '').' '.($student['last_name'] ?? ''))) ?></strong>
+
+        <div class="student-card__body">
+          <div class="student-card__photo" id="studentPhoto">
+            <img src="https://via.placeholder.com/280x280.png?text=Student" alt="Student photo">
           </div>
-          <div class="profile__meta">
-            <span class="badge"><?= htmlspecialchars($student['student_id']) ?></span>
-            <span class="divider" aria-hidden="true">•</span>
-            <span><?= htmlspecialchars($student['course']) ?> —
-              <?= htmlspecialchars(($student['level'] ?? '').($student['section'] ?? '')) ?>
-            </span>
+
+          <dl class="student-meta">
+            <div>
+              <dt>Student Name</dt>
+              <dd id="studentName">Juan Dela Cruz</dd>
+            </div>
+            <div>
+              <dt>Student ID</dt>
+              <dd id="studentId">2025-0001</dd>
+            </div>
+            <div>
+              <dt>Course / Yr &amp; Sec</dt>
+              <dd id="studentCys">BSN 3A</dd>
+            </div>
+          </dl>
+
+          <p class="student-card__empty is-hidden" id="noStudentMsg">
+            No student loaded. Use the fields on the right to select one.
+          </p>
+        </div>
+      </aside>
+
+      <!-- RIGHT: Violation form (UI only) -->
+      <section class="form-card">
+        <header class="form-card__header">
+          <div class="badge badge--accent">CCDU ACTIONS</div>
+          <h2>Violation Details</h2>
+          <p>Fill out the details below. This page captures the UI only; connect your own PHP later.</p>
+        </header>
+
+        <!-- Context row -->
+        <div class="form-context">
+          <div class="field">
+            <label class="field-label" for="ay">Academic Year</label>
+            <div class="select-wrapper">
+              <select id="ay" class="select-control">
+                <option>2025–2026</option>
+                <option>2024–2025</option>
+                <option>2023–2024</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="sem">Semester / Term</label>
+            <div class="select-wrapper">
+              <select id="sem" class="select-control">
+                <option>1st Semester</option>
+                <option>2nd Semester</option>
+                <option>Summer</option>
+              </select>
+            </div>
           </div>
         </div>
-      <?php else: ?>
-        <p>Student not found.</p>
-      <?php endif; ?>
-    </div>
 
-    <!-- Category selector -->
-    <div class="section">
-      <h2 class="section__title">Add Violation</h2>
-      <div class="form-row">
-        <label for="offense_category" class="label">Offense Category <span class="req">*</span></label>
-        <select id="offense_category" class="select" onchange="toggleForms()" required>
-          <option value="">— Select —</option>
-          <option value="light">Light</option>
-          <option value="moderate">Moderate</option>
-          <option value="grave">Grave</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- LIGHT -->
-    <div id="lightForm" class="offense-form" hidden>
-      <form method="POST" enctype="multipart/form-data" class="form">
-        <input type="hidden" name="offense_category" value="light">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id'] ?? '') ?>">
-
-        <fieldset class="section">
-          <legend class="section__title">Light Offenses</legend>
-
-          <div class="form-row">
-            <label for="lightOffenses" class="label">Type <span class="req">*</span></label>
-            <select id="lightOffenses" name="offense_type" class="select" required>
-              <option value="">— Select —</option>
-              <option value="id">ID</option>
-              <option value="uniform">Dress Code (Uniform)</option>
-              <option value="civilian">Revealing Clothes (Civilian Attire)</option>
-              <option value="accessories">Accessories</option>
-            </select>
+        <div class="form-context">
+          <div class="field">
+            <label class="field-label" for="category">Violation Category</label>
+            <div class="select-wrapper">
+              <select id="category" class="select-control" data-panel-target>
+                <option value="uniform" selected>Uniform / ID</option>
+                <option value="behavior">Behavior</option>
+                <option value="attendance">Attendance</option>
+              </select>
+            </div>
           </div>
 
-          <div id="light_idCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="id_offense[]" value="no_id"> No ID</label>
-            <label class="chip"><input type="checkbox" name="id_offense[]" value="borrowed"> Borrowed ID</label>
+          <div class="context-note">
+            Select a category to reveal its specific offenses below, then pick one or more items.
           </div>
+        </div>
 
-          <div id="light_uniformCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="uniform_offense[]" value="socks"> Socks</label>
-            <label class="chip"><input type="checkbox" name="uniform_offense[]" value="skirt"> Skirt</label>
-          </div>
+        <!-- Stacked panels -->
+        <div class="forms-stack">
 
-          <div id="light_civilianCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="civilian_offense[]" value="crop_top"> Crop Top</label>
-            <label class="chip"><input type="checkbox" name="civilian_offense[]" value="sando"> Sando</label>
-          </div>
+          <!-- Panel: Uniform/ID -->
+          <div class="category-panel is-active" data-panel="uniform">
+            <div class="panel-header">
+              <span class="panel-eyebrow">Category</span>
+              <h3>Uniform / ID</h3>
+              <p>Pick the observed non-compliance items.</p>
+            </div>
 
-          <div id="light_accessoriesCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="accessories_offense[]" value="piercings"> Piercing/s</label>
-            <label class="chip"><input type="checkbox" name="accessories_offense[]" value="hair_color"> Loud Hair Color</label>
-          </div>
-
-          <div class="form-row">
-            <label for="description_light" class="label">Report Description</label>
-            <textarea id="description_light" name="description" class="input" rows="3" placeholder="Short description..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <label class="label">Attach Photo</label>
-            <div class="upload">
-              <input type="file" name="photo" accept="image/*" class="file" onchange="previewPhoto(this, 'lightPreview')">
-              <div class="preview-wrap">
-                <img id="lightPreview" class="preview-lg" alt="" hidden>
+            <div class="chip-group">
+              <span class="chip-group__label">Select offenses</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="no-id">
+                  <span>No ID</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="improper-uniform">
+                  <span>Improper uniform</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="slippers">
+                  <span>Wearing slippers</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="haircut">
+                  <span>Non-compliant haircut</span>
+                </label>
               </div>
             </div>
           </div>
 
-          <div class="actions">
-            <button type="submit" class="btn">Add Violation</button>
-          </div>
-        </fieldset>
-      </form>
-    </div>
+          <!-- Panel: Behavior -->
+          <div class="category-panel" data-panel="behavior">
+            <div class="panel-header">
+              <span class="panel-eyebrow">Category</span>
+              <h3>Behavior</h3>
+              <p>Observed misconduct within campus.</p>
+            </div>
 
-    <!-- MODERATE -->
-    <div id="moderateForm" class="offense-form" hidden>
-      <form method="POST" enctype="multipart/form-data" class="form">
-        <input type="hidden" name="offense_category" value="moderate">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id'] ?? '') ?>">
-
-        <fieldset class="section">
-          <legend class="section__title">Moderate Offenses</legend>
-
-          <div class="form-row">
-            <label for="moderateOffenses" class="label">Type <span class="req">*</span></label>
-            <select id="moderateOffenses" name="offense_type" class="select" required>
-              <option value="">— Select —</option>
-              <option value="improper_conduct">Improper Language & Conduct</option>
-              <option value="gadget_misuse">Gadget Misuse</option>
-              <option value="unauthorized_acts">Unauthorized Acts</option>
-            </select>
-          </div>
-
-          <div id="moderate_improper_conductCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="conduct_offense[]" value="vulgar"> Use of curses and vulgar words</label>
-            <label class="chip"><input type="checkbox" name="conduct_offense[]" value="rough_behavior"> Roughness in behavior</label>
-          </div>
-
-          <div id="moderate_gadget_misuseCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="gadget_offense[]" value="cp_classes"> Use of cellular phones during classes</label>
-            <label class="chip"><input type="checkbox" name="gadget_offense[]" value="gadgets_functions"> Use of gadgets during academic functions</label>
-          </div>
-
-          <div id="moderate_unauthorized_actsCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="acts_offense[]" value="illegal_posters"> Posting posters/streamers/banners without approval</label>
-            <label class="chip"><input type="checkbox" name="acts_offense[]" value="pda"> PDA (Public Display of Affection)</label>
-          </div>
-
-          <div class="form-row">
-            <label for="description_moderate" class="label">Report Description</label>
-            <textarea id="description_moderate" name="description" class="input" rows="3" placeholder="Short description..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <label class="label">Attach Photo</label>
-            <div class="upload">
-              <input type="file" name="photo" accept="image/*" class="file" onchange="previewPhoto(this, 'moderatePreview')">
-              <div class="preview-wrap">
-                <img id="moderatePreview" class="preview-lg" alt="" hidden>
+            <div class="chip-group">
+              <span class="chip-group__label">Select offenses</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="disrespect">
+                  <span>Disrespect / discourtesy</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="vandalism">
+                  <span>Vandalism</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="littering">
+                  <span>Littering</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="noise">
+                  <span>Disruptive noise</span>
+                </label>
               </div>
             </div>
           </div>
 
-          <div class="actions">
-            <button type="submit" class="btn">Add Violation</button>
-          </div>
-        </fieldset>
-      </form>
-    </div>
+          <!-- Panel: Attendance -->
+          <div class="category-panel" data-panel="attendance">
+            <div class="panel-header">
+              <span class="panel-eyebrow">Category</span>
+              <h3>Attendance</h3>
+              <p>Late / absent cases subject to CCDU policy.</p>
+            </div>
 
-    <!-- GRAVE -->
-    <div id="graveForm" class="offense-form" hidden>
-      <form method="POST" enctype="multipart/form-data" class="form">
-        <input type="hidden" name="offense_category" value="grave">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id'] ?? '') ?>">
-
-        <fieldset class="section">
-          <legend class="section__title">Grave Offenses</legend>
-
-          <div class="form-row">
-            <label for="graveOffenses" class="label">Type <span class="req">*</span></label>
-            <select id="graveOffenses" name="offense_type" class="select" required>
-              <option value="">— Select —</option>
-              <option value="substance_addiction">Substance & Addiction</option>
-              <option value="integrity_dishonesty">Academic Integrity & Dishonesty</option>
-              <option value="violence_misconduct">Violence & Misconduct</option>
-              <option value="property_theft">Property & Theft</option>
-              <option value="threats_disrespect">Threats & Disrespect</option>
-            </select>
-          </div>
-
-          <div id="grave_substance_addictionCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="substance_offense[]" value="smoking"> Smoking</label>
-            <label class="chip"><input type="checkbox" name="substance_offense[]" value="gambling"> Gambling</label>
-          </div>
-
-          <div id="grave_integrity_dishonestyCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="integrity_offense[]" value="forgery"> Forgery, falsifying, tampering of documents</label>
-            <label class="chip"><input type="checkbox" name="integrity_offense[]" value="dishonesty"> Dishonesty</label>
-          </div>
-
-          <div id="grave_violence_misconductCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="violence_offense[]" value="assault"> Assault</label>
-            <label class="chip"><input type="checkbox" name="violence_offense[]" value="hooliganism"> Hooliganism</label>
-          </div>
-
-          <div id="grave_property_theftCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="property_offense[]" value="theft"> Theft</label>
-            <label class="chip"><input type="checkbox" name="property_offense[]" value="destruction_of_property"> Willful destruction of school property</label>
-          </div>
-
-          <div id="grave_threats_disrespectCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="threats_offense[]" value="firearms"> Carrying deadly weapons/firearms/explosives</label>
-            <label class="chip"><input type="checkbox" name="threats_offense[]" value="disrespect"> Offensive words / disrespectful deeds</label>
-          </div>
-
-          <div class="form-row">
-            <label for="description_grave" class="label">Report Description</label>
-            <textarea id="description_grave" name="description" class="input" rows="3" placeholder="Short description..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <label class="label">Attach Photo</label>
-            <div class="upload">
-              <input type="file" name="photo" accept="image/*" class="file" onchange="previewPhoto(this, 'gravePreview')">
-              <div class="preview-wrap">
-                <img id="gravePreview" class="preview-lg" alt="" hidden>
+            <div class="chip-group">
+              <span class="chip-group__label">Select offenses</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="late">
+                  <span>Late</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="cutting">
+                  <span>Cutting classes</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="offenses[]" value="absent">
+                  <span>Unexcused absence</span>
+                </label>
               </div>
             </div>
           </div>
 
-          <div class="actions">
-            <button type="submit" class="btn">Add Violation</button>
+          <!-- Narrative -->
+          <div class="field">
+            <label class="field-label" for="narrative">Narrative / Notes</label>
+            <textarea id="narrative" placeholder="Write brief details of the incident..."></textarea>
           </div>
-        </fieldset>
-      </form>
+
+          <!-- Evidence upload -->
+          <div class="field upload-field">
+            <label class="field-label" for="evidence">Evidence Photo (optional)</label>
+            <input id="evidence" type="file" accept="image/*" class="file-control">
+            <span class="helper-text">JPG/PNG, max ~5MB recommended.</span>
+            <img id="preview" class="photo-preview is-hidden" alt="Preview">
+          </div>
+
+          <!-- Actions -->
+          <div class="form-actions">
+            <a href="../ccdu/" class="btn btn-ghost">Cancel</a>
+            <button type="button" class="btn btn-primary">Save (UI only)</button>
+          </div>
+
+        </div>
+      </section>
     </div>
-  </section>
-</main>
+  </main>
 
-<script>
-  // Show image preview centered under the chooser
-  function previewPhoto(input, previewId){
-    const img = document.getElementById(previewId);
-    if (input.files && input.files[0]) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        img.src = e.target.result;
-        img.hidden = false;
-      };
-      reader.readAsDataURL(input.files[0]);
-    }
-  }
+  <script>
+    // Panel switching based on category select
+    (function () {
+      const select = document.querySelector('[data-panel-target]');
+      const panels = document.querySelectorAll('.category-panel');
+      function syncPanels() {
+        const val = select.value;
+        panels.forEach(p => {
+          p.classList.toggle('is-active', p.getAttribute('data-panel') === val);
+        });
+      }
+      select.addEventListener('change', syncPanels);
+      syncPanels();
+    })();
 
-  // Toggle which category form is visible
-  function toggleForms(){
-    const selected = document.getElementById('offense_category').value;
-    ['light','moderate','grave'].forEach(key=>{
-      const el = document.getElementById(key+'Form');
-      if (el) el.hidden = (selected !== key);
-    });
-  }
-
-  // Handle sub-type checkbox groups
-  window.addEventListener('DOMContentLoaded', () => {
-    const lightSel = document.getElementById('lightOffenses');
-    const modSel   = document.getElementById('moderateOffenses');
-    const graveSel = document.getElementById('graveOffenses');
-
-    if (lightSel) lightSel.addEventListener('change', function(){
-      ['id','uniform','civilian','accessories'].forEach(k=>{
-        const box = document.getElementById('light_'+k+'Checkbox');
-        if (box) box.hidden = true;
+    // Image preview for evidence
+    (function () {
+      const input = document.getElementById('evidence');
+      const preview = document.getElementById('preview');
+      input.addEventListener('change', () => {
+        const file = input.files && input.files[0];
+        if (!file) { preview.classList.add('is-hidden'); preview.src=''; return; }
+        const url = URL.createObjectURL(file);
+        preview.src = url;
+        preview.classList.remove('is-hidden');
       });
-      const box = document.getElementById('light_'+this.value+'Checkbox');
-      if (box) box.hidden = false;
-    });
-
-    if (modSel) modSel.addEventListener('change', function(){
-      ['improper_conduct','gadget_misuse','unauthorized_acts'].forEach(k=>{
-        const box = document.getElementById('moderate_'+k+'Checkbox');
-        if (box) box.hidden = true;
-      });
-      const box = document.getElementById('moderate_'+this.value+'Checkbox');
-      if (box) box.hidden = false;
-    });
-
-    if (graveSel) graveSel.addEventListener('change', function(){
-      ['substance_addiction','integrity_dishonesty','violence_misconduct','property_theft','threats_disrespect'].forEach(k=>{
-        const box = document.getElementById('grave_'+k+'Checkbox');
-        if (box) box.hidden = true;
-      });
-      const box = document.getElementById('grave_'+this.value+'Checkbox');
-      if (box) box.hidden = false;
-    });
-
-    toggleForms();
-  });
-</script>
+    })();
+  </script>
 </body>
 </html>
+
