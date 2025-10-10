@@ -48,12 +48,12 @@ $result = $stmt->get_result();
 
 <body>
   <!-- Do NOT add another header—using your existing layout -->
-  <main class="validators-page" aria-labelledby="page-title">
+  <main class="validators-page" aria-labelledby="page-title" style = "padding-top: var(--header-h);>
     <div class="page-header">
       <h1 id="page-title">Community Service Validators</h1>
 
       <div class="page-actions">
-        <a href="add_validator.php" class="btn btn-primary">
+        <a href="add_validator.php" class="btn btn-primary" style="margin-bottom: 10px;">
           Create Account
         </a>
       </div>

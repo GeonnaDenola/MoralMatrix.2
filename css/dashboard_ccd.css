@@ -1,4 +1,5 @@
 :root{
+  --header-h: 72px;
   --mm-primary: #8C1C13;
   --mm-primary-strong: #74140E;
   --mm-primary-soft: rgba(140, 28, 19, 0.12);
