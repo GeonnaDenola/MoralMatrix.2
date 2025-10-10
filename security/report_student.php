@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 
 include '../config.php';
-
+include '../includes/security_header.php';
 include __DIR__ . '/_scanner.php';
 
 
@@ -12,54 +12,121 @@ include __DIR__ . '/_scanner.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Report Student</title>
+    <link rel="stylesheet" href="../css/security_report_student.css">
 </head>
 <body>
 
     <div class="right-container">
-        <h2>Dashboard</h2>
-        <input type="text" id="search" placeholder="Search...">
+        <div class="report-shell">
+            <section class="page-header">
+                <p class="eyebrow">Report Student</p>
+                <h1>Locate students before filing a report</h1>
+                <p>Search, filter, and open a student's profile. From there you can capture the full report with supporting details in just a few clicks.</p>
+            </section>
 
-        <div class="sort">
-            <p>Sort by:</p>
+            <section class="filters-card">
+                <div class="filters-header">
+                    <div>
+                        <h2>Directory Filters</h2>
+                        <p>Use the filters below to narrow the student roster by institute, course, level, or section.</p>
+                    </div>
+                </div>
 
-            <select class="institute">
-                <option value="">--Institute--</option>
-                <option value="IBCE">IBCE</option>
-                <option value="IHTM">IHTM</option>
-                <option value="IAS">IAS</option>
-                <option value="ITE">ITE</option>
-            </select>
+                <div class="filters-grid">
+                    <div class="form-control search-field">
+                        <label for="search">Search student</label>
+                        <div class="input-shell">
+                            <span class="form-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7"></circle>
+                                    <line x1="20" y1="20" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </span>
+                            <input type="text" id="search" placeholder="Search by ID or name">
+                        </div>
+                    </div>
 
-            <select class="course">
-                <option value="">--Course--</option>
-            </select>
+                    <div class="form-control">
+                        <label for="institute">Institute</label>
+                        <select class="institute" id="institute">
+                            <option value="">All institutes</option>
+                            <option value="IBCE">IBCE</option>
+                            <option value="IHTM">IHTM</option>
+                            <option value="IAS">IAS</option>
+                            <option value="ITE">ITE</option>
+                        </select>
+                    </div>
 
-            <select class="level">
-                <option value="">--Level--</option>
-            </select>
+                    <div class="form-control">
+                        <label for="course">Course</label>
+                        <select class="course" id="course">
+                            <option value="">All courses</option>
+                        </select>
+                    </div>
 
-            <select class="section">
-                <option value="">--Section--</option>
-            </select>
-        </div>
+                    <div class="form-control">
+                        <label for="level">Level</label>
+                        <select class="level" id="level">
+                            <option value="">All levels</option>
+                        </select>
+                    </div>
 
-        <div class="cardContainer" id="studentContainer">
-            Loading...
+                    <div class="form-control">
+                        <label for="section">Section</label>
+                        <select class="section" id="section">
+                            <option value="">All sections</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filters-actions">
+                    <button type="button" class="button ghost" id="clearFilters">Clear filters</button>
+                    <button type="button" class="button primary" id="refreshStudents">Refresh list</button>
+                </div>
+            </section>
+
+            <section class="results-card">
+                <div class="results-header">
+                    <div>
+                        <h2>Student directory</h2>
+                        <p class="results-subtitle"><span id="resultCount">0</span> students found</p>
+                    </div>
+                    <div class="results-actions">
+                        <span class="results-subtitle">Click a student to open their profile</span>
+                    </div>
+                </div>
+
+                <div class="cardContainer" id="studentContainer">
+                    <div class="loading-state">Loading students...</div>
+                </div>
+            </section>
         </div>
     </div>
 
 <script>
+    const studentContainer = document.getElementById("studentContainer");
+    const resultCountEl = document.getElementById("resultCount");
+    const searchInput = document.getElementById("search");
+    const instituteSelect = document.querySelector(".institute");
+    const courseSelect = document.querySelector(".course");
+    const levelSelect = document.querySelector(".level");
+    const sectionSelect = document.querySelector(".section");
+
     // Fetch and render students
     function loadStudents(filters = {}) {
+        if (!studentContainer) {
+            return;
+        }
+
+        studentContainer.innerHTML = `<div class="loading-state">Loading students...</div>`;
+
         fetch("get_students.php")
         .then(response => response.json())
         .then(data => {
-            const container = document.getElementById("studentContainer");
-            container.innerHTML = ""; // Clear previous content
+            studentContainer.innerHTML = ""; // Clear previous content
 
-            // Filter results
-            let filtered = data.filter(student => {
+            const filtered = data.filter(student => {
                 return (!filters.institute || student.institute === filters.institute) &&
                        (!filters.course || student.course === filters.course) &&
                        (!filters.level || student.level === filters.level) &&
@@ -71,34 +138,51 @@ include __DIR__ . '/_scanner.php';
                        ));
             });
 
-            if (filtered.length === 0) {
-                container.innerHTML = "<p>No student records found.</p>";
+            if (!filtered.length) {
+                if (resultCountEl) {
+                    resultCountEl.textContent = "0";
+                }
+                studentContainer.innerHTML = `<div class="empty-state">We couldn't find any students that match the current filters. Adjust your search criteria and try again.</div>`;
                 return;
+            }
+
+            if (resultCountEl) {
+                resultCountEl.textContent = filtered.length;
             }
 
             // Render student cards
             filtered.forEach(student => {
                 const card = document.createElement("div");
-                card.classList.add("card");
+                card.classList.add("student-card");
 
                 card.onclick = () => viewStudent(student.student_id);
 
+                const section = student.section ? student.section : "";
+                const yearLabel = student.level ? `Year ${student.level}${section}` : "Level pending";
+
                 card.innerHTML = `
-                    <div class="left">
-                        <img src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Photo">
-                        <div class="info">
-                            <strong>${student.student_id}</strong><br>
-                            ${student.last_name}, ${student.first_name} ${student.middle_name}<br>
-                            ${student.institute}<br>
-                            ${student.course} - ${student.level}${student.section}
+                    <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Student photo">
+                    <div class="student-details">
+                        <div class="student-id">${student.student_id}</div>
+                        <div class="student-name">${student.last_name}, ${student.first_name} ${student.middle_name ?? ""}</div>
+                        <div class="student-tags">
+                            <span class="badge">${student.institute}</span>
+                            <span class="badge">${student.course}</span>
+                            <span class="badge">${yearLabel}</span>
                         </div>
                     </div>
+                    <span class="chevron">&rarr;</span>
                 `;
-                container.appendChild(card);
+                studentContainer.appendChild(card);
             });
         })
         .catch(error => {
-            document.getElementById("studentContainer").innerHTML = "<p>Error Loading Data.</p>";
+            if (resultCountEl) {
+                resultCountEl.textContent = "0";
+            }
+            if (studentContainer) {
+                studentContainer.innerHTML = `<div class="empty-state error-state">We couldn't load the student list right now. Please try again shortly.</div>`;
+            }
             console.error("Error fetching student data: ", error);
         });
     }
@@ -106,13 +190,22 @@ include __DIR__ . '/_scanner.php';
     // Apply filters
     function filterStudents() {
         const filters = {
-            institute: document.querySelector(".institute").value,
-            course: document.querySelector(".course").value,
-            level: document.querySelector(".level").value,
-            section: document.querySelector(".section").value,
-            search: document.getElementById("search").value.toLowerCase()
+            institute: instituteSelect.value,
+            course: courseSelect.value,
+            level: levelSelect.value,
+            section: sectionSelect.value,
+            search: searchInput.value.toLowerCase()
         };
         loadStudents(filters);
+    }
+
+    function resetFilters() {
+        searchInput.value = "";
+        instituteSelect.value = "";
+        courseSelect.innerHTML = '<option value="">All courses</option>';
+        levelSelect.value = "";
+        sectionSelect.value = "";
+        filterStudents();
     }
 
     function viewStudent(student_id){
@@ -130,18 +223,12 @@ include __DIR__ . '/_scanner.php';
     const levels = ["1", "2", "3", "4"];
     const sections = ["A", "B", "C", "D"];
 
-    // Elements
-    const instituteSelect = document.querySelector(".institute");
-    const courseSelect = document.querySelector(".course");
-    const levelSelect = document.querySelector(".level");
-    const sectionSelect = document.querySelector(".section");
-
     // Update course dropdown when institute changes
     instituteSelect.addEventListener("change", function () {
         const selectedInstitute = this.value;
 
         // reset course dropdown
-        courseSelect.innerHTML = '<option value="">--Course--</option>';
+        courseSelect.innerHTML = '<option value="">All courses</option>';
 
         if (selectedInstitute && courses[selectedInstitute]) {
             courses[selectedInstitute].forEach(course => {
@@ -178,10 +265,13 @@ include __DIR__ . '/_scanner.php';
     // Add event listeners for secondary refiners
     levelSelect.addEventListener("change", filterStudents);
     sectionSelect.addEventListener("change", filterStudents);
-    document.getElementById("search").addEventListener("keyup", filterStudents);
+    searchInput.addEventListener("keyup", filterStudents);
+    document.getElementById("clearFilters").addEventListener("click", resetFilters);
+    document.getElementById("refreshStudents").addEventListener("click", filterStudents);
 
     // Load all students on page load
     loadStudents();
 </script> 
 </body>
 </html>
+

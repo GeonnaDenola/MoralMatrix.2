@@ -1,636 +1,1212 @@
+:root {
+  --page-max-width: 1160px;
+  --shell-gap: clamp(24px, 4vw, 36px);
+  --card-radius: 22px;
+  --card-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+  --border-muted: rgba(148, 163, 184, 0.18);
+  --ink-900: #0f172a;
+  --ink-700: #1e293b;
+  --ink-600: #334155;
+  --ink-500: #475569;
+  --ink-400: #64748b;
+  --ink-300: #94a3b8;
+  --surface: #ffffff;
+  --background: #f4f6fb;
+  --accent: #b91c1c;
+  --accent-soft: rgba(185, 28, 28, 0.12);
+  --accent-strong: rgba(185, 28, 28, 0.25);
+  --sidebar-w: 264px;
+  --header-h: 64px;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--ink-900);
+  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.page {
+  margin-left: var(--sidebar-w);
+  margin-top: calc(var(--header-h) + 18px);
+  padding: clamp(24px, 4vw, 40px);
+  min-height: calc(100vh - var(--header-h));
+}
+
+.violation-shell {
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: var(--shell-gap);
+  align-items: flex-start;
+}
+
+.student-card,
+.form-card {
+  background: var(--surface);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-muted);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.student-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-card__header {
+  padding: clamp(24px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.card-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  font-weight: 700;
+  color: var(--ink-300);
+}
+
+.student-card__header h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  font-weight: 800;
+  color: var(--ink-900);
+}
+
+.student-card__subtitle {
+  margin: 0;
+  font-size: 0.96rem;
+  color: var(--ink-500);
+  line-height: 1.6;
+}
+
+.student-card__body {
+  padding: clamp(24px, 3vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: center;
+  text-align: center;
+}
+
+.student-card__photo {
+  width: 140px;
+  height: 140px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 2px solid rgba(148, 163, 184, 0.24);
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.student-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.student-meta {
+  margin: 0;
+  display: grid;
+  gap: 16px;
+  text-align: center;
+}
+
+.student-meta div {
+  display: grid;
+  gap: 4px;
+}
+
+.student-meta dt {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-300);
+}
+
+.student-meta dd {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.student-card__empty {
+  font-size: 0.95rem;
+  color: var(--ink-500);
+}
+
+.form-card {
+  padding: clamp(28px, 4vw, 40px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 32px);
+}
+
+.form-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-card__header h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  font-weight: 800;
+}
+
+.form-card__header p {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+}
+
+.badge--accent {
+  background: var(--accent-soft);
+  color: #991b1b;
+  border: 1px solid var(--accent-strong);
+}
+
+.form-context {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: clamp(18px, 3vw, 26px);
+  align-items: start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-500);
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-control {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  background: var(--surface);
+  font-size: 1rem;
+  color: var(--ink-700);
+  appearance: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.select-control:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+}
+
+.context-note {
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--ink-500);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.forms-stack {
+  display: grid;
+  gap: clamp(24px, 3vw, 32px);
+}
+
+.category-panel {
+  display: none;
+  flex-direction: column;
+  gap: clamp(18px, 3vw, 26px);
+  padding: clamp(24px, 4vw, 32px);
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fbfdff;
+}
+
+.category-panel.is-active {
+  display: flex;
+}
+
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-300);
+  font-weight: 700;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 700;
+}
+
+.panel-header p {
+  margin: 0;
+  font-size: 0.96rem;
+  color: var(--ink-500);
+  line-height: 1.6;
+}
+
+.chip-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.chip-group__label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--ink-400);
+  font-weight: 700;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+}
+
+.chip input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-600);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.chip:hover span {
+  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.chip input:checked + span {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.8);
+  color: var(--ink-900);
+  box-shadow: 0 14px 28px rgba(59, 130, 246, 0.24);
+}
+
+.chip input:focus-visible + span {
+  outline: 3px solid rgba(59, 130, 246, 0.32);
+  outline-offset: 2px;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 120px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  font-size: 1rem;
+  color: var(--ink-700);
+  line-height: 1.6;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field textarea:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+}
+
+.upload-field {
+  gap: 8px;
+}
+
+.file-control {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  background: var(--surface);
+  font-size: 0.95rem;
+  color: var(--ink-500);
+  cursor: pointer;
+}
+
+.helper-text {
+  font-size: 0.82rem;
+  color: var(--ink-400);
+}
+
+.photo-preview {
+  margin-top: 12px;
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 2px solid rgba(148, 163, 184, 0.32);
+  background: rgba(148, 163, 184, 0.16);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 0.98rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(120deg, #b91c1c, #dc2626);
+  color: #fff;
+  box-shadow: 0 18px 36px rgba(185, 28, 28, 0.28);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 40px rgba(185, 28, 28, 0.34);
+}
+
+.btn-ghost {
+  background: var(--accent-soft);
+  color: #991b1b;
+  border: 1px solid var(--accent-strong);
+}
+
+.btn-ghost:hover {
+  background: rgba(185, 28, 28, 0.18);
+  border-color: rgba(185, 28, 28, 0.32);
+}
+
+.empty-state {
+  border-radius: 18px;
+  border: 1px dashed rgba(148, 163, 184, 0.38);
+  padding: clamp(28px, 4vw, 36px);
+  text-align: center;
+  display: grid;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.empty-state h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.empty-state p {
+  margin: 0;
+  color: var(--ink-500);
+  line-height: 1.6;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+@media (max-width: 1100px) {
+  .violation-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .page {
+    margin-left: 0;
+    margin-top: calc(var(--header-h) + 16px);
+    padding: clamp(20px, 5vw, 32px);
+  }
+}
+
+@media (max-width: 720px) {
+  .form-context {
+    grid-template-columns: 1fr;
+  }
+
+  .category-panel {
+    padding: 20px;
+  }
+
+  .form-actions {
+    justify-content: stretch;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
 <?php
 declare(strict_types=1);
 
 require '../auth.php';
 require_role('security');
-include __DIR__ . '/_scanner.php';
-include '../config.php';
+
 include '../includes/security_header.php';
+include '../config.php';
+
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+/**
+ * Escape HTML output safely.
+ */
+function h(?string $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+$studentId     = $_GET['student_id'] ?? '';
+$errorMessage  = null;
+$student       = null;
+$studentName   = '';
+$studentCourse = '';
+$studentLevel  = '';
+$studentEmail  = '';
+$studentPhoto  = '../admin/uploads/placeholder.png';
+
+if ($studentId === '') {
+    $errorMessage = 'No student selected.';
+}
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die('Connection failed: ' . $conn->connect_error);
-}
-$conn->set_charset('utf8mb4');
+$conn = null;
 
-$securityId = $_SESSION['actor_id'] ?? null;
-if (!$securityId) {
-    die('No security id in session. Please login again.');
-}
+if ($errorMessage === null) {
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    $conn->set_charset('utf8mb4');
 
-$sql = "
-SELECT sv.violation_id,
-       sv.student_id,
-       s.photo AS student_photo,
-       s.first_name,
-       s.last_name,
-       sv.offense_category,
-       sv.offense_type,
-       sv.description,
-       sv.reported_at,
-       sv.status
-FROM student_violation sv
-JOIN student_account s ON sv.student_id = s.student_id
-WHERE sv.submitted_by = ?
-  AND LOWER(sv.status) = 'approved'
-ORDER BY sv.reported_at DESC, sv.violation_id DESC
-";
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $student_id       = $_POST['student_id']       ?? '';
+        $offense_category = $_POST['offense_category'] ?? '';
+        $offense_type     = $_POST['offense_type']     ?? '';
+        $description      = $_POST['description']      ?? '';
 
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    die('Prepare failed: ' . $conn->error);
-}
-$stmt->bind_param('s', $securityId);
-if (!$stmt->execute()) {
-    die('Execute failed: ' . $stmt->error);
-}
-$result = $stmt->get_result();
-
-$violations = [];
-$categoryCounts = [];
-$typeCounts = [];
-$studentIds = [];
-$latestReportedAt = null;
-$recentWindow = new DateTimeImmutable('-7 days');
-$recentCount = 0;
-
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $violations[] = $row;
-
-        $studentId = (string)($row['student_id'] ?? '');
-        if ($studentId !== '') {
-            $studentIds[$studentId] = true;
+        if (!$student_id || !$offense_category || !$offense_type) {
+            die('Missing required fields.');
         }
 
-        $categoryLabel = trim((string)($row['offense_category'] ?? ''));
-        if ($categoryLabel === '') {
-            $categoryLabel = 'Uncategorized';
-        }
-        $categoryCounts[$categoryLabel] = ($categoryCounts[$categoryLabel] ?? 0) + 1;
+        $detailGroups = [
+            'id_offense', 'uniform_offense', 'civilian_offense', 'accessories_offense',
+            'conduct_offense', 'gadget_offense', 'acts_offense',
+            'substance_offense', 'integrity_offense', 'violence_offense',
+            'property_offense', 'threats_offense'
+        ];
 
-        $typeLabel = trim((string)($row['offense_type'] ?? ''));
-        if ($typeLabel === '') {
-            $typeLabel = 'Unspecified';
-        }
-        $typeCounts[$typeLabel] = ($typeCounts[$typeLabel] ?? 0) + 1;
-
-        $reportedRaw = $row['reported_at'] ?? null;
-        if ($reportedRaw) {
-            try {
-                $reportedAt = new DateTimeImmutable($reportedRaw);
-                if ($latestReportedAt === null || $reportedAt > $latestReportedAt) {
-                    $latestReportedAt = $reportedAt;
-                }
-                if ($reportedAt >= $recentWindow) {
-                    $recentCount++;
-                }
-            } catch (Exception $e) {
-                // ignore parse issues
+        $picked = [];
+        foreach ($detailGroups as $group) {
+            if (!empty($_POST[$group]) && is_array($_POST[$group])) {
+                $picked = array_merge($picked, $_POST[$group]);
             }
         }
+        $offense_details = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : null;
+
+        $photo = '';
+        if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/uploads/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            $photo = time() . '_' . basename($_FILES['photo']['name']);
+            $targetPath = $uploadDir . $photo;
+
+            if (!move_uploaded_file($_FILES['photo']['tmp_name'], $targetPath)) {
+                $photo = '';
+            }
+        }
+
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $submitted_by   = $_SESSION['actor_id']   ?? 'unknown';
+        $submitted_role = $_SESSION['actor_role'] ?? 'security';
+
+        $sqlInsert = "INSERT INTO student_violation
+            (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by, submitted_role)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)";
+
+        $stmtInsert = $conn->prepare($sqlInsert);
+        $stmtInsert->bind_param(
+            'ssssssss',
+            $student_id,
+            $offense_category,
+            $offense_type,
+            $offense_details,
+            $description,
+            $photo,
+            $submitted_by,
+            $submitted_role
+        );
+        $stmtInsert->execute();
+        $stmtInsert->close();
+
+        header('Location: view_student.php?student_id=' . urlencode($student_id) . '&saved=1');
+        exit;
     }
-}
 
-$totalReports   = count($violations);
-$uniqueStudents = count($studentIds);
+    $stmt = $conn->prepare('SELECT * FROM student_account WHERE student_id = ?');
+    $stmt->bind_param('s', $studentId);
+    $stmt->execute();
+    $result  = $stmt->get_result();
+    $student = $result->fetch_assoc();
+    $stmt->close();
 
-$categoryCountsDesc = $categoryCounts;
-arsort($categoryCountsDesc);
-$topCategoryName = $categoryCountsDesc ? array_key_first($categoryCountsDesc) : '';
-$topCategoryShare = ($totalReports > 0 && $topCategoryName !== '')
-    ? round(($categoryCountsDesc[$topCategoryName] / $totalReports) * 100)
-    : 0;
-$topCategories = array_slice($categoryCountsDesc, 0, 3, true);
-
-$typeCountsDesc = $typeCounts;
-arsort($typeCountsDesc);
-$uniqueTypes = count($typeCountsDesc);
-
-$categoryOptions = buildFilterOptions($categoryCounts);
-$typeOptions = buildFilterOptions($typeCounts);
-
-$stmt->close();
-$conn->close();
-
-/**
- * @param array<string,int> $counts
- * @return array<int,array{label:string,value:string,count:int}>
- */
-function buildFilterOptions(array $counts): array
-{
-    $options = [];
-    foreach ($counts as $label => $count) {
-        $options[] = [
-            'label' => $label,
-            'value' => normaliseKey($label),
-            'count' => $count,
-        ];
-    }
-
-    usort(
-        $options,
-        static fn (array $a, array $b): int => strcasecmp($a['label'], $b['label'])
-    );
-
-    return $options;
-}
-
-function safeText(?string $text): string
-{
-    return htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
-}
-
-function normaliseKey(string $value): string
-{
-    $value = trim($value);
-    if (function_exists('mb_strtolower')) {
-        $value = mb_strtolower($value, 'UTF-8');
+    if (!$student) {
+        $errorMessage = 'Student record not found.';
     } else {
-        $value = strtolower($value);
-    }
-    $value = preg_replace('/[^a-z0-9]+/u', '-', $value) ?? '';
-    $value = trim($value, '-');
-    return $value !== '' ? $value : 'na';
-}
+        $nameParts = array_filter([
+            $student['first_name'] ?? '',
+            $student['middle_name'] ?? '',
+            $student['last_name'] ?? '',
+        ], static fn($part) => $part !== null && trim((string)$part) !== '');
 
-function toSearchIndex(string $value): string
-{
-    $value = preg_replace('/\s+/u', ' ', trim($value)) ?? '';
-    if (function_exists('mb_strtolower')) {
-        return mb_strtolower($value, 'UTF-8');
-    }
-    return strtolower($value);
-}
+        $studentName   = trim(implode(' ', $nameParts)) ?: 'Unnamed student';
+        $studentCourse = trim((string)($student['course'] ?? ''));
+        $studentLevel  = trim((string)($student['level'] ?? '') . ' ' . (string)($student['section'] ?? ''));
+        $studentEmail  = trim((string)($student['email'] ?? ''));
 
-/**
- * @return array{iso:string,full:string,relative:string}
- */
-function describeDate(?string $raw): array
-{
-    if (!$raw) {
-        return ['iso' => '', 'full' => '—', 'relative' => ''];
-    }
-
-    try {
-        $dt = new DateTimeImmutable($raw);
-    } catch (Exception $e) {
-        return ['iso' => '', 'full' => safeText($raw), 'relative' => ''];
-    }
-
-    return [
-        'iso' => $dt->format(DateTimeInterface::ATOM),
-        'full' => $dt->format('M j, Y • g:i A'),
-        'relative' => formatRelativeFromDate($dt),
-    ];
-}
-
-function formatRelativeFromDate(DateTimeImmutable $dt): string
-{
-    $now  = new DateTimeImmutable();
-    $diff = $now->diff($dt);
-
-    $units = [
-        'y' => 'year',
-        'm' => 'month',
-        'd' => 'day',
-        'h' => 'hour',
-        'i' => 'minute',
-    ];
-
-    foreach ($units as $property => $label) {
-        $value = $diff->$property;
-        if ($value > 0) {
-            $plural = $value === 1 ? '' : 's';
-            $suffix = $diff->invert === 1 ? ' ago' : ' from now';
-            return $value . ' ' . $label . $plural . $suffix;
+        if (!empty($student['photo'])) {
+            $studentPhoto = '../admin/uploads/' . rawurlencode((string)$student['photo']);
         }
     }
-
-    return 'Just now';
 }
 
-$latestDescriptor = $latestReportedAt
-    ? [
-        'full' => $latestReportedAt->format('M j, Y • g:i A'),
-        'relative' => formatRelativeFromDate($latestReportedAt),
-    ]
-    : ['full' => 'Awaiting first approval', 'relative' => ''];
+if ($conn instanceof mysqli) {
+    $conn->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Security · Approved Violations</title>
-  <link rel="stylesheet" href="../css/security_dashboard.css">
-  
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Violation</title>
+  <link rel="stylesheet" href="../css/security_add_violation.css">
 </head>
 <body>
 
-  <main class="page">
-    <div class="dashboard-shell">
-      <section class="page-heading">
-        <div class="page-heading__intro">
-          <span class="page-heading__eyebrow">Security Command Center</span>
-          <h1>Approved violation overview</h1>
-          <p>Monitor the cases that cleared review, track recurring offenses, and jump straight into the details you need when it matters.</p>
+<main class="page">
+  <div class="violation-shell">
+    <aside class="student-card">
+      <div class="student-card__header">
+        <span class="card-label">Student</span>
+        <h1><?= $student ? h($studentName) : 'Profile unavailable'; ?></h1>
+        <p class="student-card__subtitle">
+          <?= $student ? 'Verify the details before filing a report.' : 'Choose a student from the roster to begin.'; ?>
+        </p>
+      </div>
+
+      <div class="student-card__body">
+        <div class="student-card__photo">
+          <img src="<?= h($studentPhoto); ?>" alt="Student photo"
+               onerror="this.src='../admin/uploads/placeholder.png'; this.onerror=null;">
         </div>
-        <div class="page-heading__actions">
-          <a class="button button--ghost" href="pending_reports.php">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="9"></circle>
-              <line x1="12" y1="7" x2="12" y2="13"></line>
-              <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"></circle>
-            </svg>
-            Review pending
-          </a>
-          <a class="button button--primary" href="/moralmatrix/security/report_student.php">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Report new case
-          </a>
-        </div>
-      </section>
 
-      <section class="stats-grid">
-        <article class="stat-card stat-card--accent">
-          <span class="stat-label">Approved reports</span>
-          <span class="stat-value"><?= number_format($totalReports); ?></span>
-          <span class="stat-caption">
-            <span class="stat-badge">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              Last 7 days: <?= number_format($recentCount); ?>
-            </span>
-            Reviewed submissions promoted to the approved queue.
-          </span>
-        </article>
-
-        <article class="stat-card">
-          <span class="stat-label">Students involved</span>
-          <span class="stat-value"><?= number_format($uniqueStudents); ?></span>
-          <span class="stat-caption">
-            <?= $uniqueTypes === 1 ? 'Single offense type recorded' : $uniqueTypes . ' distinct offense types tracked'; ?>
-          </span>
-        </article>
-
-        <article class="stat-card">
-          <span class="stat-label">Latest update</span>
-          <span class="stat-value"><?= safeText($latestDescriptor['full']); ?></span>
-          <?php if ($latestDescriptor['relative'] !== ''): ?>
-            <span class="stat-caption">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 6v6l3 3"/>
-                <circle cx="12" cy="12" r="9"/>
-              </svg>
-              <?= safeText($latestDescriptor['relative']); ?>
-            </span>
-          <?php else: ?>
-            <span class="stat-caption">No approvals logged yet.</span>
-          <?php endif; ?>
-        </article>
-
-        <article class="stat-card">
-          <span class="stat-label">Top category</span>
-          <?php if ($topCategoryName !== ''): ?>
-            <span class="stat-value"><?= safeText($topCategoryName); ?></span>
-            <span class="stat-caption">
-              <span class="stat-badge"><?= $topCategoryShare; ?>%</span>
-              of approved reports this cycle
-            </span>
-          <?php else: ?>
-            <span class="stat-value">—</span>
-            <span class="stat-caption">Insights will appear once approvals start coming in.</span>
-          <?php endif; ?>
-        </article>
-      </section>
-
-      <?php if ($totalReports > 0): ?>
-        <section class="filter-panel" aria-label="Filtering tools">
-          <label class="search-input" for="searchInput">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="7"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input type="search" id="searchInput" name="search" placeholder="Search by name, student ID, or keywords…">
-          </label>
-
-          <div class="filter-group">
-            <span class="filter-label">Category</span>
-            <select id="categoryFilter" name="category">
-              <option value="">All categories</option>
-              <?php foreach ($categoryOptions as $option): ?>
-                <option value="<?= safeText($option['value']); ?>">
-                  <?= safeText($option['label']); ?> (<?= $option['count']; ?>)
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <span class="filter-label">Offense type</span>
-            <select id="typeFilter" name="type">
-              <option value="">All types</option>
-              <?php foreach ($typeOptions as $option): ?>
-                <option value="<?= safeText($option['value']); ?>">
-                  <?= safeText($option['label']); ?> (<?= $option['count']; ?>)
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <span class="filter-label">Sort</span>
-            <select id="sortSelect" name="sort">
-              <option value="newest" selected>Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="student">Student name</option>
-              <option value="category">Category</option>
-            </select>
-          </div>
-
-          <div class="filters-actions">
-            <button type="button" class="button button--subtle" id="resetFilters" hidden>Clear filters</button>
-          </div>
-        </section>
-
-        <?php if (!empty($topCategories)): ?>
-          <section class="insights" aria-label="Category insights">
-            <h2>Most frequent categories</h2>
-            <div class="insight-chips">
-              <?php foreach ($topCategories as $label => $count): ?>
-                <span class="insight-chip">
-                  <?= safeText($label); ?>
-                  <span class="chip-count"><?= number_format($count); ?></span>
-                </span>
-              <?php endforeach; ?>
+        <?php if ($student): ?>
+          <dl class="student-meta">
+            <div>
+              <dt>ID number</dt>
+              <dd><?= h($student['student_id'] ?? '—'); ?></dd>
             </div>
-          </section>
-        <?php endif; ?>
-
-        <div class="results-meta" aria-live="polite">
-          <div>
-            Showing <strong id="resultsCount"><?= $totalReports; ?></strong> of <strong id="totalCount"><?= $totalReports; ?></strong> approved reports
+            <div>
+              <dt>Course</dt>
+              <dd><?= $studentCourse !== '' ? h($studentCourse) : 'Not provided'; ?></dd>
+            </div>
+            <?php if ($studentLevel !== ''): ?>
+              <div>
+                <dt>Year &amp; section</dt>
+                <dd><?= h($studentLevel); ?></dd>
+              </div>
+            <?php endif; ?>
+            <div>
+              <dt>Email</dt>
+              <dd><?= $studentEmail !== '' ? h($studentEmail) : 'Not listed'; ?></dd>
+            </div>
+          </dl>
+        <?php else: ?>
+          <div class="student-card__empty">
+            <p>We couldn’t load any information for this student.</p>
           </div>
-        </div>
+        <?php endif; ?>
+      </div>
+    </aside>
 
-        <section class="cards-grid" id="violationsGrid" aria-label="Approved reports">
-          <?php foreach ($violations as $violation):
-              $firstName = trim((string)($violation['first_name'] ?? ''));
-              $lastName  = trim((string)($violation['last_name'] ?? ''));
-              $studentName = trim($firstName . ' ' . $lastName);
-              if ($studentName === '') {
-                  $studentName = 'Unnamed student';
-              }
-              $studentId = (string)($violation['student_id'] ?? '—');
-              $categoryLabel = trim((string)($violation['offense_category'] ?? ''));
-              if ($categoryLabel === '') {
-                  $categoryLabel = 'Uncategorized';
-              }
-              $typeLabel = trim((string)($violation['offense_type'] ?? ''));
-              if ($typeLabel === '') {
-                  $typeLabel = 'Unspecified';
-              }
-              $statusLabelRaw = trim((string)($violation['status'] ?? ''));
-              $statusLabel = $statusLabelRaw !== ''
-                  ? ucwords(str_replace('_', ' ', strtolower($statusLabelRaw)))
-                  : 'Approved';
+    <section class="form-card">
+      <header class="form-card__header">
+        <span class="badge badge--accent">Security action</span>
+        <h2>Log a student violation</h2>
+        <p>Capture the incident details so the review board can take the right next steps.</p>
+      </header>
 
-              $photoFile = trim((string)($violation['student_photo'] ?? ''));
-              $photoSrc = $photoFile !== '' ? '../admin/uploads/' . $photoFile : 'placeholder.png';
-
-              $description = trim((string)($violation['description'] ?? ''));
-              $dateInfo = describeDate($violation['reported_at'] ?? null);
-
-              $searchIndex = toSearchIndex($studentName . ' ' . $studentId . ' ' . $categoryLabel . ' ' . $typeLabel . ' ' . $description);
-              $categoryKey = normaliseKey($categoryLabel);
-              $typeKey = normaliseKey($typeLabel);
-              $studentSort = toSearchIndex($studentName);
-          ?>
-            <article
-              class="violation-card"
-              data-category="<?= safeText($categoryKey); ?>"
-              data-category-label="<?= safeText($categoryLabel); ?>"
-              data-type="<?= safeText($typeKey); ?>"
-              data-type-label="<?= safeText($typeLabel); ?>"
-              data-student="<?= safeText($studentSort); ?>"
-              data-search="<?= safeText($searchIndex); ?>"
-              data-reported-at="<?= safeText($dateInfo['iso']); ?>"
-            >
-              <div class="card-header">
-                <div class="student">
-                  <div class="avatar">
-                    <img src="<?= safeText($photoSrc); ?>" alt="Student photo for <?= safeText($studentName); ?>" onerror="this.src='placeholder.png'">
-                  </div>
-                  <div>
-                    <h3><?= safeText($studentName); ?></h3>
-                    <div class="student-id"><?= safeText($studentId); ?></div>
-                    <div class="meta">
-                      <span><?= safeText($categoryLabel); ?></span>
-                      <span>•</span>
-                      <span><?= safeText($typeLabel); ?></span>
-                    </div>
-                  </div>
-                </div>
-                <span class="status-pill">
-                  <?= safeText($statusLabel); ?>
-                </span>
-              </div>
-
-              <div class="card-body">
-                <?php if ($description !== ''): ?>
-                  <p><?= nl2br(safeText($description)); ?></p>
-                <?php else: ?>
-                  <p><em>No additional notes provided.</em></p>
-                <?php endif; ?>
-              </div>
-
-              <div class="card-footer">
-                <div>
-                  <time datetime="<?= safeText($dateInfo['iso']); ?>">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="9"/>
-                      <polyline points="12 7 12 12 16 14"/>
-                    </svg>
-                    <?= safeText($dateInfo['full']); ?>
-                  </time>
-                  <?php if ($dateInfo['relative'] !== ''): ?>
-                    <span class="relative">· <?= safeText($dateInfo['relative']); ?></span>
-                  <?php endif; ?>
-                </div>
-                <a href="view_violation_approved.php?id=<?= urlencode((string)($violation['violation_id'] ?? '')); ?>">
-                  View details
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                    <polyline points="12 5 19 12 12 19"/>
-                  </svg>
-                </a>
-              </div>
-            </article>
-          <?php endforeach; ?>
-        </section>
-
-        <div class="no-results" id="noResults" hidden>
-          No matches found for your current filters. Try adjusting the search or clear all filters.
+      <?php if ($errorMessage !== null): ?>
+        <div class="empty-state">
+          <h3>Unable to display the form</h3>
+          <p><?= h($errorMessage); ?></p>
+          <a class="btn btn-ghost" href="dashboard.php">Return to dashboard</a>
         </div>
       <?php else: ?>
-        <section class="empty-state">
-          <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9" stroke-dasharray="2 4"/>
-            <path d="M9 10.5l3 3 3-3"/>
-          </svg>
-          <h2>No approved reports yet</h2>
-          <p>Once cases have been reviewed and approved they will appear here with quick filters and insights. You can still register a new concern or review pending submissions.</p>
-          <div class="tips">
-            <span>Use the scanner to capture new reports</span>
-            <span>Follow up on pending reviews</span>
+        <div class="form-context">
+          <div class="field">
+            <label for="offense_category" class="field-label">Offense category</label>
+            <div class="select-wrapper">
+              <select id="offense_category" class="select-control" required>
+                <option value="">Choose a category</option>
+                <option value="light" selected>Light</option>
+                <option value="moderate">Moderate</option>
+                <option value="grave">Grave</option>
+              </select>
+            </div>
           </div>
-          <div class="page-heading__actions">
-            <a class="button button--ghost" href="pending_reports.php">Go to pending queue</a>
-            <a class="button button--primary" href="/moralmatrix/security/report_student.php">Report new case</a>
+          <div class="context-note">
+            <strong>Reminder:</strong> Every submission enters the pending queue for verification before sanctions are issued.
           </div>
-        </section>
+        </div>
+
+        <div class="forms-stack">
+          <!-- Light -->
+          <form id="lightForm" class="category-panel" method="POST" enctype="multipart/form-data" novalidate>
+            <div class="panel-header">
+              <span class="panel-eyebrow">Category — Light</span>
+              <h3>Uniform, ID, and accessories</h3>
+              <p>Flag dress-code concerns and pick every item that applies.</p>
+            </div>
+
+            <input type="hidden" name="offense_category" value="light">
+            <input type="hidden" name="student_id" value="<?= h($student['student_id'] ?? ''); ?>">
+
+            <div class="field">
+              <label for="lightOffenses" class="field-label">Offense type</label>
+              <div class="select-wrapper">
+                <select id="lightOffenses" name="offense_type" class="select-control" required>
+                  <option value="">Select an offense type</option>
+                  <option value="id">ID</option>
+                  <option value="uniform">Dress code (uniform)</option>
+                  <option value="civilian">Revealing clothes (civilian attire)</option>
+                  <option value="accessories">Accessories</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="light_idCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">ID issues</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="id_offense[]" value="no_id">
+                  <span>No ID</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="id_offense[]" value="borrowed">
+                  <span>Borrowed ID</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="light_uniformCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Uniform reminders</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="uniform_offense[]" value="socks">
+                  <span>Socks</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="uniform_offense[]" value="skirt">
+                  <span>Skirt length</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="light_civilianCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Civilian attire</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="civilian_offense[]" value="crop_top">
+                  <span>Crop top</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="civilian_offense[]" value="sando">
+                  <span>Sando</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="light_accessoriesCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Accessories</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="accessories_offense[]" value="piercings">
+                  <span>Piercing/s</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="accessories_offense[]" value="hair_color">
+                  <span>Loud hair color</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="description_light" class="field-label">Report description</label>
+              <textarea id="description_light" name="description" rows="3"
+                        placeholder="Summarize what happened, when, and where."></textarea>
+            </div>
+
+            <div class="field upload-field">
+              <label for="lightPhoto" class="field-label">Attach photo (optional)</label>
+              <input type="file" id="lightPhoto" name="photo" accept="image/*"
+                     onchange="previewPhoto(this, 'lightPreview')" class="file-control">
+              <span class="helper-text">Accepted formats: JPG, PNG, or HEIC up to 5MB.</span>
+              <img id="lightPreview" class="photo-preview" alt="Light offense preview" hidden>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Submit violation</button>
+            </div>
+          </form>
+
+          <!-- Moderate -->
+          <form id="moderateForm" class="category-panel" method="POST" enctype="multipart/form-data" novalidate>
+            <div class="panel-header">
+              <span class="panel-eyebrow">Category — Moderate</span>
+              <h3>Conduct and gadget use</h3>
+              <p>Document actions that disrupt the learning environment.</p>
+            </div>
+
+            <input type="hidden" name="offense_category" value="moderate">
+            <input type="hidden" name="student_id" value="<?= h($student['student_id'] ?? ''); ?>">
+
+            <div class="field">
+              <label for="moderateOffenses" class="field-label">Offense type</label>
+              <div class="select-wrapper">
+                <select id="moderateOffenses" name="offense_type" class="select-control" required>
+                  <option value="">Select an offense type</option>
+                  <option value="improper_conduct">Improper language &amp; conduct</option>
+                  <option value="gadget_misuse">Gadget misuse</option>
+                  <option value="unauthorized_acts">Unauthorized acts</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="moderate_improper_conductCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Improper language &amp; conduct</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="conduct_offense[]" value="vulgar">
+                  <span>Use of curses and vulgar words</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="conduct_offense[]" value="rough_behavior">
+                  <span>Roughness in behavior</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="moderate_gadget_misuseCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Gadget misuse</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="gadget_offense[]" value="cp_classes">
+                  <span>Use of cellular phones during classes</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="gadget_offense[]" value="gadgets_functions">
+                  <span>Use of gadgets during academic functions</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="moderate_unauthorized_actsCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Unauthorized acts</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="acts_offense[]" value="illegal_posters">
+                  <span>Posting materials without approval</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="acts_offense[]" value="pda">
+                  <span>Public display of affection</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="description_moderate" class="field-label">Report description</label>
+              <textarea id="description_moderate" name="description" rows="3"
+                        placeholder="Provide context, witnesses, or devices involved."></textarea>
+            </div>
+
+            <div class="field upload-field">
+              <label for="moderatePhoto" class="field-label">Attach photo (optional)</label>
+              <input type="file" id="moderatePhoto" name="photo" accept="image/*"
+                     onchange="previewPhoto(this, 'moderatePreview')" class="file-control">
+              <span class="helper-text">Attach screenshots, photos, or other supporting files.</span>
+              <img id="moderatePreview" class="photo-preview" alt="Moderate offense preview" hidden>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Submit violation</button>
+            </div>
+          </form>
+
+          <!-- Grave -->
+          <form id="graveForm" class="category-panel" method="POST" enctype="multipart/form-data" novalidate>
+            <div class="panel-header">
+              <span class="panel-eyebrow">Category — Grave</span>
+              <h3>Critical incidents</h3>
+              <p>Escalate serious violations and capture all essential details.</p>
+            </div>
+
+            <input type="hidden" name="offense_category" value="grave">
+            <input type="hidden" name="student_id" value="<?= h($student['student_id'] ?? ''); ?>">
+
+            <div class="field">
+              <label for="graveOffenses" class="field-label">Offense type</label>
+              <div class="select-wrapper">
+                <select id="graveOffenses" name="offense_type" class="select-control" required>
+                  <option value="">Select an offense type</option>
+                  <option value="substance_addiction">Substance abuse &amp; addiction</option>
+                  <option value="integrity_dishonesty">Academic integrity &amp; dishonesty</option>
+                  <option value="violence_misconduct">Violence &amp; misconduct</option>
+                  <option value="property_theft">Property damage or theft</option>
+                  <option value="threats_disrespect">Threats &amp; disrespect</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="grave_substance_addictionCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Substance issues</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="substance_offense[]" value="under_influence">
+                  <span>Under the influence on campus</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="substance_offense[]" value="possession">
+                  <span>Possession or distribution</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="grave_integrity_dishonestyCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Integrity &amp; honesty</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="integrity_offense[]" value="cheating">
+                  <span>Cheating or academic fraud</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="integrity_offense[]" value="forgery">
+                  <span>Forgery of documents</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="grave_violence_misconductCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Violence &amp; misconduct</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="violence_offense[]" value="physical">
+                  <span>Physical altercation</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="violence_offense[]" value="harassment">
+                  <span>Harassment or bullying</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="grave_property_theftCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Property damage or theft</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="property_offense[]" value="damage">
+                  <span>Damage to facilities</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="property_offense[]" value="theft">
+                  <span>Theft of property</span>
+                </label>
+              </div>
+            </div>
+
+            <div id="grave_threats_disrespectCheckbox" class="chip-group is-hidden">
+              <span class="chip-group__label">Threats &amp; disrespect</span>
+              <div class="chip-list">
+                <label class="chip">
+                  <input type="checkbox" name="threats_offense[]" value="threatening">
+                  <span>Threatening statements</span>
+                </label>
+                <label class="chip">
+                  <input type="checkbox" name="threats_offense[]" value="disrespect">
+                  <span>Disrespect to school officials</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="description_grave" class="field-label">Report description</label>
+              <textarea id="description_grave" name="description" rows="3"
+                        placeholder="Include witness names, locations, and immediate response."></textarea>
+            </div>
+
+            <div class="field upload-field">
+              <label for="gravePhoto" class="field-label">Attach photo (optional)</label>
+              <input type="file" id="gravePhoto" name="photo" accept="image/*"
+                     onchange="previewPhoto(this, 'gravePreview')" class="file-control">
+              <span class="helper-text">Add photos, documents, or screenshots that support the report.</span>
+              <img id="gravePreview" class="photo-preview" alt="Grave offense preview" hidden>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Submit violation</button>
+            </div>
+          </form>
+        </div>
       <?php endif; ?>
-    </div>
-  </main>
-  <script>
-  (function(){
-    const dropdown = document.getElementById('logoutDropdown');
-    if (!dropdown) return;
-    const summary = dropdown.querySelector('summary');
+    </section>
+  </div>
+</main>
 
-    function sync(){
-      if (!summary) { return; }
-      summary.setAttribute('aria-expanded', dropdown.hasAttribute('open') ? 'true' : 'false');
+<script>
+function previewPhoto(input, previewId){
+  const preview = document.getElementById(previewId);
+  if (!preview) return;
+
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = event => {
+      preview.src = event.target?.result || '';
+      preview.hidden = false;
+    };
+    reader.readAsDataURL(input.files[0]);
+  } else {
+    preview.hidden = true;
+    preview.removeAttribute('src');
+  }
+}
+
+function initOptionSwitch(selectId, prefix, values, suffix){
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  const hideAll = () => {
+    values.forEach(value => {
+      const group = document.getElementById(prefix + value + suffix);
+      if (group) {
+        group.classList.add('is-hidden');
+      }
+    });
+  };
+
+  const showSelected = () => {
+    const group = document.getElementById(prefix + select.value + suffix);
+    if (group) {
+      group.classList.remove('is-hidden');
     }
+  };
 
-    dropdown.addEventListener('toggle', sync);
-    document.addEventListener('click', function(evt){
-      if (!dropdown.contains(evt.target)) {
-        dropdown.removeAttribute('open');
-        sync();
+  hideAll();
+  showSelected();
+
+  select.addEventListener('change', () => {
+    hideAll();
+    showSelected();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const categorySelect = document.getElementById('offense_category');
+  const panels = ['light', 'moderate', 'grave'];
+
+  const syncPanels = () => {
+    const selected = categorySelect ? categorySelect.value : '';
+    panels.forEach(type => {
+      const panel = document.getElementById(type + 'Form');
+      if (panel) {
+        panel.classList.toggle('is-active', selected === type);
       }
     });
-    document.addEventListener('keydown', function(evt){
-      if (evt.key === 'Escape') {
-        dropdown.removeAttribute('open');
-        sync();
+  };
+
+  if (categorySelect) {
+    categorySelect.addEventListener('change', syncPanels);
+  }
+  syncPanels();
+
+  initOptionSwitch('lightOffenses', 'light_', ['id', 'uniform', 'civilian', 'accessories'], 'Checkbox');
+  initOptionSwitch('moderateOffenses', 'moderate_', ['improper_conduct', 'gadget_misuse', 'unauthorized_acts'], 'Checkbox');
+  initOptionSwitch('graveOffenses', 'grave_', ['substance_addiction', 'integrity_dishonesty', 'violence_misconduct', 'property_theft', 'threats_disrespect'], 'Checkbox');
+});
+
+(function(){
+  const sheet = document.getElementById('sideSheet');
+  const scrim = document.getElementById('sheetScrim');
+  const openBtn = document.getElementById('openMenu');
+  const closeBtn = document.getElementById('closeMenu');
+  if (!sheet || !scrim || !openBtn || !closeBtn) return;
+
+  let lastFocusedEl = null;
+
+  function trapFocus(container, e){
+    const focusables = container.querySelectorAll('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last  = focusables[focusables.length - 1];
+
+    if (e.key === 'Tab') {
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
-    });
-  })();
-  </script>
+    }
+  }
 
-  <?php if ($totalReports > 0): ?>
-  <script>
-    (function(){
-      const searchInput = document.getElementById('searchInput');
-      const categoryFilter = document.getElementById('categoryFilter');
-      const typeFilter = document.getElementById('typeFilter');
-      const sortSelect = document.getElementById('sortSelect');
-      const resetButton = document.getElementById('resetFilters');
-      const grid = document.getElementById('violationsGrid');
-      const resultsCount = document.getElementById('resultsCount');
-      const totalCount = document.getElementById('totalCount');
-      const noResults = document.getElementById('noResults');
-      const cards = Array.from(document.querySelectorAll('.violation-card'));
-      const totalRecords = Number(totalCount ? totalCount.textContent : cards.length);
+  const focusTrapHandler = e => trapFocus(sheet, e);
 
-      function parseTime(value){
-        const parsed = Date.parse(value);
-        return Number.isNaN(parsed) ? 0 : parsed;
-      }
+  function openSheet(){
+    lastFocusedEl = document.activeElement;
+    sheet.classList.add('open');
+    scrim.classList.add('open');
+    sheet.setAttribute('aria-hidden', 'false');
+    scrim.setAttribute('aria-hidden', 'false');
+    openBtn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('no-scroll');
 
-      function sortCards(list){
-        const mode = sortSelect ? sortSelect.value : 'newest';
-        const sorted = list.slice();
+    setTimeout(() => {
+      const firstFocusable = sheet.querySelector('#pageButtons a, #pageButtons button, [tabindex]:not([tabindex="-1"])');
+      (firstFocusable || sheet).focus();
+    }, 10);
 
-        switch(mode){
-          case 'oldest':
-            sorted.sort((a, b) => parseTime(a.dataset.reportedAt || '') - parseTime(b.dataset.reportedAt || ''));
-            break;
-          case 'student':
-            sorted.sort((a, b) => (a.dataset.student || '').localeCompare(b.dataset.student || ''));
-            break;
-          case 'category':
-            sorted.sort((a, b) => (a.dataset.categoryLabel || '').localeCompare(b.dataset.categoryLabel || ''));
-            break;
-          case 'newest':
-          default:
-            sorted.sort((a, b) => parseTime(b.dataset.reportedAt || '') - parseTime(a.dataset.reportedAt || ''));
-            break;
-        }
-        return sorted;
-      }
+    sheet.addEventListener('keydown', focusTrapHandler);
+  }
 
-      function applyFilters(){
-        const query = (searchInput?.value || '').trim().toLowerCase();
-        const category = categoryFilter?.value || '';
-        const type = typeFilter?.value || '';
+  function closeSheet(){
+    sheet.classList.remove('open');
+    scrim.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+    scrim.setAttribute('aria-hidden', 'true');
+    openBtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('no-scroll');
 
-        let visible = [];
+    sheet.removeEventListener('keydown', focusTrapHandler);
+    if (lastFocusedEl) {
+      lastFocusedEl.focus();
+    }
+  }
 
-        cards.forEach(card => {
-          const matchesSearch = !query || (card.dataset.search || '').includes(query);
-          const matchesCategory = !category || card.dataset.category === category;
-          const matchesType = !type || card.dataset.type === type;
+  openBtn.addEventListener('click', openSheet);
+  closeBtn.addEventListener('click', closeSheet);
+  scrim.addEventListener('click', closeSheet);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeSheet();
+    }
+  });
 
-          const shouldShow = matchesSearch && matchesCategory && matchesType;
-          card.hidden = !shouldShow;
-          card.classList.toggle('is-hidden', !shouldShow);
-          if (shouldShow) {
-            visible.push(card);
-          }
-        });
+  sheet.addEventListener('click', e => {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const sameTab = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
+    if (sameTab) {
+      closeSheet();
+    }
+  });
+})();
+</script>
 
-        visible = sortCards(visible);
-        const hiddenCards = cards.filter(card => card.hidden);
-        [...visible, ...hiddenCards].forEach(card => grid?.appendChild(card));
+<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false"
+        style="position:fixed;left:-9999px;opacity:0" tabindex="-1">Menu</button>
 
-        const visibleCount = visible.length;
-        if (resultsCount) {
-          resultsCount.textContent = visibleCount.toString();
-        }
-
-        if (noResults) {
-          noResults.hidden = visibleCount !== 0;
-        }
-
-        const hasFilters = !!query || !!category || !!type || (sortSelect && sortSelect.value !== 'newest');
-        if (resetButton) {
-          resetButton.hidden = !hasFilters;
-        }
-      }
-
-      if (resetButton) {
-        resetButton.addEventListener('click', function(){
-          if (searchInput) searchInput.value = '';
-          if (categoryFilter) categoryFilter.selectedIndex = 0;
-          if (typeFilter) typeFilter.selectedIndex = 0;
-          if (sortSelect) sortSelect.value = 'newest';
-          applyFilters();
-          if (searchInput) searchInput.focus();
-        });
-      }
-
-      searchInput?.addEventListener('input', applyFilters);
-      categoryFilter?.addEventListener('change', applyFilters);
-      typeFilter?.addEventListener('change', applyFilters);
-      sortSelect?.addEventListener('change', applyFilters);
-
-      if (totalCount) {
-        totalCount.textContent = totalRecords.toString();
-      }
-      applyFilters();
-    })();
-  </script>
-  <?php endif; ?>
 </body>
 </html>
 

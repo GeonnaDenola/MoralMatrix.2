@@ -1,5 +1,4 @@
 <?php
-// security/pending.php — show ONLY my pending violations (security)
 declare(strict_types=1);
 
 require '../auth.php';
@@ -9,22 +8,91 @@ include __DIR__ . '/_scanner.php';
 include '../config.php';
 include '../includes/security_header.php';
 
-// --- DB connect ---
+function h(?string $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function cleanText(?string $value): string
+{
+    $value = preg_replace('/\s+/u', ' ', trim((string)$value)) ?? '';
+    return $value;
+}
+
+function formatRelativeFromDate(DateTimeImmutable $dt): string
+{
+    $now = new DateTimeImmutable();
+    $diff = $now->diff($dt);
+
+    $units = [
+        'y' => 'year',
+        'm' => 'month',
+        'd' => 'day',
+        'h' => 'hour',
+        'i' => 'minute',
+    ];
+
+    foreach ($units as $property => $label) {
+        $value = $diff->$property;
+        if ($value > 0) {
+            $plural = $value === 1 ? '' : 's';
+            $suffix = $diff->invert === 1 ? ' ago' : ' from now';
+            return $value . ' ' . $label . $plural . $suffix;
+        }
+    }
+
+    return 'Just now';
+}
+
+function describeDate(?string $raw): array
+{
+    if (!$raw) {
+        return ['iso' => '', 'full' => '', 'relative' => '', 'datetime' => null];
+    }
+
+    try {
+        $dt = new DateTimeImmutable($raw);
+    } catch (Exception $e) {
+        return ['iso' => '', 'full' => h($raw), 'relative' => '', 'datetime' => null];
+    }
+
+    return [
+        'iso' => $dt->format(DateTimeInterface::ATOM),
+        'full' => $dt->format('M j, Y at g:i A'),
+        'relative' => formatRelativeFromDate($dt),
+        'datetime' => $dt,
+    ];
+}
+
+function categoryIconSvg(string $category): string
+{
+    $key = strtolower(trim($category));
+    switch ($key) {
+        case 'moderate':
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 12 12 17 22 12"></polyline><polyline points="2 17 12 22 22 17"></polyline></svg>';
+        case 'grave':
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+        default:
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"></line><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"></line><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"></line></svg>';
+    }
+}
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+if ($conn->connect_error) {
+    die('Connection failed: ' . $conn->connect_error);
+}
 $conn->set_charset('utf8mb4');
 
-// --- current security id (same as your dashboard) ---
-$security_id = $_SESSION['actor_id'] ?? null;
-if (!$security_id) { die("No security id in session. Please login again."); }
+$securityId = $_SESSION['actor_id'] ?? null;
+if (!$securityId) {
+    die('No security id in session. Please login again.');
+}
 
-// --- ONLY my pending violations ---
-// NOTE: match dashboard style: filter by submitted_by only; make status case-insensitive
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -42,160 +110,318 @@ WHERE sv.submitted_by = ?
   AND LOWER(sv.status) = 'pending'
 ORDER BY sv.reported_at DESC, sv.violation_id DESC
 ";
-$stmt = $conn->prepare($sql) ?: die('Prepare failed: '.$conn->error);
-$stmt->bind_param('s', $security_id);          // keep 's' to match your dashboard
-$stmt->execute() || die('Execute failed: '.$stmt->error);
+
+$stmt = $conn->prepare($sql) ?: die('Prepare failed: ' . $conn->error);
+$stmt->bind_param('s', $securityId);
+if (!$stmt->execute()) {
+    die('Execute failed: ' . $stmt->error);
+}
 $result = $stmt->get_result();
 
-// --- Optional: debug snapshot by role/status for THIS user (visit ?debug=1 to see) ---
 $debugRows = [];
 if (!empty($_GET['debug'])) {
-  $d = $conn->prepare("
-    SELECT COALESCE(sv.submitted_role,'(null)') AS role,
-           LOWER(sv.status) AS status_norm,
-           COUNT(*) AS c
-    FROM student_violation sv
-    WHERE sv.submitted_by = ?
-    GROUP BY sv.submitted_role, LOWER(sv.status)
-    ORDER BY c DESC
-  ");
-  $d->bind_param('s', $security_id);
-  $d->execute();
-  $debugRows = $d->get_result()->fetch_all(MYSQLI_ASSOC);
-  $d->close();
+    $debug = $conn->prepare("
+        SELECT COALESCE(sv.submitted_role,'(null)') AS role,
+               LOWER(sv.status) AS status_norm,
+               COUNT(*) AS c
+        FROM student_violation sv
+        WHERE sv.submitted_by = ?
+        GROUP BY sv.submitted_role, LOWER(sv.status)
+        ORDER BY c DESC
+    ");
+    if ($debug) {
+        $debug->bind_param('s', $securityId);
+        $debug->execute();
+        $debugRows = $debug->get_result()->fetch_all(MYSQLI_ASSOC);
+        $debug->close();
+    }
+}
+
+$violations = [];
+$categoryCounts = [];
+$studentIds = [];
+$latestReportedAt = null;
+$latestDescriptor = ['iso' => '', 'full' => '', 'relative' => ''];
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $photoFile = cleanText($row['student_photo'] ?? '');
+        $photoPath = '../admin/uploads/placeholder.png';
+        if ($photoFile !== '') {
+            $safeFile = basename($photoFile);
+            $photoPath = '../admin/uploads/' . rawurlencode($safeFile);
+        }
+
+        $studentId = cleanText($row['student_id'] ?? '');
+        $nameParts = [$row['first_name'] ?? '', $row['last_name'] ?? ''];
+        $studentName = cleanText(implode(' ', $nameParts));
+        if ($studentName === '') {
+            $studentName = 'Unnamed student';
+        }
+
+        $category = cleanText($row['offense_category'] ?? '');
+        if ($category === '') {
+            $category = 'Uncategorized';
+        }
+        $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
+
+        $typeRaw = cleanText($row['offense_type'] ?? '');
+        $typeLabel = $typeRaw !== '' ? $typeRaw : 'Type not provided';
+
+        $description = cleanText($row['description'] ?? '');
+
+        $statusRaw = cleanText($row['status'] ?? 'Pending');
+        $statusLabel = strtoupper($statusRaw !== '' ? $statusRaw : 'Pending');
+
+        $dateInfo = describeDate($row['reported_at'] ?? null);
+        if ($dateInfo['datetime'] instanceof DateTimeImmutable) {
+            if ($latestReportedAt === null || $dateInfo['datetime'] > $latestReportedAt) {
+                $latestReportedAt = $dateInfo['datetime'];
+                $latestDescriptor = [
+                    'iso' => $dateInfo['iso'],
+                    'full' => $dateInfo['full'],
+                    'relative' => $dateInfo['relative'],
+                ];
+            }
+        }
+
+        $violations[] = [
+            'id' => (int)$row['violation_id'],
+            'student_id' => $studentId,
+            'student_name' => $studentName,
+            'photo' => $photoPath,
+            'category' => $category,
+            'type' => $typeLabel,
+            'description' => $description,
+            'status' => $statusLabel,
+            'reported_at' => [
+                'iso' => $dateInfo['iso'],
+                'full' => $dateInfo['full'],
+                'relative' => $dateInfo['relative'],
+            ],
+            'has_type' => $typeRaw !== '',
+        ];
+
+        if ($studentId !== '') {
+            $studentIds[$studentId] = true;
+        }
+    }
+}
+
+$stmt->close();
+$conn->close();
+
+$pendingCount = count($violations);
+$uniqueStudents = count($studentIds);
+
+$topCategory = '';
+$topCategoryCount = 0;
+if ($categoryCounts) {
+    arsort($categoryCounts);
+    $topCategory = (string)array_key_first($categoryCounts);
+    $topCategoryCount = (int)$categoryCounts[$topCategory];
+}
+
+$topCategorySummary = '';
+if ($topCategory !== '') {
+    $topCategorySummary = $topCategory . ' / ' . ($topCategoryCount === 1 ? '1 case' : $topCategoryCount . ' cases');
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Security — My Pending Violations</title>
-<link rel="stylesheet" href="/MoralMatrix/css/global.css">
-<style>
-  .violations { padding: 12px; max-width: 980px; margin: 0 auto; }
-  .card-link { text-decoration:none; color:inherit; display:block; }
-  .card {
-    border:1px solid #ddd; border-radius:10px; padding:12px; margin:10px 0;
-    display:flex; align-items:center; gap:18px; background:#fff;
-    transition:transform .12s, box-shadow .12s;
-  }
-  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.06); cursor:pointer; }
-  .card .left { flex: 0 0 120px; text-align:center; }
-  .card .left img { width:100px; height:100px; object-fit:cover; border-radius:50%; border:2px solid #eee; }
-  .card .info { flex:1; }
-  .meta { color:#666; font-size:0.92rem; }
-  .debug { background:#fff7ed; border:1px solid #fed7aa; padding:8px 10px; border-radius:8px; margin:12px auto; max-width:980px; font-size:.9rem; }
-  .debug table { border-collapse:collapse; }
-  .debug th, .debug td { border:1px solid #ddd; padding:4px 8px; }
-</style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Security - Pending Violations</title>
+    <link rel="stylesheet" href="../css/security_pending.css">
 </head>
 <body>
+<main class="page">
+    <div class="pending-shell">
+        <section class="page-header">
+            <div class="page-header__intro">
+                <span class="page-header__eyebrow">Pending queue</span>
+                <h1>Resolve outstanding reports</h1>
+                <p>Review the incidents you have submitted, follow up on critical situations, and keep the campus timeline moving.</p>
 
-<!-- Optional menu like on your dashboard -->
-<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
-<div class="page-top-pad"></div>
-<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
-<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
-  <div class="sidesheet-header">
-    <span>Menu</span>
-    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
-  </div>
-  <div class="sidesheet-rail">
-    <div id="pageButtons" class="drawer-pages">
-      <?php include 'side_buttons.php'; ?>
+                <div class="page-header__meta">
+                    <span class="meta-pill">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"></circle>
+                            <polyline points="12 7 12 12 15 15"></polyline>
+                        </svg>
+                        <?= h((string)$pendingCount); ?> awaiting review
+                    </span>
+                    <?php if (!empty($latestDescriptor['iso'])): ?>
+                        <span class="meta-pill">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M3 5h18"></path>
+                                <path d="M8 3v4"></path>
+                                <path d="M16 3v4"></path>
+                                <rect x="3" y="7" width="18" height="14" rx="2"></rect>
+                                <path d="M8 11h8"></path>
+                                <path d="M8 15h6"></path>
+                            </svg>
+                            Latest: <time datetime="<?= h($latestDescriptor['iso']); ?>" title="<?= h($latestDescriptor['full']); ?>">
+                                <?= h($latestDescriptor['relative'] ?: $latestDescriptor['full']); ?>
+                            </time>
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($topCategorySummary !== ''): ?>
+                        <span class="meta-pill">
+                            <?= categoryIconSvg($topCategory); ?>
+                            <?= h($topCategorySummary); ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="page-header__actions">
+                <a class="button button--ghost" href="dashboard.php">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 13h8V3H3z"></path>
+                        <path d="M13 21h8V9h-8z"></path>
+                        <path d="M3 21h8v-6H3z"></path>
+                        <path d="M13 3v6h8V3z"></path>
+                    </svg>
+                    View approved cases
+                </a>
+                <a class="button button--primary" href="/moralmatrix/security/report_student.php">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                    Report new incident
+                </a>
+            </div>
+        </section>
+
+        <?php if ($debugRows): ?>
+            <div class="debug">
+                <strong>Debug (per-role/status for your submissions)</strong>
+                <div>actor_id: <code><?= h((string)$securityId); ?></code></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Submitted role</th>
+                            <th scope="col">Status (normalized)</th>
+                            <th scope="col" style="text-align:right;">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($debugRows as $debugRow): ?>
+                        <tr>
+                            <td><?= h($debugRow['role']); ?></td>
+                            <td><?= h($debugRow['status_norm']); ?></td>
+                            <td style="text-align:right;"><?= (int)$debugRow['c']; ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <div style="margin-top: 10px; color: var(--ink-500); font-size: 0.85rem;">
+                    Tip: If you see statuses such as <em>pending approval</em> or roles other than <em>security</em>, that explains empty results in the queue.
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($pendingCount > 0): ?>
+            <section class="queue-summary" aria-label="Queue highlights">
+                <div class="summary-card">
+                    <span class="summary-label">Pending cases</span>
+                    <span class="summary-value"><?= h((string)$pendingCount); ?></span>
+                    <span class="summary-hint">Everything submitted under your name that still needs attention.</span>
+                </div>
+                <div class="summary-card">
+                    <span class="summary-label">Students in queue</span>
+                    <span class="summary-value"><?= h((string)$uniqueStudents); ?></span>
+                    <span class="summary-hint">Unique students linked to the reports above.</span>
+                </div>
+                <?php if ($topCategorySummary !== ''): ?>
+                    <div class="summary-card">
+                        <span class="summary-label">Most common category</span>
+                        <span class="summary-value"><?= h($topCategory); ?></span>
+                        <span class="summary-hint"><?= h(ucfirst($topCategorySummary)); ?></span>
+                    </div>
+                <?php endif; ?>
+            </section>
+
+            <section>
+                <h2 class="visually-hidden">Pending violations</h2>
+                <div class="violation-grid">
+                    <?php foreach ($violations as $violation): ?>
+                        <article class="violation-card">
+                            <div class="violation-card__header">
+                                <div class="avatar">
+                                    <img src="<?= h($violation['photo']); ?>" alt="Photo of <?= h($violation['student_name']); ?>" loading="lazy" onerror="this.src='../admin/uploads/placeholder.png';this.onerror=null;">
+                                </div>
+                                <div class="student">
+                                    <span class="student-name"><?= h($violation['student_name']); ?></span>
+                                    <?php if ($violation['student_id'] !== ''): ?>
+                                        <span class="student-id"><?= h($violation['student_id']); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="status-pill"><?= h($violation['status']); ?></span>
+                            </div>
+
+                            <div class="violation-card__body">
+                                <div class="meta-row">
+                                    <span class="badge">
+                                        <?= categoryIconSvg($violation['category']); ?>
+                                        <?= h($violation['category']); ?>
+                                    </span>
+                                    <span class="badge">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M20 6L9 17l-5-5"></path>
+                                        </svg>
+                                        <?= h($violation['type']); ?>
+                                    </span>
+                                </div>
+                                <?php if ($violation['description'] !== ''): ?>
+                                    <p><?= h($violation['description']); ?></p>
+                                <?php else: ?>
+                                    <p>No additional description was provided.</p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="violation-card__footer">
+                                <time datetime="<?= h($violation['reported_at']['iso']); ?>" title="<?= h($violation['reported_at']['full']); ?>">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="9"></circle>
+                                        <polyline points="12 7 12 12 15 15"></polyline>
+                                    </svg>
+                                    <?= h($violation['reported_at']['relative'] ?: $violation['reported_at']['full']); ?>
+                                </time>
+                                <a class="review-link" href="view_violation_pending.php?id=<?= $violation['id']; ?>">
+                                    Review details
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M5 12h14"></path>
+                                        <path d="M12 5l7 7-7 7"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php else: ?>
+            <section class="empty-state" aria-label="No pending reports">
+                <h2>Everything is clear</h2>
+                <p>There are no pending violations submitted under your account. When you report a new case, it will appear here until it is approved.</p>
+                <div class="empty-tips">
+                    <span>Confirm you selected the right filters</span>
+                    <span>Use the debug toggle if a case is missing</span>
+                    <span>Reach out to the review team for follow up</span>
+                </div>
+                <a class="button button--primary" href="/moralmatrix/security/report_student.php">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                    Report new incident
+                </a>
+            </section>
+        <?php endif; ?>
     </div>
-  </div>
-</nav>
-
-<?php if ($debugRows): ?>
-  <div class="debug">
-    <strong>Debug (per-role/status for your submissions)</strong>
-    <div>actor_id: <code><?= htmlspecialchars((string)$security_id) ?></code></div>
-    <table>
-      <tr><th>submitted_role</th><th>status (normalized)</th><th>count</th></tr>
-      <?php foreach ($debugRows as $r): ?>
-        <tr>
-          <td><?= htmlspecialchars($r['role']) ?></td>
-          <td><?= htmlspecialchars($r['status_norm']) ?></td>
-          <td style="text-align:right"><?= (int)$r['c'] ?></td>
-        </tr>
-      <?php endforeach; ?>
-    </table>
-    <div>Tip: If you see statuses like <em>pending approval</em> or roles not equal to <em>security</em>, that explains empty results.</div>
-  </div>
-<?php endif; ?>
-
-<div class="violations">
-  <h3>My Pending Violations</h3>
-
-  <?php if ($result && $result->num_rows > 0): ?>
-    <?php while ($row = $result->fetch_assoc()): ?>
-      <?php
-        $studentPhotoFile = $row['student_photo'] ?? '';
-        $studentPhotoSrc = $studentPhotoFile
-            ? '../admin/uploads/' . htmlspecialchars($studentPhotoFile)
-            : 'placeholder.png';
-        $violationId = (int)$row['violation_id'];
-        $studentId = htmlspecialchars($row['student_id']);
-      ?>
-      <a class="card-link" href="view_violation_pending.php?id=<?= $violationId ?>">
-        <div class="card">
-          <div class="left">
-            <img src="<?= $studentPhotoSrc ?>" alt="Student photo" onerror="this.src='placeholder.png'">
-          </div>
-          <div class="info">
-            <h4><?= htmlspecialchars($row['first_name'].' '.$row['last_name']) ?> (<?= $studentId ?>)</h4>
-            <p><strong>Category:</strong> <?= htmlspecialchars($row['offense_category']) ?> &nbsp; • &nbsp;
-               <strong>Type:</strong> <?= htmlspecialchars($row['offense_type']) ?></p>
-            <?php if (!empty($row['description'])): ?>
-              <p><?= nl2br(htmlspecialchars($row['description'])) ?></p>
-            <?php endif; ?>
-            <p class="meta"><strong>Status:</strong> <?= htmlspecialchars($row['status']) ?> —
-               <em>Reported at <?= htmlspecialchars($row['reported_at']) ?></em></p>
-          </div>
-        </div>
-      </a>
-    <?php endwhile; ?>
-  <?php else: ?>
-    <p>No pending violations found.</p>
-    <p class="meta">If you expect items here, try <a href="?debug=1">debug view</a> to see actual statuses/roles stored.</p>
-  <?php endif; ?>
-</div>
-
-<?php
-$stmt->close();
-$conn->close();
-?>
-
-<script>
-// same sidesheet JS as your dashboard (optional)
-(function(){
-  const sheet=document.getElementById('sideSheet'),scrim=document.getElementById('sheetScrim'),
-        openBtn=document.getElementById('openMenu'),closeBtn=document.getElementById('closeMenu');
-  if(!sheet||!scrim||!openBtn||!closeBtn) return;
-  let last=null;
-  function trap(c,e){
-    const f=c.querySelectorAll('a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])');
-    if(!f.length) return; const first=f[0], lastf=f[f.length-1];
-    if(e.key==='Tab'){ if(e.shiftKey&&document.activeElement===first){e.preventDefault();lastf.focus();}
-    else if(!e.shiftKey&&document.activeElement===lastf){e.preventDefault();first.focus();}}
-  }
-  const handler=e=>trap(sheet,e);
-  function open(){ last=document.activeElement; sheet.classList.add('open'); scrim.classList.add('open');
-    sheet.setAttribute('aria-hidden','false'); scrim.setAttribute('aria-hidden','false');
-    openBtn.setAttribute('aria-expanded','true'); document.body.classList.add('no-scroll');
-    setTimeout(()=>{ (sheet.querySelector('#pageButtons a, #pageButtons button, [tabindex]:not([tabindex="-1"])')||sheet).focus(); },10);
-    sheet.addEventListener('keydown',handler);}
-  function close(){ sheet.classList.remove('open'); scrim.classList.remove('open');
-    sheet.setAttribute('aria-hidden','true'); scrim.setAttribute('aria-hidden','true');
-    openBtn.setAttribute('aria-expanded','false'); document.body.classList.remove('no-scroll');
-    sheet.removeEventListener('keydown',handler); if(last) last.focus(); }
-  openBtn.addEventListener('click',open); closeBtn.addEventListener('click',close); scrim.addEventListener('click',close);
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
-  sheet.addEventListener('click',e=>{ const link=e.target.closest('a[href]'); if(!link) return;
-    const sameTab=!(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0); if(sameTab) close(); });
-})();
-</script>
+</main>
 </body>
 </html>

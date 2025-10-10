@@ -16,9 +16,7 @@
     body{
       background: #f4f6fb;
       color: var(--ink-700);
-    }
-    .page{
-      margin-top: 2px;
+      margin-top: 40px;
     }
 
     .dashboard-shell{

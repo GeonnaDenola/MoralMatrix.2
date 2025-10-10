@@ -99,10 +99,6 @@ if (!function_exists('activeClass')) {
   </div>
 </nav>
 
-<!-- Example content wrapper -->
-<main class="page">
-  <!-- Your page content -->
-</main>
 
 <script>
   // Accessibility niceties for the dropdown
