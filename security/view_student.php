@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 include '../config.php';
-
+include '../includes/security_header.php';
 include __DIR__ . '/_scanner.php';
 
 $servername = $database_settings['servername'];
@@ -45,53 +45,148 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Profile</title>
-  <link rel="stylesheet" href="/MoralMatrix/css/global.css">
+  <link rel="stylesheet" href="../css/security_view_student.css">
 </head>
 <body>
 
-<!-- ======= LEFT Sidesheet trigger + panel (uses global.css) ======= -->
-<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
-<div class="page-top-pad"></div>
 
-<!-- Scrim -->
-<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
-
-<!-- LEFT Sidesheet (drawer) -->
-<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
-  <div class="sidesheet-header">
-    <span>Menu</span>
-    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
-  </div>
-
-  <div class="sidesheet-rail">
-    <div id="pageButtons" class="drawer-pages">
-      <?php include 'side_buttons.php'; ?>
-    </div>
-  </div>
-</nav>
-<!-- ======= /LEFT Sidesheet ======= -->
 
 <div class="right-container">
   <?php if($student): ?>
-    <div class="profile">
-      <img src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo']) : 'placeholder.png' ?>" alt="Profile">
-      <p><strong>Student ID:</strong> <?= htmlspecialchars($student['student_id']) ?></p>
-      <h2><?= htmlspecialchars($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name']) ?></h2>
-      <p><strong>Course:</strong> <?= htmlspecialchars($student['course']) ?></p>
-      <p><strong>Year Level:</strong> <?= htmlspecialchars($student['level']) ?></p>
-      <p><strong>Section:</strong> <?= htmlspecialchars($student['section']) ?></p>
-      <p><strong>Institute:</strong> <?= htmlspecialchars($student['institute']) ?></p>
-      <p><strong>Guardian:</strong> <?= htmlspecialchars($student['guardian']) ?> (<?= htmlspecialchars($student['guardian_mobile']) ?>)</p>
-      <p><strong>Email:</strong> <?= htmlspecialchars($student['email']) ?></p>
-      <p><strong>Mobile:</strong> <?= htmlspecialchars($student['mobile']) ?></p>
+    <?php
+      $fullName = trim($student['first_name'] . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . $student['last_name']);
+      $course   = $student['course'] ?: 'â€”';
+      $level    = $student['level'] ?: 'â€”';
+      $section  = $student['section'] ?: 'â€”';
+      $inst     = $student['institute'] ?: 'â€”';
+      $photoSrc = !empty($student['photo']) ? '../admin/uploads/' . $student['photo'] : 'placeholder.png';
+      $yearParts = [];
+      if ($level !== 'â€”' && $level !== '') {
+        $yearParts[] = 'Year ' . $level;
+      }
+      if ($section !== 'â€”' && $section !== '') {
+        $yearParts[] = $section;
+      }
+      $yearLabel = $yearParts ? implode(' ', $yearParts) : 'Year/Section â€”';
+    ?>
+    <div class="profile-shell">
+      <section class="profile-hero">
+        <div class="hero-content">
+          <div class="identity">
+            <div class="portrait">
+              <img src="<?= htmlspecialchars($photoSrc) ?>" alt="Student portrait of <?= htmlspecialchars($fullName) ?>">
+            </div>
+            <div class="headline">
+              <span class="eyebrow">Student Profile</span>
+              <h1><?= htmlspecialchars($fullName) ?></h1>
+              <div class="badge-row">
+                <span class="badge">ID: <?= htmlspecialchars($student['student_id']) ?></span>
+                <span class="badge"><?= htmlspecialchars($inst) ?></span>
+                <span class="badge"><?= htmlspecialchars($course) ?></span>
+                <span class="badge"><?= htmlspecialchars($yearLabel) ?></span>
+              </div>
+              <div class="actions">
+                <a class="primary-btn" href="<?= htmlspecialchars($selfDir) ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Violation
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-grid">
+        <div class="info-card">
+          <h2>Academic Details</h2>
+          <div class="info-list">
+            <div class="info-row">
+              <span>Course</span>
+              <span><?= htmlspecialchars($course) ?></span>
+            </div>
+            <div class="info-row">
+              <span>Institute</span>
+              <span><?= htmlspecialchars($inst) ?></span>
+            </div>
+            <div class="info-row">
+              <span>Year</span>
+              <span><?= htmlspecialchars($level) ?></span>
+            </div>
+            <div class="info-row">
+              <span>Section</span>
+              <span><?= htmlspecialchars($section) ?></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h2>Contact</h2>
+          <div class="info-list">
+            <div class="info-row">
+              <span>Email</span>
+              <span><?= htmlspecialchars($student['email'] ?: 'â€”') ?></span>
+            </div>
+            <div class="info-row">
+              <span>Mobile</span>
+              <span><?= htmlspecialchars($student['mobile'] ?: 'â€”') ?></span>
+            </div>
+            <div class="info-row">
+              <span>Guardian</span>
+              <span><?= htmlspecialchars($student['guardian'] ?: 'â€”') ?></span>
+            </div>
+            <div class="info-row">
+              <span>Guardian Mobile</span>
+              <span><?= htmlspecialchars($student['guardian_mobile'] ?: 'â€”') ?></span>
+            </div>
+            <div class="info-row">
+              <span>Address</span>
+              <span><?= htmlspecialchars($student['address'] ?? 'â€”') ?></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="history-card">
+        <header>
+          <h2>Violation History</h2>
+          <span class="badge neutral">
+            <?= count($violations) ?> record<?= count($violations) === 1 ? '' : 's' ?>
+          </span>
+        </header>
+
+        <?php if (count($violations)): ?>
+          <div class="timeline">
+            <?php foreach ($violations as $violation): ?>
+              <?php
+                $reportedAt = !empty($violation['reported_at']) ? date('M d, Y', strtotime($violation['reported_at'])) : 'Date unavailable';
+                $category   = $violation['offense_category'] ?: 'Uncategorized';
+                $offense    = $violation['offense_type'] ?: 'Violation';
+                $details    = $violation['offense_details'] ?: ($violation['description'] ?: 'No additional details provided.');
+              ?>
+              <div class="timeline-item">
+                <h3><?= htmlspecialchars($offense) ?></h3>
+                <div class="meta">
+                  <span><?= htmlspecialchars($category) ?></span>
+                  <span><?= htmlspecialchars($reportedAt) ?></span>
+                  <span>#<?= htmlspecialchars($violation['violation_id']) ?></span>
+                </div>
+                <p><?= htmlspecialchars($details) ?></p>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="empty-state">
+            This student does not have any recorded violations yet.
+          </div>
+        <?php endif; ?>
+      </section>
     </div>
   <?php else: ?>
-    <p>Student not found.</p>
+    <div class="not-found">Student not found.</div>
   <?php endif; ?>
-
-  <div class="add-violation-btn">
-    <a class="btn" href="<?= htmlspecialchars($selfDir) ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">Add Violation</a>
-  </div>
 </div>
 
 <script>
@@ -169,3 +264,4 @@ $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 </script>
 </body>
 </html>
+
