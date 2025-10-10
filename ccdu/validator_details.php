@@ -84,7 +84,7 @@ include 'page_buttons.php';
   <link rel="stylesheet" href="../css/validator.css">
 </head>
 <body>
-  <main class="vd-page" aria-labelledby="pageTitle">
+  <main class="vd-page" aria-labelledby="pageTitle" style = "margin-top: 90px;">
     <div class="vd-wrap">
       <div class="vd-card" role="region" aria-label="Validator profile" style = "margin-left: 200px;">
         <header class="vd-card__header">
