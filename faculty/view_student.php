@@ -8,111 +8,192 @@ $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) { die("Connection failed: " . $conn->connect_error); }
+if ($conn->connect_error) {
+    die('Connection failed: ' . $conn->connect_error);
+}
 
-if (!isset($_GET['student_id'])) { die("No student selected."); }
+if (!isset($_GET['student_id'])) {
+    die('No student selected.');
+}
 
-$student_id = $_GET['student_id'];
-$sql = "SELECT * FROM student_account WHERE student_id=?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $student_id);
+$studentId = $_GET['student_id'];
+$stmt = $conn->prepare('SELECT * FROM student_account WHERE student_id = ?');
+$stmt->bind_param('s', $studentId);
 $stmt->execute();
 $result  = $stmt->get_result();
 $student = $result->fetch_assoc();
 $stmt->close();
 
-/* ==== FETCH VIOLATIONS (kept if you need later) ==== */
 $violations = [];
-$sqlv = "SELECT violation_id, offense_category, offense_type, offense_details, description, reported_at
-         FROM student_violation
-         WHERE student_id = ?
-         ORDER BY reported_at DESC, violation_id DESC";
-$stmtv = $conn->prepare($sqlv);
-$stmtv->bind_param("s", $student_id);
+$stmtv = $conn->prepare('
+    SELECT violation_id, offense_category, offense_type, offense_details, description, reported_at
+    FROM student_violation
+    WHERE student_id = ?
+    ORDER BY reported_at DESC, violation_id DESC
+');
+$stmtv->bind_param('s', $studentId);
 $stmtv->execute();
 $resv = $stmtv->get_result();
-while ($row = $resv->fetch_assoc()) { $violations[] = $row; }
+while ($row = $resv->fetch_assoc()) {
+    $violations[] = $row;
+}
 $stmtv->close();
 
 $conn->close();
 
-$selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
+$selfDir = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/');
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Profile</title>
-  <link rel="stylesheet" href="../css/faculty_view_student.css" />
+  <link rel="stylesheet" href="../css/faculty_view_student.css">
 </head>
 <body>
-
-<!-- ======= LEFT Sidesheet trigger + panel (uses your global.css) ======= -->
-<button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false">Menu</button>
-<div class="page-top-pad"></div>
-
-<!-- Scrim -->
-<div id="sheetScrim" class="sidesheet-scrim" aria-hidden="true"></div>
-
-<!-- LEFT Sidesheet (drawer) -->
-<nav id="sideSheet" class="sidesheet" aria-hidden="true" role="dialog" aria-label="Main menu" tabindex="-1">
-  <div class="sidesheet-header">
-    <span>Menu</span>
-    <button id="closeMenu" class="sidesheet-close" aria-label="Close menu">✕</button>
-  </div>
-  <!-- Put your menu links here if needed -->
-</nav>
-<!-- ======= /LEFT Sidesheet ======= -->
-
-<!-- ======= Right content container (centered) ======= -->
 <div class="right-container">
   <?php if ($student): ?>
-    <section class="profile" aria-labelledby="student-name">
-      <div class="avatar">
-        <img
-          src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo']) : 'placeholder.png' ?>"
-          alt="Student photo"
-          loading="lazy"
-        />
-      </div>
+    <?php
+      $fullName = trim(($student['first_name'] ?? '') . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . ($student['last_name'] ?? ''));
+      if ($fullName === '') {
+          $fullName = 'Unnamed student';
+      }
+      $course   = $student['course']   ?: '—';
+      $level    = $student['level']    ?: '—';
+      $section  = $student['section']  ?: '—';
+      $inst     = $student['institute']?: '—';
+      $photoSrc = !empty($student['photo']) ? '../admin/uploads/' . $student['photo'] : 'placeholder.png';
+      $yearParts = [];
+      if ($level !== '—') {
+          $yearParts[] = 'Year ' . $level;
+      }
+      if ($section !== '—') {
+          $yearParts[] = $section;
+      }
+      $yearLabel = $yearParts ? implode(' ', $yearParts) : 'Year/Section —';
+    ?>
+    <div class="profile-shell">
+      <section class="profile-hero">
+        <div class="hero-content">
+          <div class="identity">
+            <div class="portrait">
+              <img src="<?= htmlspecialchars($photoSrc, ENT_QUOTES, 'UTF-8'); ?>" alt="Student portrait of <?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8'); ?>">
+            </div>
+            <div class="headline">
+              <span class="eyebrow">Student Profile</span>
+              <h1><?= htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8'); ?></h1>
+              <div class="badge-row">
+                <span class="badge">ID: <?= htmlspecialchars($student['student_id'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="badge"><?= htmlspecialchars($inst, ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="badge"><?= htmlspecialchars($course, ENT_QUOTES, 'UTF-8'); ?></span>
+                <span class="badge"><?= htmlspecialchars($yearLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+              </div>
+              <div class="actions">
+                <a class="primary-btn" href="<?= htmlspecialchars($selfDir, ENT_QUOTES, 'UTF-8'); ?>/add_violation.php?student_id=<?= urlencode($studentId); ?>">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Violation
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div class="profile-body">
-        <p class="student-id">
-          <span>Student ID</span>
-          <b><?= htmlspecialchars($student['student_id']) ?></b>
-        </p>
-
-        <h2 id="student-name" class="name">
-          <?= htmlspecialchars(trim($student['first_name'] . " " . $student['middle_name'] . " " . $student['last_name'])) ?>
-        </h2>
-
-        <div class="details">
-          <p><strong>Course</strong><span><?= htmlspecialchars($student['course']) ?></span></p>
-          <p><strong>Year Level</strong><span><?= htmlspecialchars($student['level']) ?></span></p>
-          <p><strong>Section</strong><span><?= htmlspecialchars($student['section']) ?></span></p>
-          <p><strong>Institute</strong><span><?= htmlspecialchars($student['institute']) ?></span></p>
-          <p><strong>Guardian</strong><span><?= htmlspecialchars($student['guardian']) ?> (<?= htmlspecialchars($student['guardian_mobile']) ?>)</span></p>
-          <p><strong>Email</strong><span><?= htmlspecialchars($student['email']) ?></span></p>
-          <p><strong>Mobile</strong><span><?= htmlspecialchars($student['mobile']) ?></span></p>
+      <section class="detail-grid">
+        <div class="info-card">
+          <h2>Academic Details</h2>
+          <div class="info-list">
+            <div class="info-row">
+              <span>Course</span>
+              <span><?= htmlspecialchars($course, ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Institute</span>
+              <span><?= htmlspecialchars($inst, ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Year</span>
+              <span><?= htmlspecialchars($level, ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Section</span>
+              <span><?= htmlspecialchars($section, ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+          </div>
         </div>
 
-        <div class="actions">
-          <a class="btn" href="<?= htmlspecialchars($selfDir) ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">
-            Add Violation
-          </a>
+        <div class="info-card">
+          <h2>Contact</h2>
+          <div class="info-list">
+            <div class="info-row">
+              <span>Email</span>
+              <span><?= htmlspecialchars($student['email'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Mobile</span>
+              <span><?= htmlspecialchars($student['mobile'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Guardian</span>
+              <span><?= htmlspecialchars($student['guardian'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Guardian Mobile</span>
+              <span><?= htmlspecialchars($student['guardian_mobile'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+            <div class="info-row">
+              <span>Address</span>
+              <span><?= htmlspecialchars($student['address'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></span>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section class="history-card">
+        <header>
+          <h2>Violation History</h2>
+          <span class="badge neutral">
+            <?= count($violations); ?> record<?= count($violations) === 1 ? '' : 's'; ?>
+          </span>
+        </header>
+
+        <?php if ($violations): ?>
+          <div class="timeline">
+            <?php foreach ($violations as $violation): ?>
+              <?php
+                $reportedAt = !empty($violation['reported_at']) ? date('M d, Y', strtotime($violation['reported_at'])) : 'Date unavailable';
+                $category   = $violation['offense_category'] ?: 'Uncategorized';
+                $offense    = $violation['offense_type'] ?: 'Violation';
+                $details    = $violation['offense_details'] ?: ($violation['description'] ?: 'No additional details provided.');
+              ?>
+              <div class="timeline-item">
+                <h3><?= htmlspecialchars($offense, ENT_QUOTES, 'UTF-8'); ?></h3>
+                <div class="meta">
+                  <span><?= htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?></span>
+                  <span><?= htmlspecialchars($reportedAt, ENT_QUOTES, 'UTF-8'); ?></span>
+                  <span>#<?= htmlspecialchars($violation['violation_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?></span>
+                </div>
+                <p><?= htmlspecialchars($details, ENT_QUOTES, 'UTF-8'); ?></p>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="empty-state">
+            This student does not have any recorded violations yet.
+          </div>
+        <?php endif; ?>
+      </section>
+    </div>
   <?php else: ?>
-    <p class="empty-state">Student not found.</p>
+    <div class="not-found">Student not found.</div>
   <?php endif; ?>
 </div>
-<!-- ======= /Right content container ======= -->
 
 <script>
-/* ======== LEFT Sidesheet: open/close + focus trap ======== */
 (function(){
   const sheet   = document.getElementById('sideSheet');
   const scrim   = document.getElementById('sheetScrim');

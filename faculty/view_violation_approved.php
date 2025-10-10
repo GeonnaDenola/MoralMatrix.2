@@ -33,6 +33,50 @@ $stmt->bind_param("i", $violation_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $violation = $result->fetch_assoc();
+$stmt->close();
+
+$studentName = '';
+$studentId = '';
+$category = '';
+$type = '';
+$description = '';
+$status = '';
+$statusClass = '';
+$reportedRaw = '';
+$reportedDisplay = '';
+$reportedRelative = '';
+$photoSrc = '';
+
+if ($violation) {
+    $studentFirst = trim((string)($violation['first_name'] ?? ''));
+    $studentLast  = trim((string)($violation['last_name'] ?? ''));
+    $studentName  = trim($studentFirst . ' ' . $studentLast);
+    if ($studentName === '') {
+        $studentName = 'Unnamed student';
+    }
+    $studentId = trim((string)($violation['student_id'] ?? ''));
+    $category = trim((string)($violation['offense_category'] ?? 'Uncategorized'));
+    $type = trim((string)($violation['offense_type'] ?? 'Unspecified'));
+    $description = trim((string)($violation['description'] ?? ''));
+    $status = trim((string)($violation['status'] ?? ''));
+    $statusClass = strtolower(str_replace(' ', '-', $status));
+    $reportedRaw = (string)($violation['reported_at'] ?? '');
+
+    if ($reportedRaw !== '') {
+        try {
+            $reportedDate = new DateTime($reportedRaw);
+            $reportedDisplay = $reportedDate->format('M d, Y g:i A');
+            $reportedRelative = $reportedDate->format('l, F j');
+        } catch (Exception $e) {
+            $reportedDisplay = $reportedRaw;
+        }
+    }
+
+    $photo = trim((string)($violation['photo'] ?? ''));
+    if ($photo !== '') {
+        $photoSrc = '../uploads/' . $photo;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -45,57 +89,92 @@ $violation = $result->fetch_assoc();
 </head>
 <body class="violation-page">
 <?php if ($violation): ?>
-    <main class="layout" role="main" aria-labelledby="violation-title">
-        <section class="violation-card" role="region">
-            <div class="card-header">
-                <h2 id="violation-title">Violation Report</h2>
-                <span
-                    class="status-badge <?= strtolower(str_replace(' ', '-', $violation['status'])) ?>">
-                    <?= htmlspecialchars($violation['status']) ?>
-                </span>
+    <main class="violation-shell" role="main" aria-labelledby="violation-title">
+        <section class="hero-card" role="region">
+            <div class="hero-top">
+                <div>
+                    <span class="hero-eyebrow">Violation report</span>
+                    <h1 id="violation-title"><?= htmlspecialchars($studentName); ?></h1>
+                    <div class="hero-meta">
+                        <?php if ($studentId !== ''): ?>
+                            <span class="meta-chip">ID <?= htmlspecialchars($studentId); ?></span>
+                        <?php endif; ?>
+                        <span class="meta-chip"><?= htmlspecialchars($category); ?></span>
+                        <span class="meta-chip"><?= htmlspecialchars($type); ?></span>
+                    </div>
+                </div>
+                <?php if ($status !== ''): ?>
+                    <span class="status-pill <?= htmlspecialchars($statusClass); ?>">
+                        <?= htmlspecialchars($status); ?>
+                    </span>
+                <?php endif; ?>
             </div>
-
-            <dl class="details">
-                <div class="row">
-                    <dt>Student</dt>
-                    <dd><?= htmlspecialchars($violation['first_name']." ".$violation['last_name']) ?></dd>
+            <?php if ($reportedDisplay !== ''): ?>
+                <div class="hero-bottom">
+                    <div class="meta-block">
+                        <span class="meta-label">Reported</span>
+                        <span class="meta-value"><?= htmlspecialchars($reportedDisplay); ?></span>
+                    </div>
+                    <?php if ($reportedRelative !== ''): ?>
+                        <div class="meta-block">
+                            <span class="meta-label">Day</span>
+                            <span class="meta-value"><?= htmlspecialchars($reportedRelative); ?></span>
+                        </div>
+                    <?php endif; ?>
                 </div>
+            <?php endif; ?>
+        </section>
 
-                <div class="row">
-                    <dt>Category</dt>
-                    <dd><?= htmlspecialchars($violation['offense_category']) ?></dd>
+        <section class="content-grid">
+            <article class="info-card">
+                <h2>Overview</h2>
+                <dl class="info-list">
+                    <div class="info-row">
+                        <dt>Student</dt>
+                        <dd><?= htmlspecialchars($studentName); ?></dd>
+                    </div>
+                    <div class="info-row">
+                        <dt>Category</dt>
+                        <dd><?= htmlspecialchars($category); ?></dd>
+                    </div>
+                    <div class="info-row">
+                        <dt>Type</dt>
+                        <dd><?= htmlspecialchars($type); ?></dd>
+                    </div>
+                </dl>
+            </article>
+
+            <article class="summary-card">
+                <h2>Description</h2>
+                <?php if ($description !== ''): ?>
+                    <p><?= nl2br(htmlspecialchars($description, ENT_QUOTES, 'UTF-8')); ?></p>
+                <?php else: ?>
+                    <p class="muted"><em>No additional description was provided.</em></p>
+                <?php endif; ?>
+            </article>
+        </section>
+
+        <section class="evidence-panel">
+            <header>
+                <div>
+                    <h2>Photo evidence</h2>
+                    <p class="muted">Visual context supplied with the report.</p>
                 </div>
-
-                <div class="row">
-                    <dt>Type</dt>
-                    <dd><?= htmlspecialchars($violation['offense_type']) ?></dd>
-                </div>
-
-                <div class="row">
-                    <dt>Description</dt>
-                    <dd><?= htmlspecialchars($violation['description']) ?></dd>
-                </div>
-            </dl>
-
-            <?php if (!empty($violation['photo'])): ?>
-                <figure class="evidence">
-                    <img
-                        src="../uploads/<?= htmlspecialchars($violation['photo']) ?>"
-                        alt="Photo evidence for <?= htmlspecialchars($violation['first_name'].' '.$violation['last_name']) ?>"
-                        loading="lazy">
-                    <figcaption>Photo evidence</figcaption>
+            </header>
+            <?php if ($photoSrc !== ''): ?>
+                <figure>
+                    <img src="<?= htmlspecialchars($photoSrc, ENT_QUOTES, 'UTF-8'); ?>" alt="Photo evidence for <?= htmlspecialchars($studentName, ENT_QUOTES, 'UTF-8'); ?>" loading="lazy">
+                    <figcaption><?= htmlspecialchars($studentName, ENT_QUOTES, 'UTF-8'); ?></figcaption>
                 </figure>
             <?php else: ?>
-                <p class="muted no-photo"><em>No photo evidence uploaded.</em></p>
+                <div class="empty-evidence">
+                    <span class="muted">No photo evidence uploaded.</span>
+                </div>
             <?php endif; ?>
-
-            <div class="meta">
-                <small>Reported at: <?= htmlspecialchars($violation['reported_at']) ?></small>
-            </div>
         </section>
     </main>
 <?php else: ?>
-    <main class="layout">
+    <main class="violation-shell">
         <section class="empty-state">
             <h2>Violation not found</h2>
             <p class="muted">The report you’re looking for doesn’t exist or was removed.</p>
