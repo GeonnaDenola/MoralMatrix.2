@@ -307,9 +307,7 @@ main.page-wrapper{
   border: 1px solid rgba(180, 192, 214, 0.55);
 }
 
-.meta{
-  min-width: 0;
-}
+.meta{ min-width: 0; }
 
 .id{
   font-weight: 700;
@@ -337,9 +335,7 @@ main.page-wrapper{
   white-space: nowrap;
 }
 
-.card-right{
-  margin-left: auto;
-}
+.card-right{ margin-left: auto; }
 
 .pill{
   display: inline-flex;
@@ -386,30 +382,16 @@ main.page-wrapper{
   background: rgba(254, 235, 235, 0.8);
 }
 
-.skeleton{
-  position: relative;
-  overflow: hidden;
-}
+.skeleton{ position: relative; overflow: hidden; }
 
-.sk{
-  background: rgba(226, 232, 240, 0.7);
-  border-radius: 8px;
-}
+.sk{ background: rgba(226, 232, 240, 0.7); border-radius: 8px; }
 
-.sk-line{
-  width: 160px;
-  height: 12px;
-  margin: 6px 0;
-}
+.sk-line{ width: 160px; height: 12px; margin: 6px 0; }
 
 .sk-line.short{ width: 120px; }
 .sk-line.tiny{ width: 90px; height: 10px; }
 
-.sk-pill{
-  width: 60px;
-  height: 26px;
-  border-radius: 999px;
-}
+.sk-pill{ width: 60px; height: 26px; border-radius: 999px; }
 
 .skeleton::after{
   content:"";
@@ -420,14 +402,37 @@ main.page-wrapper{
   animation: shimmer 1.3s infinite;
 }
 
-@keyframes shimmer{
-  100%{ transform: translateX(100%); }
-}
+@keyframes shimmer{ 100%{ transform: translateX(100%); } }
 
 *{ scrollbar-width: thin; scrollbar-color: #c5cfde transparent; }
 *::-webkit-scrollbar{ width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb{ background: #c5cfde; border-radius: 999px; }
 *::-webkit-scrollbar-track{ background: transparent; }
+
+/* Pagination */
+.pager{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.pager__info{
+  color: var(--mm-muted);
+  font-weight: 600;
+}
+.pager__actions{
+  display: flex;
+  gap: 10px;
+}
+.pager__btn{
+  min-width: 108px;
+}
+.pager__btn[disabled]{
+  opacity: .55;
+  cursor: not-allowed;
+}
 
 @media (max-width: 1080px){
   .cardContainer{
@@ -471,12 +476,16 @@ main.page-wrapper{
     padding: calc(var(--header-h, 64px) + 8px) 18px 48px;
   }
 
-  .page-shell{
-    border-radius: 18px;
-  }
+  .page-shell{ border-radius: 18px; }
 
   .cardContainer{
     grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .pager{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 

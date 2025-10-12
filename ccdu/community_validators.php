@@ -1,7 +1,7 @@
 <?php
 include '../includes/header.php';
 include '../config.php';
-include 'page_buttons.php';
+include 'page_buttons.php'; // (not used anymore, but left in place)
 include __DIR__ . '/_scanner.php';
 
 /* ---------------- Database ---------------- */
@@ -31,7 +31,15 @@ $sortMap = [
 ];
 if (!array_key_exists($sort, $sortMap)) $sort = 'recent';
 
-/* ---------------- Query ---------------- */
+/* ---------------- Pagination ---------------- */
+$perPage = (int)($_GET['per_page'] ?? 12);
+if ($perPage < 1)   $perPage = 12;
+if ($perPage > 60)  $perPage = 60; // safety cap
+
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1) $page = 1;
+
+/* ---------------- WHERE builder ---------------- */
 $where   = [];
 $params  = [];
 $types   = '';
@@ -47,17 +55,43 @@ if ($q !== '') {
   $params[] = $kw;
 }
 
-$sql = "SELECT validator_id, v_username, created_at, expires_at, active, designation
-        FROM validator_account";
-if ($where) $sql .= ' WHERE '.implode(' AND ', $where);
-$sql .= ' ORDER BY '.$sortMap[$sort];
+$whereSql = $where ? (' WHERE '.implode(' AND ', $where)) : '';
 
-$stmt = $conn->prepare($sql);
+/* ---------------- Count first ---------------- */
+$sqlCount = "SELECT COUNT(*) AS cnt FROM validator_account" . $whereSql;
+$stmtCount = $conn->prepare($sqlCount);
+if ($stmtCount === false) { die("Prepare error: " . $conn->error); }
+if ($types) { $stmtCount->bind_param($types, ...$params); }
+if (!$stmtCount->execute()) { die("Query error: " . $stmtCount->error); }
+$resCount = $stmtCount->get_result()->fetch_assoc();
+$total    = (int)($resCount['cnt'] ?? 0);
+$stmtCount->close();
+
+$totalPages = max(1, (int)ceil($total / $perPage));
+if ($page > $totalPages) $page = $totalPages;
+$offset = ($page - 1) * $perPage;
+
+/* ---------------- Fetch current page ---------------- */
+/* Safe to inline LIMIT/OFFSET after casting to int */
+$orderSql = $sortMap[$sort];
+$sqlData  = "SELECT validator_id, v_username, created_at, expires_at, active, designation
+             FROM validator_account{$whereSql}
+             ORDER BY {$orderSql}
+             LIMIT {$perPage} OFFSET {$offset}";
+
+$stmt = $conn->prepare($sqlData);
 if ($stmt === false) { die("Prepare error: " . $conn->error); }
 if ($types) { $stmt->bind_param($types, ...$params); }
 if (!$stmt->execute()) { die("Query error: " . $stmt->error); }
 $result = $stmt->get_result();
-$total  = $result->num_rows;
+
+/* Helper: build URL for a page while preserving filters */
+function page_url($p, $perPage){
+  $qs = $_GET;
+  $qs['page'] = max(1, (int)$p);
+  $qs['per_page'] = $perPage;
+  return '?' . http_build_query($qs);
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -65,13 +99,9 @@ $total  = $result->num_rows;
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Community Service Validators</title>
-
-  <!-- Your fixed header + sidebar live outside this file.
-       The CSS below reserves space so content never hides under them. -->
-  <link rel="stylesheet" href="../css/community_validator.css?v=2.1"/>
+  <link rel="stylesheet" href="../css/community_validator.css?v=2.2"/>
 </head>
 
-<!-- IMPORTANT: this class enables the offset fix -->
 <body class="has-fixed-chrome">
   <main class="validators-shell">
     <section class="validators-page" aria-labelledby="page-title">
@@ -144,7 +174,7 @@ $total  = $result->num_rows;
       <!-- Results meta -->
       <div class="results-meta" role="status" aria-live="polite">
         <span class="pill"><?= ucfirst($status) ?></span>
-        <span class="count"><?= $total ?> <?= $total === 1 ? 'record' : 'records' ?></span>
+        <span class="count"><?= number_format($total) ?> <?= $total === 1 ? 'record' : 'records' ?></span>
         <?php if ($q !== ''): ?>
           <span class="query">for “<?= htmlspecialchars($q) ?>”</span>
         <?php endif; ?>
@@ -211,8 +241,26 @@ $total  = $result->num_rows;
         </section>
       <?php endif; ?>
 
+      <!-- Pager -->
       <div class="pager-area">
-        <?php /* echo_page_buttons(); */ ?>
+        <div class="pager" role="navigation" aria-label="Pagination">
+          <div class="pager__info">
+            Page <?= $total ? $page : 1 ?> of <?= $totalPages ?> • <?= number_format($total) ?> total
+          </div>
+          <div class="pager__actions">
+            <?php if ($page > 1): ?>
+              <a class="btn btn-outline pager__btn" href="<?= htmlspecialchars(page_url($page-1, $perPage)) ?>" rel="prev" aria-label="Previous page">← Prev</a>
+            <?php else: ?>
+              <span class="btn btn-outline pager__btn is-disabled" aria-disabled="true">← Prev</span>
+            <?php endif; ?>
+
+            <?php if ($page < $totalPages): ?>
+              <a class="btn btn-outline pager__btn" href="<?= htmlspecialchars(page_url($page+1, $perPage)) ?>" rel="next" aria-label="Next page">Next →</a>
+            <?php else: ?>
+              <span class="btn btn-outline pager__btn is-disabled" aria-disabled="true">Next →</span>
+            <?php endif; ?>
+          </div>
+        </div>
       </div>
     </section>
   </main>

@@ -12,274 +12,337 @@ function activeClass($file){ global $active; return $active === $file ? ' is-act
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Dashboard</title>
-  <link rel="stylesheet" href="../css/dashboard_ccd.css?v=3"/>
+  <link rel="stylesheet" href="../css/dashboard_ccd.css?v=4"/>
 </head>
 <body>
 <main class="page-wrapper">
-    <div class="page-shell">
-      <header class="page-head">
-        <div class="page-head__info">
-          <h1>Dashboard</h1>
-          <p>Monitor community service students and quickly jump to their profiles.</p>
-        </div>
-        <div class="page-head__actions">
-          <button class="btn btn-ghost" id="toggleFilters" type="button" aria-expanded="false" aria-controls="filters">
-            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <div class="page-shell">
+    <header class="page-head">
+      <div class="page-head__info">
+        <h1>Dashboard</h1>
+        <p>Monitor community service students and quickly jump to their profiles.</p>
+      </div>
+      <div class="page-head__actions">
+        <button class="btn btn-ghost" id="toggleFilters" type="button" aria-expanded="false" aria-controls="filters">
+          <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Filters
+        </button>
+        <button class="btn btn-muted" id="btnClear" type="button" aria-label="Clear filters">
+          <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 18L18 6M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Clear
+        </button>
+      </div>
+    </header>
+
+    <section class="filters-panel" id="filters" data-collapsed="true" aria-label="Filters">
+      <div class="filters-grid">
+        <label class="field field--search">
+          <span class="field-label sr-only">Search</span>
+          <div class="input-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 21l-4.2-4.2m1.2-4.8A7 7 0 1 1 5 5a7 7 0 0 1 13 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            Filters
+            <input type="text" id="search" class="input" placeholder="Search by ID or name..." aria-label="Search students by ID or name" autocomplete="off">
+          </div>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Institute</span>
+          <select class="input institute" aria-label="Filter by Institute">
+            <option value="">All Institutes</option>
+            <option value="IBCE">IBCE</option>
+            <option value="IHTM">IHTM</option>
+            <option value="IAS">IAS</option>
+            <option value="ITE">ITE</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Course</span>
+          <select class="input course" aria-label="Filter by Course">
+            <option value="">All Courses</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Level</span>
+          <select class="input level" aria-label="Filter by Level">
+            <option value="">All Levels</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Section</span>
+          <select class="input section" aria-label="Filter by Section">
+            <option value="">All Sections</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="cards-shell" aria-label="Students">
+      <div class="cardContainer" id="studentContainer" aria-live="polite"></div>
+
+      <!-- Pagination -->
+      <div class="pager" id="pager" aria-label="Pagination controls">
+        <div class="pager__info" id="pagerInfo">Page 1 of 1 • 0 total</div>
+        <div class="pager__actions">
+          <button class="btn btn-muted pager__btn" id="btnPrev" type="button" aria-label="Previous page" disabled>
+            &larr; Prev
           </button>
-          <button class="btn btn-muted" id="btnClear" type="button" aria-label="Clear filters">
-            <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 18L18 6M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            Clear
+          <button class="btn btn-muted pager__btn" id="btnNext" type="button" aria-label="Next page" disabled>
+            Next &rarr;
           </button>
         </div>
-      </header>
+      </div>
+    </section>
+  </div>
+</main>
 
-      <section class="filters-panel" id="filters" data-collapsed="true" aria-label="Filters">
-        <div class="filters-grid">
-          <label class="field field--search">
-            <span class="field-label sr-only">Search</span>
-            <div class="input-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M21 21l-4.2-4.2m1.2-4.8A7 7 0 1 1 5 5a7 7 0 0 1 13 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <input type="text" id="search" class="input" placeholder="Search by ID or name..." aria-label="Search students by ID or name" autocomplete="off">
-            </div>
-          </label>
+<script>
+  // --- Options (UI only) ---
+  const courses = {
+    'IBCE': ['BSIT','BSCA','BSA','BSOA','BSE','BSMA'],
+    'IHTM': ['BSTM','BSHM'],
+    'IAS' : ['BSBIO','ABH','BSLM'],
+    'ITE' : ['BSED-ENG','BSED-FIL','BSED-MATH','BEED','BSED-SS','BTVTE','BSED-SCI','BPED']
+  };
+  const levels = ["1","2","3","4"];
+  const sections = ["A","B","C","D"];
 
-          <label class="field">
-            <span class="field-label">Institute</span>
-            <select class="input institute" aria-label="Filter by Institute">
-              <option value="">All Institutes</option>
-              <option value="IBCE">IBCE</option>
-              <option value="IHTM">IHTM</option>
-              <option value="IAS">IAS</option>
-              <option value="ITE">ITE</option>
-            </select>
-          </label>
+  const instituteSelect = document.querySelector(".institute");
+  const courseSelect     = document.querySelector(".course");
+  const levelSelect      = document.querySelector(".level");
+  const sectionSelect    = document.querySelector(".section");
+  const searchInput      = document.getElementById("search");
+  const btnClear         = document.getElementById("btnClear");
+  const container        = document.getElementById("studentContainer");
+  const toggleFiltersBtn = document.getElementById("toggleFilters");
+  const filtersEl        = document.getElementById("filters");
 
-          <label class="field">
-            <span class="field-label">Course</span>
-            <select class="input course" aria-label="Filter by Course">
-              <option value="">All Courses</option>
-            </select>
-          </label>
+  // Pagination DOM
+  const pagerInfo = document.getElementById('pagerInfo');
+  const btnPrev   = document.getElementById('btnPrev');
+  const btnNext   = document.getElementById('btnNext');
 
-          <label class="field">
-            <span class="field-label">Level</span>
-            <select class="input level" aria-label="Filter by Level">
-              <option value="">All Levels</option>
-            </select>
-          </label>
+  // --- Paging state ---
+  const PAGE_SIZE = 50; // cards per page (adjust anytime)
+  let allStudents = [];
+  let filteredStudents = [];
+  let currentPage = 1;
 
-          <label class="field">
-            <span class="field-label">Section</span>
-            <select class="input section" aria-label="Filter by Section">
-              <option value="">All Sections</option>
-            </select>
-          </label>
+  // --- Small helpers ---
+  function skeleton(count = PAGE_SIZE){
+    const items = Array.from({length: count}).map(() => `
+      <div class="card skeleton" aria-hidden="true">
+        <div class="card-left">
+          <div class="avatar sk"></div>
+          <div class="meta">
+            <div class="sk sk-line"></div>
+            <div class="sk sk-line short"></div>
+            <div class="sk sk-line tiny"></div>
+          </div>
         </div>
-      </section>
+        <div class="card-right">
+          <span class="pill sk sk-pill"></span>
+        </div>
+      </div>
+    `);
+    return items.join("");
+  }
 
-      <section class="cards-shell" aria-label="Students">
-        <div class="cardContainer" id="studentContainer" aria-live="polite"></div>
-      </section>
-    </div>
-  </main>
+  function viewStudent(student_id){
+    window.location.href = "view_student.php?student_id=" + encodeURIComponent(student_id);
+  }
 
-
-  <script>
-    // --- Options (UI only) ---
-    const courses = {
-      'IBCE': ['BSIT','BSCA','BSA','BSOA','BSE','BSMA'],
-      'IHTM': ['BSTM','BSHM'],
-      'IAS' : ['BSBIO','ABH','BSLM'],
-      'ITE' : ['BSED-ENG','BSED-FIL','BSED-MATH','BEED','BSED-SS','BTVTE','BSED-SCI','BPED']
+  function getFiltersFromUI(){
+    return {
+      institute: instituteSelect.value,
+      course:    courseSelect.value,
+      level:     levelSelect.value,
+      section:   sectionSelect.value,
+      search:    searchInput.value.trim()
     };
-    const levels = ["1","2","3","4"];
-    const sections = ["A","B","C","D"];
+  }
 
-    const instituteSelect = document.querySelector(".institute");
-    const courseSelect     = document.querySelector(".course");
-    const levelSelect      = document.querySelector(".level");
-    const sectionSelect    = document.querySelector(".section");
-    const searchInput      = document.getElementById("search");
-    const btnClear         = document.getElementById("btnClear");
-    const container        = document.getElementById("studentContainer");
-    const toggleFiltersBtn = document.getElementById("toggleFilters");
-    const filtersEl        = document.getElementById("filters");
+  function applyFilters(){
+    const f = getFiltersFromUI();
+    const q = (f.search || "").toLowerCase();
 
-    // --- Small helpers ---
-    function skeleton(count = 8){
-      const items = Array.from({length: count}).map(() => `
-        <div class="card skeleton" aria-hidden="true">
-          <div class="card-left">
-            <div class="avatar sk"></div>
-            <div class="meta">
-              <div class="sk sk-line"></div>
-              <div class="sk sk-line short"></div>
-              <div class="sk sk-line tiny"></div>
-            </div>
-          </div>
-          <div class="card-right">
-            <span class="pill sk sk-pill"></span>
+    filteredStudents = allStudents.filter(s => {
+      return (!f.institute || s.institute === f.institute) &&
+             (!f.course || s.course === f.course) &&
+             (!f.level || s.level == f.level) &&
+             (!f.section || String(s.section).toUpperCase() === String(f.section).toUpperCase()) &&
+             (!q || (
+               String(s.student_id).toLowerCase().includes(q) ||
+               String(s.first_name).toLowerCase().includes(q) ||
+               String(s.last_name).toLowerCase().includes(q)
+             ));
+    });
+    currentPage = 1; // reset to first page on new filter
+  }
+
+  function updatePager(total, totalPages){
+    pagerInfo.textContent = `Page ${total ? currentPage : 1} of ${totalPages || 1} • ${total} total`;
+    btnPrev.disabled = currentPage <= 1 || total === 0;
+    btnNext.disabled = currentPage >= (totalPages || 1) || total === 0;
+  }
+
+  function renderPage(){
+    const total = filteredStudents.length;
+
+    if (!total){
+      container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Try removing some filters or changing your search.</div></div>";
+      updatePager(0, 1);
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = filteredStudents.slice(start, start + PAGE_SIZE);
+
+    const frag = document.createDocumentFragment();
+
+    pageItems.forEach(student => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "card";
+      card.onclick = () => viewStudent(student.student_id);
+
+      const mid = student.middle_name ? ` ${student.middle_name}` : '';
+      const photo = student.photo ? `../admin/uploads/${student.photo}` : '../admin/uploads/placeholder.png';
+
+      const levelSection = `${student.level}\u2011${String(student.section).toUpperCase()}`;
+
+      card.innerHTML = `
+        <div class="card-left">
+          <img class="avatar" src="${photo}" alt="Photo of ${student.first_name} ${student.last_name}"
+               loading="lazy" decoding="async"
+               onerror="this.onerror=null;this.src='../admin/uploads/placeholder.png';">
+          <div class="meta">
+            <div class="id">${student.student_id}</div>
+            <div class="name">${student.last_name}, ${student.first_name}${mid}</div>
+            <div class="sub">${student.institute} &bull; ${student.course} &bull; ${levelSection}</div>
           </div>
         </div>
-      `);
-      return items.join("");
-    }
-
-    function viewStudent(student_id){
-      window.location.href = "view_student.php?student_id=" + encodeURIComponent(student_id);
-    }
-
-    function loadStudents(filters = {}) {
-      container.innerHTML = skeleton();
-
-      fetch("get_students.php", { cache: "no-store" })
-        .then(response => response.json())
-        .then(data => {
-          container.innerHTML = "";
-
-          if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Try removing some filters or changing your search.</div></div>";
-            return;
-          }
-
-          const q = (filters.search || "").toLowerCase();
-          const filtered = data.filter(student => {
-            const s = student;
-            return (!filters.institute || s.institute === filters.institute) &&
-                   (!filters.course || s.course === filters.course) &&
-                   (!filters.level || s.level == filters.level) &&
-                   (!filters.section || String(s.section).toUpperCase() === String(filters.section).toUpperCase()) &&
-                   (!q || (
-                    String(s.student_id).toLowerCase().includes(q) ||
-                    String(s.first_name).toLowerCase().includes(q) ||
-                    String(s.last_name).toLowerCase().includes(q)
-                   ));
-          });
-
-          if (filtered.length === 0) {
-            container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Try removing some filters or changing your search.</div></div>";
-            return;
-          }
-
-          const frag = document.createDocumentFragment();
-
-          filtered.forEach(student => {
-            const card = document.createElement("button");
-            card.type = "button";
-            card.className = "card";
-            card.onclick = () => viewStudent(student.student_id);
-
-            const mid = student.middle_name ? ` ${student.middle_name}` : '';
-            const photo = student.photo ? `../admin/uploads/${student.photo}` : '../admin/uploads/placeholder.png';
-
-            // Level-Section: use non-breaking hyphen and uppercase section (e.g., 1-B)
-            const levelSection = `${student.level}\u2011${String(student.section).toUpperCase()}`;
-
-            card.innerHTML = `
-              <div class="card-left">
-                <img class="avatar" src="${photo}" alt="Photo of ${student.first_name} ${student.last_name}"
-                     loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='../admin/uploads/placeholder.png';">
-                <div class="meta">
-                  <div class="id">${student.student_id}</div>
-                  <div class="name">${student.last_name}, ${student.first_name}${mid}</div>
-                  <div class="sub">${student.institute} &bull; ${student.course} &bull; ${levelSection}</div>
-                </div>
-              </div>
-              <div class="card-right">
-                <span class="pill" title="Level & Section">${levelSection}</span>
-              </div>
-            `;
-            frag.appendChild(card);
-          });
-
-          container.appendChild(frag);
-        })
-        .catch(error => {
-          container.innerHTML = "<div class='empty error' role='alert'>Error loading data.</div>";
-          console.error("Error fetching student data:", error);
-        });
-    }
-
-    function filterStudents() {
-      const filters = {
-        institute: instituteSelect.value,
-        course:    courseSelect.value,
-        level:     levelSelect.value,
-        section:   sectionSelect.value,
-        search:    searchInput.value.trim()
-      };
-      loadStudents(filters);
-    }
-
-    // --- Wire up selects ---
-    function populateCourseSelect(inst){
-      courseSelect.innerHTML = '<option value="">All Courses</option>';
-      if (inst && courses[inst]) {
-        courses[inst].forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c; opt.textContent = c;
-          courseSelect.appendChild(opt);
-        });
-      }
-    }
-
-    instituteSelect.addEventListener("change", function () {
-      populateCourseSelect(this.value);
-      filterStudents();
+        <div class="card-right">
+          <span class="pill" title="Level & Section">${levelSection}</span>
+        </div>
+      `;
+      frag.appendChild(card);
     });
 
-    levels.forEach(level => {
-      const opt = document.createElement("option");
-      opt.value = level; opt.textContent = level; levelSelect.appendChild(opt);
-    });
-    sections.forEach(section => {
-      const opt = document.createElement("option");
-      opt.value = section; opt.textContent = section; sectionSelect.appendChild(opt);
-    });
+    container.innerHTML = "";
+    container.appendChild(frag);
+    updatePager(total, totalPages);
+  }
 
-    courseSelect.addEventListener("change", filterStudents);
-    levelSelect.addEventListener("change", filterStudents);
-    sectionSelect.addEventListener("change", filterStudents);
-    searchInput.addEventListener("input", filterStudents);
+  function fetchStudents(){
+    container.innerHTML = skeleton();
+    fetch("get_students.php", { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => {
+        allStudents = Array.isArray(data) ? data : [];
+        if (!allStudents.length){
+          container.innerHTML = "<div class='empty' role='status'><div class='empty__title'>No student records found</div><div class='empty__text'>Add records to get started.</div></div>";
+          updatePager(0, 1);
+          return;
+        }
+        applyFilters();
+        renderPage();
+      })
+      .catch(err => {
+        container.innerHTML = "<div class='empty error' role='alert'>Error loading data.</div>";
+        updatePager(0, 1);
+        console.error("Error fetching student data:", err);
+      });
+  }
 
-    // Clear filters button
-    btnClear.addEventListener("click", () => {
-      searchInput.value = "";
-      instituteSelect.value = "";
-      populateCourseSelect("");
-      levelSelect.value = "";
-      sectionSelect.value = "";
-      loadStudents();
-    });
+  function filterStudents(){
+    applyFilters();
+    renderPage();
+  }
 
-    // Mobile filter toggle (UI only)
-    function setFiltersCollapsed(collapsed) {
-      filtersEl.dataset.collapsed = String(collapsed);
-      toggleFiltersBtn.setAttribute('aria-expanded', String(!collapsed));
+  // --- Wire up selects ---
+  function populateCourseSelect(inst){
+    courseSelect.innerHTML = '<option value="">All Courses</option>';
+    if (inst && courses[inst]) {
+      courses[inst].forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c; opt.textContent = c;
+        courseSelect.appendChild(opt);
+      });
     }
-    toggleFiltersBtn.addEventListener('click', () => {
-      const collapsed = filtersEl.dataset.collapsed !== 'false';
-      setFiltersCollapsed(!collapsed);
-    });
+  }
 
-    // Auto toggle based on width (show on desktop)
-    const mq = window.matchMedia('(min-width: 900px)');
-    function handleMQ(e){ setFiltersCollapsed(!e.matches); }
-    mq.addEventListener ? mq.addEventListener('change', handleMQ) : mq.addListener(handleMQ);
+  instituteSelect.addEventListener("change", function () {
+    populateCourseSelect(this.value);
+    filterStudents();
+  });
 
-    // Initial load
-    document.addEventListener('DOMContentLoaded', () => {
-      handleMQ(mq);
-      loadStudents();
-    });
-  </script>
+  levels.forEach(level => {
+    const opt = document.createElement("option");
+    opt.value = level; opt.textContent = level; levelSelect.appendChild(opt);
+  });
+  sections.forEach(section => {
+    const opt = document.createElement("option");
+    opt.value = section; opt.textContent = section; sectionSelect.appendChild(opt);
+  });
+
+  courseSelect.addEventListener("change", filterStudents);
+  levelSelect.addEventListener("change", filterStudents);
+  sectionSelect.addEventListener("change", filterStudents);
+  searchInput.addEventListener("input", filterStudents);
+
+  // Clear filters button
+  btnClear.addEventListener("click", () => {
+    searchInput.value = "";
+    instituteSelect.value = "";
+    populateCourseSelect("");
+    levelSelect.value = "";
+    sectionSelect.value = "";
+    filterStudents();
+  });
+
+  // Pagination controls
+  btnPrev.addEventListener('click', () => {
+    if (currentPage > 1){
+      currentPage--;
+      renderPage();
+    }
+  });
+  btnNext.addEventListener('click', () => {
+    currentPage++;
+    renderPage();
+  });
+
+  // Mobile filter toggle (UI only)
+  function setFiltersCollapsed(collapsed) {
+    filtersEl.dataset.collapsed = String(collapsed);
+    toggleFiltersBtn.setAttribute('aria-expanded', String(!collapsed));
+  }
+  toggleFiltersBtn.addEventListener('click', () => {
+    const collapsed = filtersEl.dataset.collapsed !== 'false';
+    setFiltersCollapsed(!collapsed);
+  });
+
+  // Auto toggle based on width (show on desktop)
+  const mq = window.matchMedia('(min-width: 900px)');
+  function handleMQ(e){ setFiltersCollapsed(!e.matches); }
+  mq.addEventListener ? mq.addEventListener('change', handleMQ) : mq.addListener(handleMQ);
+
+  // Initial load
+  document.addEventListener('DOMContentLoaded', () => {
+    handleMQ(mq);
+    fetchStudents();
+  });
+</script>
 </body>
 </html>
