@@ -131,8 +131,68 @@ function count_entries(mysqli $conn, string $student_id, ?string $minServiceDate
   return (int)$c;
 }
 
+/**
+ * Build a set of student_ids who have ONGOING community service
+ * (required > logged), even if they have 0 entries.
+ */
+function ongoing_student_ids(mysqli $conn, bool $hasEntries): array {
+  // 1) Count grave vs non-grave per student (exclude void/canceled if status exists)
+  $hasStatus = false;
+  if ($r = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) { $hasStatus = ($r->num_rows > 0); $r->close(); }
+
+  $sqlReq = "
+    SELECT student_id,
+      SUM(CASE WHEN (LOWER(offense_category) LIKE '%grave%' AND LOWER(offense_category) NOT LIKE '%less%')
+               THEN 1 ELSE 0 END) AS grave_cnt,
+      SUM(CASE WHEN NOT (LOWER(offense_category) LIKE '%grave%' AND LOWER(offense_category) NOT LIKE '%less%')
+               THEN 1 ELSE 0 END) AS non_grave_cnt
+    FROM student_violation
+  ";
+  if ($hasStatus) {
+    $sqlReq .= " WHERE LOWER(status) NOT IN ('void','voided','canceled','cancelled') ";
+  }
+  $sqlReq .= " GROUP BY student_id";
+
+  $requiredByStudent = [];
+  if ($rs = $conn->query($sqlReq)) {
+    while ($row = $rs->fetch_assoc()) {
+      $sid    = (string)$row['student_id'];
+      $grave  = (int)($row['grave_cnt'] ?? 0);
+      $minor  = (int)($row['non_grave_cnt'] ?? 0);
+      $requiredByStudent[$sid] = ($grave * 20) + (intdiv($minor, 3) * 10);
+    }
+    $rs->close();
+  }
+
+  if (empty($requiredByStudent)) return []; // nobody has violations
+
+  // 2) Sum logged hours per student (if entries table exists)
+  $loggedByStudent = [];
+  if ($hasEntries) {
+    if ($rs = $conn->query("SELECT student_id, COALESCE(SUM(hours),0) AS total FROM community_service_entries GROUP BY student_id")) {
+      while ($row = $rs->fetch_assoc()) {
+        $loggedByStudent[(string)$row['student_id']] = (float)$row['total'];
+      }
+      $rs->close();
+    }
+  }
+
+  // 3) Pick those with required > logged
+  $ongoing = [];
+  foreach ($requiredByStudent as $sid => $req) {
+    $logged = (float)($loggedByStudent[$sid] ?? 0.0);
+    if ($req > 0 && $req - $logged > 0.00001) {
+      $ongoing[$sid] = true;
+    }
+  }
+
+  return array_keys($ongoing);
+}
+
 /* ------- Students that match filters (based on entries) ------- */
 $studentIds = [];
+
+// A) Students that have entries matching the filters (original behavior)
 if ($hasEntries) {
   $sql = "SELECT DISTINCT e.student_id FROM community_service_entries e WHERE 1=1";
   $types = ''; $params = [];
@@ -147,6 +207,18 @@ if ($hasEntries) {
   while ($row = $res->fetch_assoc()) $studentIds[] = $row['student_id'];
   $st->close();
 }
+
+// B) Union with students who STILL HAVE REMAINING HOURS, even with 0 entries
+$ongoingIds = ongoing_student_ids($conn, $hasEntries);
+$studentIds = array_values(array_unique(array_merge($studentIds, $ongoingIds)));
+
+// C) If a specific student_id filter was typed, ensure it's included even if no entries yet
+if ($studentFilter !== '' && !in_array($studentFilter, $studentIds, true)) {
+  $studentIds[] = $studentFilter;
+}
+
+// Sort list (by student_id ascending) for stable display
+sort($studentIds, SORT_STRING);
 
 /* ------- Build cards ------- */
 $cards = [];
@@ -170,7 +242,7 @@ if (!empty($studentIds)) {
     $remaining= max(0, $required - $logged);
 
     $latest   = latest_entry($conn, $sid, $startDate ? $startDate->format('Y-m-d') : null, $validatorId);
-    $inCount  = count_entries($conn, $sid, $startDate ? $startDate->format('Y-m-d') : null, $validatorId);
+    $inCount  = $hasEntries ? count_entries($conn, $sid, $startDate ? $startDate->format('Y-m-d') : null, $validatorId) : 0;
 
     $thumbUrl = '';
     if ($latest && !empty($latest['photo_paths'])) {
@@ -254,7 +326,6 @@ if (!empty($studentIds)) {
   <div class="pagehead">
     <div>
       <h1>Community Service — Students</h1>
-      <div class="note">Read-only overview. Click a student to view validator updates in a popup.</div>
     </div>
   </div>
 
@@ -289,17 +360,20 @@ if (!empty($studentIds)) {
     </div>
   </form>
 
-  <?php if (!$hasEntries): ?>
-    <div class="empty">No <code>community_service_entries</code> table found.</div>
+  <?php if (!$hasEntries && empty($studentIds)): ?>
+    <div class="empty">No <code>community_service_entries</code> table found and no students with ongoing community service.</div>
   <?php elseif (empty($cards)): ?>
     <div class="empty">No students match your filters.</div>
   <?php else: ?>
     <div class="summary">
-      Showing <strong><?= count($cards) ?></strong> student<?= count($cards)===1?'':'s' ?><?= $studentFilter?' for ID '.htmlspecialchars($studentFilter):'' ?><?= $validatorId>0?' • filtered by validator':'' ?><?= $period!=='all'?' • period: '.$period:'' ?>
+      Showing <strong><?= count($cards) ?></strong> student<?= count($cards)===1?'':'s' ?>
+      <?= $studentFilter ? ' for ID '.htmlspecialchars($studentFilter) : '' ?>
+      <?= $validatorId>0 ? ' • filtered by validator' : '' ?>
+      <?= $period!=='all' ? ' • period: '.$period : '' ?>
     </div>
 
     <div class="grid">
-      <?php foreach ($cards as $c): 
+      <?php foreach ($cards as $c):
         $latest = $c['latest'];
         $lastDate = $latest ? ($latest['service_date'] ?? $latest['created_at']) : null;
         $detailsUrl = 'community_service_view.php?student_id=' . urlencode($c['student_id']);
@@ -365,7 +439,6 @@ if (!empty($studentIds)) {
   const btnClose = modal.querySelector('.modal-close');
 
   function openModalWith(url){
-    // add modal=1 for compact rendering
     const modalUrl = url + (url.includes('?') ? '&' : '?') + 'modal=1';
     body.innerHTML = 'Loading…';
     fetch(modalUrl, { credentials: 'same-origin' })
@@ -375,7 +448,6 @@ if (!empty($studentIds)) {
         modal.classList.add('open');
         backdrop.classList.add('open');
         document.body.style.overflow = 'hidden';
-        // push a state so back button closes modal
         if (!history.state || history.state.csModalOpen !== true) {
           history.pushState({ csModalOpen: true }, '');
         }
@@ -392,7 +464,6 @@ if (!empty($studentIds)) {
     modal.classList.remove('open');
     backdrop.classList.remove('open');
     document.body.style.overflow = '';
-    // if history was pushed, pop it
     if (history.state && history.state.csModalOpen === true) {
       history.back();
     }
@@ -401,10 +472,7 @@ if (!empty($studentIds)) {
   document.addEventListener('click', function(e){
     const card = e.target.closest('.js-student-card');
     if (!card) return;
-
-    // allow new-tab, middle click, or with modifiers
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-
     e.preventDefault();
     const url = card.getAttribute('data-modal-url') || card.getAttribute('href');
     if (url) openModalWith(url);
@@ -414,8 +482,7 @@ if (!empty($studentIds)) {
   backdrop.addEventListener('click', closeModal);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
 
-  // Close modal on browser back (after pushState)
-  window.addEventListener('popstate', function(){
+  window.addEventListener('popstate', function (){
     if (modal.classList.contains('open')) {
       modal.classList.remove('open');
       backdrop.classList.remove('open');

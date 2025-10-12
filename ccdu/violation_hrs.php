@@ -7,42 +7,45 @@
  *   - Each GRAVE (category contains 'grave' but NOT 'less') = 20 hours
  *   - Every 3 of all other categories (light/moderate/less grave/minor/blank) = 10 hours
  *
- * Returned types:
- *   - Required: int (multiple of 10 or 20)
- *   - Logged: float (sum of validator entries)
- *   - Remaining: float (never negative)
+ * Returns:
+ *   - communityServiceHours(...)    : int    (required hours)
+ *   - communityServiceLogged(...)   : float  (sum of logged hours)
+ *   - communityServiceRemaining(...): float  (max(required - logged, 0))
  */
 
-/** Small helper: does a table have a column? */
+/** Safe “has column” check (no prepared SHOW; sanitize identifiers) */
 function _hasColumn(mysqli $conn, string $table, string $column): bool {
-    $q = $conn->prepare("SHOW COLUMNS FROM `$table` LIKE ?");
-    if (!$q) return false;
-    $q->bind_param("s", $column);
-    $q->execute();
-    $res = $q->get_result();
-    $ok  = ($res && $res->num_rows > 0);
-    $q->close();
+    // allow only [A-Za-z0-9_]
+    $table  = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+    if ($table === '' || $column === '') return false;
+
+    $sql = "SHOW COLUMNS FROM `$table` LIKE '$column'";
+    $res = $conn->query($sql);
+    if (!$res) return false;
+    $ok = ($res->num_rows > 0);
+    $res->free();
     return $ok;
 }
 
-/**
- * REQUIRED hours from violations (robust).
- * Compatible with your old call site — you can keep using communityServiceHours($conn, $student_id).
- */
+/** REQUIRED hours from violations */
 function communityServiceHours(mysqli $conn, string $student_id): int {
     $hasStatus = _hasColumn($conn, 'student_violation', 'status');
 
-    // Count grave vs non-grave in SQL (case-insensitive), excluding void/canceled if status exists
+    // Normalize category to handle NULL/blank
+    $cat = "LOWER(TRIM(COALESCE(offense_category,'')))";
+
     $sql = "
         SELECT
           SUM(CASE
-                WHEN (LOWER(offense_category) LIKE '%grave%'
-                      AND LOWER(offense_category) NOT LIKE '%less%')
-                THEN 1 ELSE 0 END) AS grave_cnt,
+                WHEN ($cat LIKE '%grave%' AND $cat NOT LIKE '%less%') THEN 1
+                ELSE 0
+              END) AS grave_cnt,
           SUM(CASE
-                WHEN NOT (LOWER(offense_category) LIKE '%grave%'
-                          AND LOWER(offense_category) NOT LIKE '%less%')
-                THEN 1 ELSE 0 END) AS non_grave_cnt
+                -- everything NOT “grave but not less” is counted as non_grave (including blank)
+                WHEN ($cat LIKE '%grave%' AND $cat NOT LIKE '%less%') THEN 0
+                ELSE 1
+              END) AS non_grave_cnt
         FROM student_violation
         WHERE student_id = ?
     ";
@@ -52,7 +55,6 @@ function communityServiceHours(mysqli $conn, string $student_id): int {
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) return 0;
-
     $stmt->bind_param("s", $student_id);
     if (!$stmt->execute()) { $stmt->close(); return 0; }
 
@@ -60,23 +62,21 @@ function communityServiceHours(mysqli $conn, string $student_id): int {
     if (!$res) { $stmt->close(); return 0; }
 
     $row = $res->fetch_assoc() ?: ['grave_cnt' => 0, 'non_grave_cnt' => 0];
+    $res->free();
     $stmt->close();
 
-    $grave     = (int)($row['grave_cnt'] ?? 0);
-    $nonGrave  = (int)($row['non_grave_cnt'] ?? 0);
+    $grave    = (int)($row['grave_cnt'] ?? 0);
+    $nonGrave = (int)($row['non_grave_cnt'] ?? 0);
 
-    // Apply the rule
-    $required = ($grave * 20) + (intdiv($nonGrave, 3) * 10);
-
-    return (int)$required;
+    return (int)(($grave * 20) + (intdiv($nonGrave, 3) * 10));
 }
 
 /** LOGGED hours from community_service_entries (sum) */
 function communityServiceLogged(mysqli $conn, string $student_id): float {
-    // Early out if table is missing
-    $chk = $conn->query("SHOW TABLES LIKE 'community_service_entries'");
-    if (!$chk || $chk->num_rows === 0) { if ($chk) $chk->close(); return 0.0; }
-    $chk->close();
+    // Early out if the table doesn’t exist
+    $res = $conn->query("SHOW TABLES LIKE 'community_service_entries'");
+    if (!$res || $res->num_rows === 0) { if ($res) $res->free(); return 0.0; }
+    $res->free();
 
     $sql = "SELECT COALESCE(SUM(hours),0) AS total FROM community_service_entries WHERE student_id = ?";
     $stmt = $conn->prepare($sql);
