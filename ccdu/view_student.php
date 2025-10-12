@@ -123,6 +123,11 @@ foreach ($violationsAll as $vv) {
 }
 $hours = intdiv($modLightCount, 3) * 10 + ($graveCount * 20);
 
+$requiredHours  = communityServiceHours($conn, $student_id);
+$loggedHours    = communityServiceLogged($conn, $student_id);
+$remainingHours = communityServiceRemaining($conn, $student_id); // or $requiredHours - $loggedHours with max(0, …)
+
+
 /* Map of already-assigned violation ids */
 $assignedIds = [];
 $hasAssignCol = $hasViolCol = false;
@@ -241,11 +246,15 @@ function viol_page_url($p, $pp = null){
           <aside class="profile-sidebar">
             <article class="card metric-card">
               <p class="eyebrow">Community Service</p>
+
               <p class="metric-card__value">
-                <?= htmlspecialchars((string)$hours) ?>
-                <span><?= $hours === 1 ? 'hour logged' : 'hours logged' ?></span>
+                  <?= number_format((float)$remainingHours, 2) ?>
+                  <span><?= ((float)$remainingHours === 1.0) ? 'hour remaining' : 'hours remaining' ?></span>
               </p>
-              <p class="metric-card__hint">Keep this student aligned with their outstanding service requirements.</p>
+              <p class="metric-card__hint">Keep this student aligned with their outstanding service requirements. 
+                Required: <?= number_format((float)$requiredHours, 0) ?> hrs •
+                Logged: <?= number_format((float)$loggedHours, 2) ?> hrs
+              </p>
               <a class="btn btn-primary btn-block" href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">Add Violation</a>
             </article>
 
