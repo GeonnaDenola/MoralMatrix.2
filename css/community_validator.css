@@ -1,6 +1,6 @@
 /* ================================
    Community Validators — Page Styles
-   v2.1 — safe offsets for fixed header + sidebar, centered layout, responsive
+   v2.2 — adds pager styles
    ================================ */
 
 :root{
@@ -24,13 +24,9 @@
 }
 
 /* ---- App chrome guards (do NOT depend on your header/sidebar markup) ---- */
-/* If your header/sidebar are fixed, the body has this class from the page */
-body.has-fixed-chrome {
-  background: var(--bg);
-}
+body.has-fixed-chrome { background: var(--bg); }
 
-/* Push the content clear of the header and sidebar.
-   This is the core fix for “hiding behind” chrome. */
+/* Push content clear of fixed chrome */
 body.has-fixed-chrome .validators-shell{
   margin-top: var(--header-h);
   margin-left: var(--sidebar-w);
@@ -43,11 +39,8 @@ body.has-fixed-chrome .validators-shell{
   background:var(--bg);
   box-sizing: border-box;
 }
-
 @media (min-width:1024px){
-  .validators-shell{
-    padding: 32px 24px 96px;
-  }
+  .validators-shell{ padding: 32px 24px 96px; }
 }
 
 /* Middle column centered relative to viewport */
@@ -92,9 +85,7 @@ body.has-fixed-chrome .validators-shell{
   box-shadow:var(--shadow);
   margin-bottom:16px;
 }
-.filters__left{
-  display:flex; align-items:end; gap:12px; flex-wrap:wrap;
-}
+.filters__left{ display:flex; align-items:end; gap:12px; flex-wrap:wrap; }
 .filters__right{ display:flex; align-items:center; gap:10px; }
 
 .field{ display:grid; gap:6px; min-width:210px; }
@@ -120,21 +111,13 @@ body.has-fixed-chrome .validators-shell{
   display:flex;
   align-items:center;
 }
-.search-input{
-  width:100%;
-  padding-right:44px;
-}
+.search-input{ width:100%; padding-right:44px; }
 .icon-btn{
-  position:absolute;
-  right:6px;
-  height:32px;
-  width:36px;
-  display:inline-grid;
-  place-items:center;
-  border-radius:9px;
-  border:1px solid var(--border-strong);
-  background:#fff;
-  color:var(--brand);
+  position:absolute; right:6px;
+  height:32px; width:36px;
+  display:inline-grid; place-items:center;
+  border-radius:9px; border:1px solid var(--border-strong);
+  background:#fff; color:var(--brand);
   cursor:pointer;
   transition:transform .05s ease, box-shadow .15s ease, background .15s ease;
 }
@@ -242,24 +225,34 @@ body.has-fixed-chrome .validators-shell{
 .empty-state p{ color:var(--muted); margin:0 0 16px 0; }
 .empty-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
-/* ---------------- Pager area ---------------- */
+/* ---------------- Pager ---------------- */
 .pager-area{ margin-top:18px; display:flex; justify-content:center; }
-
-/* ---------------- Responsive guards ---------------- */
-/* On tablets/phones, give the content the full width.
-   If your sidebar becomes off-canvas, we don't reserve space for it. */
-@media (max-width: 1024px){
-  :root{ --sidebar-w: 0px; } /* collapse left offset */
-  body.has-fixed-chrome .validators-shell{ margin-left: 0; }
+.pager{
+  width:100%;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding-top:4px;
+}
+.pager__info{
+  color:var(--muted); font-weight:700;
+}
+.pager__actions{ display:flex; gap:10px; }
+.pager__btn{ min-width:110px; text-align:center; }
+.pager__btn.is-disabled{
+  pointer-events:none; opacity:.55;
 }
 
-/* Small phones: tighter padding and single-column controls */
+/* ---------------- Responsive guards ---------------- */
+@media (max-width: 1024px){
+  :root{ --sidebar-w: 0px; }
+  body.has-fixed-chrome .validators-shell{ margin-left: 0; }
+}
 @media (max-width:640px){
   .validators-shell{ padding:16px 12px 64px; }
   .page-header{ align-items:flex-start; flex-direction:column; gap:8px; }
   .filters{ padding:12px; }
   .field{ min-width:100%; }
   .filters__right{ width:100%; justify-content:flex-end; }
+  .pager{ flex-direction:column; align-items:flex-start; }
 }
 
 /* Safe-area support (iOS notch) */
@@ -272,4 +265,3 @@ body.has-fixed-chrome .validators-shell{
   }
 }
 .validators-page .meta dd{ text-align:left !important; justify-self:start; }
-
