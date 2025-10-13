@@ -401,13 +401,9 @@ ob_start(); ?>
           <?php if ($remainingForThis <= 0): ?>
             <a class="btn" href="<?= $logUrl ?>">🧾 View / Add Notes</a>
           <?php elseif ($csAssigned): ?>
-            <a class="btn btn-primary" href="<?= $logUrl ?>">⏱️ Log Hours (Remaining: <?= number_format($remainingForThis, 2) ?>h)</a>
           <?php else: ?>
             <a class="btn btn-primary" href="<?= $setCsUrl ?>">🧹 Set for Community Service</a>
-            <a class="btn" href="<?= $logUrl ?>">⏱️ Log Hours</a>
           <?php endif; ?>
-
-          <a class="btn" href="violation_edit.php?id=<?= $violationNo ?>&student_id=<?= urlencode($r['student_id']) ?>">✏️ Edit</a>
 
           <?php if ($hasStatus && strtolower($statusVal) !== 'void'): ?>
             <form method="POST" action="violation_void.php" onsubmit="return confirm('Void this violation?');" style="display:inline">

@@ -191,7 +191,7 @@ foreach ($assignments as $assignment) {
                 <?php endif; ?>
 
                 <footer class="vd-card__footer">
-                  <span class="vd-link">View student record</span>
+                  <span class="vd-link">View service record</span>
                 </footer>
               </a>
             <?php endforeach; ?>
