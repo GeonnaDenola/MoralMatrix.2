@@ -22,6 +22,39 @@ $faculty_id = $_SESSION['actor_id'] ?? null;
 if (!$faculty_id) {
     die("No faculty id in session. Please login again.");
 }
+
+/* =================== PAGINATION (ADD-ONLY) =================== */
+$page    = max(1, (int)($_GET['page'] ?? 1));
+$perPage = min(50, max(1, (int)($_GET['per_page'] ?? 12)));
+$offset  = ($page - 1) * $perPage;
+
+// total approved count for this faculty (for status "• N total")
+$countSql = "
+  SELECT COUNT(*)
+  FROM student_violation sv
+  JOIN student_account s ON sv.student_id = s.student_id
+  WHERE sv.submitted_by = ?
+    AND sv.status = 'approved'
+";
+$cnt = $conn->prepare($countSql) ?: die("Prepare failed: " . $conn->error);
+$cnt->bind_param("s", $faculty_id);
+$cnt->execute();
+$cnt->bind_result($totalAllApproved);
+$cnt->fetch();
+$cnt->close();
+$totalAllApproved = (int)($totalAllApproved ?? 0);
+$lastPage = max(1, (int)ceil($totalAllApproved / $perPage));
+if ($page > $lastPage) { $page = $lastPage; $offset = ($page - 1) * $perPage; }
+
+/** Build a link to a target page while keeping current query params (ADD-ONLY) */
+function faculty_build_page_link(int $targetPage): string {
+    $base = strtok($_SERVER['REQUEST_URI'], '?');
+    $q = $_GET; unset($q['page']);
+    $q['page'] = $targetPage;
+    return htmlspecialchars($base . '?' . http_build_query($q), ENT_QUOTES, 'UTF-8');
+}
+/* ================= /PAGINATION (ADD-ONLY) =================== */
+
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -38,17 +71,39 @@ JOIN student_account s ON sv.student_id = s.student_id
 WHERE sv.submitted_by = ?
   AND sv.status = 'approved'
 ORDER BY sv.reported_at DESC, sv.violation_id DESC
+LIMIT ? OFFSET ?
 ";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("Prepare failed: " . $conn->error);
 }
-$stmt->bind_param("s", $faculty_id);
+$stmt->bind_param("sii", $faculty_id, $perPage, $offset);
 if (!$stmt->execute()) {
     die("Execute failed: " . $stmt->error);
 }
 $result = $stmt->get_result();
+
+// number on THIS page (keep your original variable name usage)
 $totalApproved = ($result && $result->num_rows) ? (int) $result->num_rows : 0;
+
+/* =============== PAGER HTML (ADD-ONLY) =============== */
+$pagerHtml = '';
+if ($totalAllApproved > 0) {
+    $prevDisabled = $page <= 1;
+    $nextDisabled = $page >= $lastPage;
+
+    $statusText = 'Page ' . $page . ' of ' . $lastPage . ' • ' . $totalAllApproved . ' total';
+
+    $pagerHtml = '
+    <nav class="pagerbar" aria-label="Pagination">
+      <div class="pagerbar__status">'.htmlspecialchars($statusText, ENT_QUOTES, 'UTF-8').'</div>
+      <div class="pagerbar__controls">
+        <a class="pagerbtn'.($prevDisabled?' is-disabled':'').'" href="'.($prevDisabled ? '#' : faculty_build_page_link($page-1)).'" aria-disabled="'.($prevDisabled?'true':'false').'" rel="prev">← Prev</a>
+        <a class="pagerbtn'.($nextDisabled?' is-disabled':'').'" href="'.($nextDisabled ? '#' : faculty_build_page_link($page+1)).'" aria-disabled="'.($nextDisabled?'true':'false').'" rel="next">Next →</a>
+      </div>
+    </nav>';
+}
+/* ============ /PAGER HTML (ADD-ONLY) ============ */
 
 /**
  * Build a normalised search string for client-side filtering.
@@ -119,6 +174,8 @@ function faculty_to_search_index(string $value): string
           <button type="button" class="button button--subtle" id="clearSearch" hidden>Clear search</button>
         </div>
       </section>
+
+
 
       <section class="cards-grid" id="violationsGrid" aria-label="Approved reports">
         <?php while ($row = $result->fetch_assoc()): ?>
@@ -228,6 +285,9 @@ function faculty_to_search_index(string $value): string
           </article>
         <?php endwhile; ?>
       </section>
+
+      <!-- PAGER: bottom (ADD-ONLY ECHO) -->
+      <?= $pagerHtml ?>
 
       <div class="no-results" id="noResults" hidden>
         No matches found for your current search. Try a different name, student ID, or keyword.

@@ -6,6 +6,7 @@ require_role('security');
 include __DIR__ . '/_scanner.php';
 include '../config.php';
 include '../includes/security_header.php';
+
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
@@ -117,6 +118,7 @@ $typeOptions = buildFilterOptions($typeCounts);
 $stmt->close();
 $conn->close();
 
+/* ========= HELPERS (existing) ========= */
 /**
  * @param array<string,int> $counts
  * @return array<int,array{label:string,value:string,count:int}>
@@ -131,95 +133,87 @@ function buildFilterOptions(array $counts): array
             'count' => $count,
         ];
     }
-
-    usort(
-        $options,
-        static fn (array $a, array $b): int => strcasecmp($a['label'], $b['label'])
-    );
-
+    usort($options, static fn (array $a, array $b): int => strcasecmp($a['label'], $b['label']));
     return $options;
 }
-
-function safeText(?string $text): string
-{
-    return htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8');
-}
-
-function normaliseKey(string $value): string
-{
+function safeText(?string $text): string { return htmlspecialchars($text ?? '', ENT_QUOTES, 'UTF-8'); }
+function normaliseKey(string $value): string {
     $value = trim($value);
-    if (function_exists('mb_strtolower')) {
-        $value = mb_strtolower($value, 'UTF-8');
-    } else {
-        $value = strtolower($value);
-    }
+    $value = function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
     $value = preg_replace('/[^a-z0-9]+/u', '-', $value) ?? '';
     $value = trim($value, '-');
     return $value !== '' ? $value : 'na';
 }
-
-function toSearchIndex(string $value): string
-{
+function toSearchIndex(string $value): string {
     $value = preg_replace('/\s+/u', ' ', trim($value)) ?? '';
-    if (function_exists('mb_strtolower')) {
-        return mb_strtolower($value, 'UTF-8');
-    }
-    return strtolower($value);
+    return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
 }
-
-/**
- * @return array{iso:string,full:string,relative:string}
- */
+/** @return array{iso:string,full:string,relative:string} */
 function describeDate(?string $raw): array
 {
-    if (!$raw) {
-        return ['iso' => '', 'full' => '—', 'relative' => ''];
-    }
-
-    try {
-        $dt = new DateTimeImmutable($raw);
-    } catch (Exception $e) {
-        return ['iso' => '', 'full' => safeText($raw), 'relative' => ''];
-    }
-
+    if (!$raw) return ['iso' => '', 'full' => '—', 'relative' => ''];
+    try { $dt = new DateTimeImmutable($raw); }
+    catch (Exception $e) { return ['iso' => '', 'full' => safeText($raw), 'relative' => '']; }
     return [
         'iso' => $dt->format(DateTimeInterface::ATOM),
         'full' => $dt->format('M j, Y • g:i A'),
         'relative' => formatRelativeFromDate($dt),
     ];
 }
-
 function formatRelativeFromDate(DateTimeImmutable $dt): string
 {
     $now  = new DateTimeImmutable();
     $diff = $now->diff($dt);
-
-    $units = [
-        'y' => 'year',
-        'm' => 'month',
-        'd' => 'day',
-        'h' => 'hour',
-        'i' => 'minute',
-    ];
-
-    foreach ($units as $property => $label) {
-        $value = $diff->$property;
-        if ($value > 0) {
-            $plural = $value === 1 ? '' : 's';
+    foreach (['y'=>'year','m'=>'month','d'=>'day','h'=>'hour','i'=>'minute'] as $k=>$label) {
+        $v = $diff->$k;
+        if ($v > 0) {
+            $plural = $v === 1 ? '' : 's';
             $suffix = $diff->invert === 1 ? ' ago' : ' from now';
-            return $value . ' ' . $label . $plural . $suffix;
+            return $v . ' ' . $label . $plural . $suffix;
         }
     }
-
     return 'Just now';
 }
+/* ========= /HELPERS ========= */
 
 $latestDescriptor = $latestReportedAt
-    ? [
-        'full' => $latestReportedAt->format('M j, Y • g:i A'),
-        'relative' => formatRelativeFromDate($latestReportedAt),
-    ]
+    ? ['full' => $latestReportedAt->format('M j, Y • g:i A'), 'relative' => formatRelativeFromDate($latestReportedAt)]
     : ['full' => 'Awaiting first approval', 'relative' => ''];
+
+/* =================== PAGINATION (ADD-ONLY) =================== */
+$page    = max(1, (int)($_GET['page'] ?? 1));
+$perPage = min(50, max(1, (int)($_GET['per_page'] ?? 12)));
+$offset  = ($page - 1) * $perPage;
+
+$lastPage = max(1, (int)ceil(($totalReports ?: 0) / $perPage));
+if ($page > $lastPage) { $page = $lastPage; $offset = ($page - 1) * $perPage; }
+
+$pageViolations = array_slice($violations, $offset, $perPage);
+$pageCount      = count($pageViolations);
+
+/** keep other query params when switching pages */
+function security_build_page_link(int $targetPage): string {
+    $base = strtok($_SERVER['REQUEST_URI'], '?');
+    $q = $_GET; unset($q['page']);
+    $q['page'] = $targetPage;
+    return htmlspecialchars($base . '?' . http_build_query($q), ENT_QUOTES, 'UTF-8');
+}
+
+$pagerHtml = '';
+if ($totalReports > 0) {
+    $prevDisabled = $page <= 1;
+    $nextDisabled = $page >= $lastPage;
+    $statusText = 'Page '.$page.' of '.$lastPage.' • '.$totalReports.' total';
+    $pagerHtml = '
+    <nav class="pagerbar" aria-label="Pagination">
+      <div class="pagerbar__status">'.safeText($statusText).'</div>
+      <div class="pagerbar__controls">
+        <a class="pagerbtn'.($prevDisabled?' is-disabled':'').'" href="'.($prevDisabled ? '#' : security_build_page_link($page-1)).'" aria-disabled="'.($prevDisabled?'true':'false').'" rel="prev">← Prev</a>
+        <a class="pagerbtn'.($nextDisabled?' is-disabled':'').'" href="'.($nextDisabled ? '#' : security_build_page_link($page+1)).'" aria-disabled="'.($nextDisabled?'true':'false').'" rel="next">Next →</a>
+      </div>
+    </nav>';
+}
+/* ================= /PAGINATION (ADD-ONLY) =================== */
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -376,41 +370,27 @@ $latestDescriptor = $latestReportedAt
 
         <div class="results-meta" aria-live="polite">
           <div>
-            Showing <strong id="resultsCount"><?= $totalReports; ?></strong> of <strong id="totalCount"><?= $totalReports; ?></strong> approved reports
+            Showing <strong id="resultsCount"><?= $pageCount; ?></strong> of <strong id="totalCount"><?= $pageCount; ?></strong> approved reports
           </div>
         </div>
-
         <section class="cards-grid" id="violationsGrid" aria-label="Approved reports">
-          <?php foreach ($violations as $violation):
+          <?php foreach ($pageViolations as $violation):
               $firstName = trim((string)($violation['first_name'] ?? ''));
               $lastName  = trim((string)($violation['last_name'] ?? ''));
               $studentName = trim($firstName . ' ' . $lastName);
-              if ($studentName === '') {
-                  $studentName = 'Unnamed student';
-              }
+              if ($studentName === '') { $studentName = 'Unnamed student'; }
               $studentId = (string)($violation['student_id'] ?? '—');
-              $categoryLabel = trim((string)($violation['offense_category'] ?? ''));
-              if ($categoryLabel === '') {
-                  $categoryLabel = 'Uncategorized';
-              }
-              $typeLabel = trim((string)($violation['offense_type'] ?? ''));
-              if ($typeLabel === '') {
-                  $typeLabel = 'Unspecified';
-              }
+              $categoryLabel = trim((string)($violation['offense_category'] ?? '')) ?: 'Uncategorized';
+              $typeLabel     = trim((string)($violation['offense_type'] ?? '')) ?: 'Unspecified';
               $statusLabelRaw = trim((string)($violation['status'] ?? ''));
-              $statusLabel = $statusLabelRaw !== ''
-                  ? ucwords(str_replace('_', ' ', strtolower($statusLabelRaw)))
-                  : 'Approved';
-
+              $statusLabel = $statusLabelRaw !== '' ? ucwords(str_replace('_',' ', strtolower($statusLabelRaw))) : 'Approved';
               $photoFile = trim((string)($violation['student_photo'] ?? ''));
-              $photoSrc = $photoFile !== '' ? '../admin/uploads/' . $photoFile : 'placeholder.png';
-
+              $photoSrc  = $photoFile !== '' ? '../admin/uploads/' . $photoFile : 'placeholder.png';
               $description = trim((string)($violation['description'] ?? ''));
               $dateInfo = describeDate($violation['reported_at'] ?? null);
-
-              $searchIndex = toSearchIndex($studentName . ' ' . $studentId . ' ' . $categoryLabel . ' ' . $typeLabel . ' ' . $description);
+              $searchIndex = toSearchIndex($studentName.' '.$studentId.' '.$categoryLabel.' '.$typeLabel.' '.$description);
               $categoryKey = normaliseKey($categoryLabel);
-              $typeKey = normaliseKey($typeLabel);
+              $typeKey     = normaliseKey($typeLabel);
               $studentSort = toSearchIndex($studentName);
           ?>
             <article
@@ -438,9 +418,7 @@ $latestDescriptor = $latestReportedAt
                     </div>
                   </div>
                 </div>
-                <span class="status-pill">
-                  <?= safeText($statusLabel); ?>
-                </span>
+                <span class="status-pill"><?= safeText($statusLabel); ?></span>
               </div>
 
               <div class="card-body">
@@ -476,6 +454,9 @@ $latestDescriptor = $latestReportedAt
           <?php endforeach; ?>
         </section>
 
+        <!-- PAGER BOTTOM -->
+        <?= $pagerHtml ?>
+
         <div class="no-results" id="noResults" hidden>
           No matches found for your current filters. Try adjusting the search or clear all filters.
         </div>
@@ -499,30 +480,16 @@ $latestDescriptor = $latestReportedAt
       <?php endif; ?>
     </div>
   </main>
+
   <script>
   (function(){
     const dropdown = document.getElementById('logoutDropdown');
     if (!dropdown) return;
     const summary = dropdown.querySelector('summary');
-
-    function sync(){
-      if (!summary) { return; }
-      summary.setAttribute('aria-expanded', dropdown.hasAttribute('open') ? 'true' : 'false');
-    }
-
+    function sync(){ if (!summary) return; summary.setAttribute('aria-expanded', dropdown.hasAttribute('open') ? 'true' : 'false'); }
     dropdown.addEventListener('toggle', sync);
-    document.addEventListener('click', function(evt){
-      if (!dropdown.contains(evt.target)) {
-        dropdown.removeAttribute('open');
-        sync();
-      }
-    });
-    document.addEventListener('keydown', function(evt){
-      if (evt.key === 'Escape') {
-        dropdown.removeAttribute('open');
-        sync();
-      }
-    });
+    document.addEventListener('click', function(evt){ if (!dropdown.contains(evt.target)) { dropdown.removeAttribute('open'); sync(); }});
+    document.addEventListener('keydown', function(evt){ if (evt.key === 'Escape') { dropdown.removeAttribute('open'); sync(); }});
   })();
   </script>
 
@@ -539,31 +506,19 @@ $latestDescriptor = $latestReportedAt
       const totalCount = document.getElementById('totalCount');
       const noResults = document.getElementById('noResults');
       const cards = Array.from(document.querySelectorAll('.violation-card'));
-      const totalRecords = Number(totalCount ? totalCount.textContent : cards.length);
+      const totalRecords = cards.length;
 
-      function parseTime(value){
-        const parsed = Date.parse(value);
-        return Number.isNaN(parsed) ? 0 : parsed;
-      }
+      function parseTime(value){ const parsed = Date.parse(value); return Number.isNaN(parsed) ? 0 : parsed; }
 
       function sortCards(list){
         const mode = sortSelect ? sortSelect.value : 'newest';
         const sorted = list.slice();
-
         switch(mode){
-          case 'oldest':
-            sorted.sort((a, b) => parseTime(a.dataset.reportedAt || '') - parseTime(b.dataset.reportedAt || ''));
-            break;
-          case 'student':
-            sorted.sort((a, b) => (a.dataset.student || '').localeCompare(b.dataset.student || ''));
-            break;
-          case 'category':
-            sorted.sort((a, b) => (a.dataset.categoryLabel || '').localeCompare(b.dataset.categoryLabel || ''));
-            break;
+          case 'oldest':  sorted.sort((a,b)=>parseTime(a.dataset.reportedAt||'')-parseTime(b.dataset.reportedAt||'')); break;
+          case 'student': sorted.sort((a,b)=>(a.dataset.student||'').localeCompare(b.dataset.student||'')); break;
+          case 'category':sorted.sort((a,b)=>(a.dataset.categoryLabel||'').localeCompare(b.dataset.categoryLabel||'')); break;
           case 'newest':
-          default:
-            sorted.sort((a, b) => parseTime(b.dataset.reportedAt || '') - parseTime(a.dataset.reportedAt || ''));
-            break;
+          default:        sorted.sort((a,b)=>parseTime(b.dataset.reportedAt||'')-parseTime(a.dataset.reportedAt||'')); break;
         }
         return sorted;
       }
@@ -574,18 +529,14 @@ $latestDescriptor = $latestReportedAt
         const type = typeFilter?.value || '';
 
         let visible = [];
-
         cards.forEach(card => {
           const matchesSearch = !query || (card.dataset.search || '').includes(query);
           const matchesCategory = !category || card.dataset.category === category;
           const matchesType = !type || card.dataset.type === type;
-
           const shouldShow = matchesSearch && matchesCategory && matchesType;
           card.hidden = !shouldShow;
           card.classList.toggle('is-hidden', !shouldShow);
-          if (shouldShow) {
-            visible.push(card);
-          }
+          if (shouldShow) visible.push(card);
         });
 
         visible = sortCards(visible);
@@ -593,18 +544,11 @@ $latestDescriptor = $latestReportedAt
         [...visible, ...hiddenCards].forEach(card => grid?.appendChild(card));
 
         const visibleCount = visible.length;
-        if (resultsCount) {
-          resultsCount.textContent = visibleCount.toString();
-        }
-
-        if (noResults) {
-          noResults.hidden = visibleCount !== 0;
-        }
+        if (resultsCount) resultsCount.textContent = visibleCount.toString();
+        if (noResults) noResults.hidden = visibleCount !== 0;
 
         const hasFilters = !!query || !!category || !!type || (sortSelect && sortSelect.value !== 'newest');
-        if (resetButton) {
-          resetButton.hidden = !hasFilters;
-        }
+        if (resetButton) resetButton.hidden = !hasFilters;
       }
 
       if (resetButton) {
@@ -623,9 +567,7 @@ $latestDescriptor = $latestReportedAt
       typeFilter?.addEventListener('change', applyFilters);
       sortSelect?.addEventListener('change', applyFilters);
 
-      if (totalCount) {
-        totalCount.textContent = totalRecords.toString();
-      }
+      if (totalCount) totalCount.textContent = totalRecords.toString();
       applyFilters();
     })();
   </script>

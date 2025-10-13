@@ -338,30 +338,45 @@ body.validator-dashboard{
 }
 
 .vd-empty{
-  margin-top: 20px;
+  margin-top: 24px;
   text-align: center;
-  padding: 48px 24px;
+  padding: 16px 10px;
   border-radius: var(--vd-radius-md);
   border: 1px dashed var(--vd-border);
   background: rgba(244, 246, 251, 0.7);
   box-shadow: var(--vd-shadow-sm);
   color: var(--vd-muted);
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .vd-empty__icon{
-  font-size: 42px;
-  margin-bottom: 16px;
+  font-size: 20px;
+  margin-bottom: 6px;
+  width: 28px;
+  height: 28px;
 }
 
-.vd-empty h2{
-  margin: 0 0 8px;
-  color: var(--vd-text);
-  font-size: 1.4rem;
+.vd-empty__icon svg {
+  width: 100%;
+  height: 100%;
 }
 
-.vd-empty p{
-  margin: 0 auto;
-  max-width: 48ch;
+.vd-empty h2 {
+  font-size: 1.15rem;
+  margin: 8px 0 6px 0;
+  font-weight: 700;
+  color: #555;
+}
+
+.vd-empty p {
+  font-size: 0.98rem;
+  margin: 0;
+  color: var(--vd-muted);
 }
 
 .vd-card:focus-visible{

@@ -1,8 +1,6 @@
 <?php
-
 include '../config.php';
 include '../includes/faculty_header.php';
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +94,16 @@ include '../includes/faculty_header.php';
                 <div class="cardContainer" id="studentContainer">
                     <div class="loading-state">Loading students...</div>
                 </div>
+
+                <!-- ADDED: pagination bar -->
+                <div class="pagination-bar" id="paginationBar" hidden>
+                    <span class="pager-info" id="paginationText">Page 1 of 1 • 0 total</span>
+                    <div class="pager-controls">
+                        <button type="button" class="pager-btn" id="prevPage" disabled>&larr; Prev</button>
+                        <button type="button" class="pager-btn" id="nextPage" disabled>Next &rarr;</button>
+                    </div>
+                </div>
+                <!-- END pagination bar -->
             </section>
         </div>
     </div>
@@ -109,74 +117,111 @@ include '../includes/faculty_header.php';
     const levelSelect = document.querySelector(".level");
     const sectionSelect = document.querySelector(".section");
 
-    function loadStudents(filters = {}) {
-        if (!studentContainer) {
+    // ADDED: pagination state + refs
+    const paginationBar = document.getElementById("paginationBar");
+    const paginationText = document.getElementById("paginationText");
+    const prevPageBtn = document.getElementById("prevPage");
+    const nextPageBtn = document.getElementById("nextPage");
+
+    let pageSize = 9;           // cards per page
+    let currentPage = 1;        // current page
+    let lastFilters = {};       // remember last applied filters
+    let studentsCache = [];     // keep fetched list so paging doesn't refetch
+
+    function loadStudents(filters = {}, options = { skipFetch: false }) {
+        if (!studentContainer) return;
+
+        // remember filters
+        lastFilters = { ...filters };
+
+        if (!options.skipFetch || studentsCache.length === 0) {
+            studentContainer.innerHTML = `<div class="loading-state">Loading students...</div>`;
+            fetch("get_students.php")
+                .then(response => response.json())
+                .then(data => {
+                    studentsCache = Array.isArray(data) ? data : [];
+                    renderStudents();
+                })
+                .catch(error => {
+                    if (resultCountEl) resultCountEl.textContent = "0";
+                    if (studentContainer) {
+                        studentContainer.innerHTML = `<div class="empty-state error-state">We couldn't load the student list right now. Please try again shortly.</div>`;
+                    }
+                    if (paginationBar) {
+                        paginationBar.hidden = true;
+                    }
+                    console.error("Error fetching student data: ", error);
+                });
+        } else {
+            renderStudents();
+        }
+    }
+
+    // ADDED: isolate rendering (filters + pagination)
+    function renderStudents() {
+        // filter
+        let filtered = studentsCache.filter(student => {
+            const instituteMatch = !lastFilters.institute || student.institute === lastFilters.institute;
+            const courseMatch = !lastFilters.course || student.course === lastFilters.course;
+            const levelMatch = !lastFilters.level || student.level === lastFilters.level;
+            const sectionMatch = !lastFilters.section || student.section === lastFilters.section;
+
+            let searchMatch = true;
+            if (lastFilters.search) {
+                const haystack = `${student.student_id} ${student.first_name} ${student.last_name} ${student.middle_name ?? ''}`.toLowerCase();
+                searchMatch = haystack.includes(lastFilters.search);
+            }
+            return instituteMatch && courseMatch && levelMatch && sectionMatch && searchMatch;
+        });
+
+        // counts
+        const total = filtered.length;
+        if (resultCountEl) resultCountEl.textContent = total.toString();
+
+        // pagination math
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        // update pagination UI
+        paginationText.textContent = `Page ${total === 0 ? 0 : currentPage} of ${totalPages} • ${total} total`;
+        prevPageBtn.disabled = currentPage <= 1 || total === 0;
+        nextPageBtn.disabled = currentPage >= totalPages || total === 0;
+        paginationBar.hidden = false;
+
+        // slice the current page
+        const start = (currentPage - 1) * pageSize;
+        const pageItems = filtered.slice(start, start + pageSize);
+
+        // render cards
+        studentContainer.innerHTML = "";
+        if (pageItems.length === 0) {
+            studentContainer.innerHTML = `<div class="empty-state">No student records match your filters.</div>`;
             return;
         }
 
-        studentContainer.innerHTML = `<div class="loading-state">Loading students...</div>`;
+        pageItems.forEach(student => {
+            const card = document.createElement("div");
+            card.classList.add("student-card");
+            card.onclick = () => viewStudent(student.student_id);
 
-        fetch("get_students.php")
-        .then(response => response.json())
-        .then(data => {
-            studentContainer.innerHTML = "";
+            const section = student.section ? student.section : "";
+            const yearLabel = student.level ? `Year ${student.level}${section}` : "Level pending";
 
-            let filtered = data.filter(student => {
-                const instituteMatch = !filters.institute || student.institute === filters.institute;
-                const courseMatch = !filters.course || student.course === filters.course;
-                const levelMatch = !filters.level || student.level === filters.level;
-                const sectionMatch = !filters.section || student.section === filters.section;
-
-                let searchMatch = true;
-                if (filters.search) {
-                    const haystack = `${student.student_id} ${student.first_name} ${student.last_name} ${student.middle_name ?? ''}`.toLowerCase();
-                    searchMatch = haystack.includes(filters.search);
-                }
-
-                return instituteMatch && courseMatch && levelMatch && sectionMatch && searchMatch;
-            });
-
-            if (resultCountEl) {
-                resultCountEl.textContent = filtered.length.toString();
-            }
-
-            if (filtered.length === 0) {
-                studentContainer.innerHTML = `<div class="empty-state">No student records match your filters.</div>`;
-                return;
-            }
-
-            filtered.forEach(student => {
-                const card = document.createElement("div");
-                card.classList.add("student-card");
-                card.onclick = () => viewStudent(student.student_id);
-
-                const section = student.section ? student.section : "";
-                const yearLabel = student.level ? `Year ${student.level}${section}` : "Level pending";
-
-                card.innerHTML = `
-                    <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Student photo">
-                    <div class="student-details">
-                        <div class="student-id">${student.student_id}</div>
-                        <div class="student-name">${student.last_name}, ${student.first_name} ${student.middle_name ?? ""}</div>
-                        <div class="student-tags">
-                            <span class="badge">${student.institute}</span>
-                            <span class="badge">${student.course}</span>
-                            <span class="badge">${yearLabel}</span>
-                        </div>
+            card.innerHTML = `
+                <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Student photo">
+                <div class="student-details">
+                    <div class="student-id">${student.student_id}</div>
+                    <div class="student-name">${student.last_name}, ${student.first_name} ${student.middle_name ?? ""}</div>
+                    <div class="student-tags">
+                        <span class="badge">${student.institute}</span>
+                        <span class="badge">${student.course}</span>
+                        <span class="badge">${yearLabel}</span>
                     </div>
-                    <span class="chevron">&rarr;</span>
-                `;
-                studentContainer.appendChild(card);
-            });
-        })
-        .catch(error => {
-            if (resultCountEl) {
-                resultCountEl.textContent = "0";
-            }
-            if (studentContainer) {
-                studentContainer.innerHTML = `<div class="empty-state error-state">We couldn't load the student list right now. Please try again shortly.</div>`;
-            }
-            console.error("Error fetching student data: ", error);
+                </div>
+                <span class="chevron">&rarr;</span>
+            `;
+            studentContainer.appendChild(card);
         });
     }
 
@@ -186,9 +231,10 @@ include '../includes/faculty_header.php';
             course: courseSelect.value,
             level: levelSelect.value,
             section: sectionSelect.value,
-            search: searchInput.value.toLowerCase()
+            search: (searchInput.value || "").toLowerCase().trim()
         };
-        loadStudents(filters);
+        currentPage = 1; // ADDED: reset page on new filters
+        loadStudents(filters, { skipFetch: true });
     }
 
     function resetFilters() {
@@ -197,6 +243,7 @@ include '../includes/faculty_header.php';
         courseSelect.innerHTML = '<option value="">All courses</option>';
         levelSelect.value = "";
         sectionSelect.value = "";
+        currentPage = 1; // ADDED
         filterStudents();
     }
 
@@ -251,9 +298,27 @@ include '../includes/faculty_header.php';
     sectionSelect.addEventListener("change", filterStudents);
     searchInput.addEventListener("keyup", filterStudents);
     document.getElementById("clearFilters").addEventListener("click", resetFilters);
-    document.getElementById("refreshStudents").addEventListener("click", filterStudents);
 
+    // Refresh should refetch from server (keep current filters)
+    document.getElementById("refreshStudents").addEventListener("click", () => {
+        currentPage = 1;
+        loadStudents(lastFilters, { skipFetch: false });
+    });
+
+    // ADDED: prev/next handlers
+    prevPageBtn.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage--;
+            loadStudents(lastFilters, { skipFetch: true });
+        }
+    });
+    nextPageBtn.addEventListener("click", () => {
+        currentPage++;
+        loadStudents(lastFilters, { skipFetch: true });
+    });
+
+    // initial load
     loadStudents();
-</script> 
+</script>
 </body>
 </html>

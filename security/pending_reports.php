@@ -8,64 +8,40 @@ include __DIR__ . '/_scanner.php';
 include '../config.php';
 include '../includes/security_header.php';
 
-function h(?string $value): string
-{
+/* -------------------- helpers -------------------- */
+function h(?string $value): string {
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
-
-function cleanText(?string $value): string
-{
+function cleanText(?string $value): string {
     $value = preg_replace('/\s+/u', ' ', trim((string)$value)) ?? '';
     return $value;
 }
-
-function formatRelativeFromDate(DateTimeImmutable $dt): string
-{
+function formatRelativeFromDate(DateTimeImmutable $dt): string {
     $now = new DateTimeImmutable();
     $diff = $now->diff($dt);
-
-    $units = [
-        'y' => 'year',
-        'm' => 'month',
-        'd' => 'day',
-        'h' => 'hour',
-        'i' => 'minute',
-    ];
-
-    foreach ($units as $property => $label) {
-        $value = $diff->$property;
-        if ($value > 0) {
-            $plural = $value === 1 ? '' : 's';
+    $units = ['y'=>'year','m'=>'month','d'=>'day','h'=>'hour','i'=>'minute'];
+    foreach ($units as $prop=>$label) {
+        $v = $diff->$prop;
+        if ($v > 0) {
+            $plural = $v === 1 ? '' : 's';
             $suffix = $diff->invert === 1 ? ' ago' : ' from now';
-            return $value . ' ' . $label . $plural . $suffix;
+            return $v.' '.$label.$plural.$suffix;
         }
     }
-
     return 'Just now';
 }
-
-function describeDate(?string $raw): array
-{
-    if (!$raw) {
-        return ['iso' => '', 'full' => '', 'relative' => '', 'datetime' => null];
-    }
-
-    try {
-        $dt = new DateTimeImmutable($raw);
-    } catch (Exception $e) {
-        return ['iso' => '', 'full' => h($raw), 'relative' => '', 'datetime' => null];
-    }
-
+function describeDate(?string $raw): array {
+    if (!$raw) return ['iso'=>'','full'=>'','relative'=>'','datetime'=>null];
+    try { $dt = new DateTimeImmutable($raw); }
+    catch (Exception $e) { return ['iso'=>'','full'=>h($raw),'relative'=>'','datetime'=>null]; }
     return [
-        'iso' => $dt->format(DateTimeInterface::ATOM),
-        'full' => $dt->format('M j, Y at g:i A'),
-        'relative' => formatRelativeFromDate($dt),
-        'datetime' => $dt,
+        'iso'=>$dt->format(DateTimeInterface::ATOM),
+        'full'=>$dt->format('M j, Y at g:i A'),
+        'relative'=>formatRelativeFromDate($dt),
+        'datetime'=>$dt,
     ];
 }
-
-function categoryIconSvg(string $category): string
-{
+function categoryIconSvg(string $category): string {
     $key = strtolower(trim($category));
     switch ($key) {
         case 'moderate':
@@ -77,22 +53,43 @@ function categoryIconSvg(string $category): string
     }
 }
 
+/* -------------------- db -------------------- */
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
 $password   = $database_settings['password'];
 $dbname     = $database_settings['dbname'];
 
 $conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    die('Connection failed: ' . $conn->connect_error);
-}
+if ($conn->connect_error) { die('Connection failed: ' . $conn->connect_error); }
 $conn->set_charset('utf8mb4');
 
 $securityId = $_SESSION['actor_id'] ?? null;
-if (!$securityId) {
-    die('No security id in session. Please login again.');
-}
+if (!$securityId) { die('No security id in session. Please login again.'); }
 
+/* ========= pagination (faculty-style) ========= */
+$page    = max(1, (int)($_GET['page'] ?? 1));
+$perPage = min(50, max(1, (int)($_GET['per_page'] ?? 12)));
+$offset  = ($page - 1) * $perPage;
+
+$countSql = "
+  SELECT COUNT(*)
+  FROM student_violation sv
+  JOIN student_account s ON sv.student_id = s.student_id
+  WHERE sv.submitted_by = ?
+    AND LOWER(sv.status) = 'pending'
+";
+$cnt = $conn->prepare($countSql) ?: die('Prepare failed: ' . $conn->error);
+$cnt->bind_param('s', $securityId);
+$cnt->execute();
+$cnt->bind_result($totalPending);
+$cnt->fetch();
+$cnt->close();
+$totalPending = (int)($totalPending ?? 0);
+$lastPage = max(1, (int)ceil($totalPending / $perPage));
+if ($page > $lastPage) { $page = $lastPage; $offset = ($page - 1) * $perPage; }
+/* ========= /pagination ========= */
+
+/* -------------------- page query -------------------- */
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -109,15 +106,14 @@ JOIN student_account s ON sv.student_id = s.student_id
 WHERE sv.submitted_by = ?
   AND LOWER(sv.status) = 'pending'
 ORDER BY sv.reported_at DESC, sv.violation_id DESC
+LIMIT ? OFFSET ?
 ";
-
 $stmt = $conn->prepare($sql) ?: die('Prepare failed: ' . $conn->error);
-$stmt->bind_param('s', $securityId);
-if (!$stmt->execute()) {
-    die('Execute failed: ' . $stmt->error);
-}
+$stmt->bind_param('sii', $securityId, $perPage, $offset);
+if (!$stmt->execute()) { die('Execute failed: ' . $stmt->error); }
 $result = $stmt->get_result();
 
+/* -------------------- optional debug -------------------- */
 $debugRows = [];
 if (!empty($_GET['debug'])) {
     $debug = $conn->prepare("
@@ -137,11 +133,12 @@ if (!empty($_GET['debug'])) {
     }
 }
 
+/* -------------------- build items -------------------- */
 $violations = [];
 $categoryCounts = [];
 $studentIds = [];
 $latestReportedAt = null;
-$latestDescriptor = ['iso' => '', 'full' => '', 'relative' => ''];
+$latestDescriptor = ['iso'=>'','full'=>'','relative'=>''];
 
 if ($result) {
     while ($row = $result->fetch_assoc()) {
@@ -153,23 +150,17 @@ if ($result) {
         }
 
         $studentId = cleanText($row['student_id'] ?? '');
-        $nameParts = [$row['first_name'] ?? '', $row['last_name'] ?? ''];
-        $studentName = cleanText(implode(' ', $nameParts));
-        if ($studentName === '') {
-            $studentName = 'Unnamed student';
-        }
+        $studentName = cleanText(implode(' ', [ $row['first_name'] ?? '', $row['last_name'] ?? '' ]));
+        if ($studentName === '') $studentName = 'Unnamed student';
 
         $category = cleanText($row['offense_category'] ?? '');
-        if ($category === '') {
-            $category = 'Uncategorized';
-        }
+        if ($category === '') $category = 'Uncategorized';
         $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
 
         $typeRaw = cleanText($row['offense_type'] ?? '');
         $typeLabel = $typeRaw !== '' ? $typeRaw : 'Type not provided';
 
         $description = cleanText($row['description'] ?? '');
-
         $statusRaw = cleanText($row['status'] ?? 'Pending');
         $statusLabel = strtoupper($statusRaw !== '' ? $statusRaw : 'Pending');
 
@@ -178,15 +169,15 @@ if ($result) {
             if ($latestReportedAt === null || $dateInfo['datetime'] > $latestReportedAt) {
                 $latestReportedAt = $dateInfo['datetime'];
                 $latestDescriptor = [
-                    'iso' => $dateInfo['iso'],
-                    'full' => $dateInfo['full'],
-                    'relative' => $dateInfo['relative'],
+                    'iso'=>$dateInfo['iso'],
+                    'full'=>$dateInfo['full'],
+                    'relative'=>$dateInfo['relative'],
                 ];
             }
         }
 
         $violations[] = [
-            'id' => (int)$row['violation_id'],
+            'id' => (int)($row['violation_id'] ?? 0),
             'student_id' => $studentId,
             'student_name' => $studentName,
             'photo' => $photoPath,
@@ -199,19 +190,17 @@ if ($result) {
                 'full' => $dateInfo['full'],
                 'relative' => $dateInfo['relative'],
             ],
-            'has_type' => $typeRaw !== '',
         ];
 
-        if ($studentId !== '') {
-            $studentIds[$studentId] = true;
-        }
+        if ($studentId !== '') $studentIds[$studentId] = true;
     }
 }
 
 $stmt->close();
 $conn->close();
 
-$pendingCount = count($violations);
+/* -------------------- computed display values -------------------- */
+$pendingCount = $totalPending;               // show TOTAL awaiting review
 $uniqueStudents = count($studentIds);
 
 $topCategory = '';
@@ -221,11 +210,40 @@ if ($categoryCounts) {
     $topCategory = (string)array_key_first($categoryCounts);
     $topCategoryCount = (int)$categoryCounts[$topCategory];
 }
+$topCategorySummary = $topCategory !== '' ? ($topCategory . ' / ' . ($topCategoryCount === 1 ? '1 case' : $topCategoryCount . ' cases')) : '';
 
-$topCategorySummary = '';
-if ($topCategory !== '') {
-    $topCategorySummary = $topCategory . ' / ' . ($topCategoryCount === 1 ? '1 case' : $topCategoryCount . ' cases');
+/* ========= pager html (same structure as your example) ========= */
+function build_page_link(int $targetPage): string {
+    $base = strtok($_SERVER['REQUEST_URI'], '?');
+    $q = $_GET;
+    unset($q['page']);
+    $q['page'] = $targetPage;
+    return htmlspecialchars($base . '?' . http_build_query($q), ENT_QUOTES, 'UTF-8');
 }
+
+$pagerHtml = '';
+if ($totalPending > 0) {
+    $prevDisabled = $page <= 1;
+    $nextDisabled = $page >= $lastPage;
+
+    $prevHref = $prevDisabled ? '#' : build_page_link($page - 1);
+    $nextHref = $nextDisabled ? '#' : build_page_link($page + 1);
+
+    $prevCls = $prevDisabled ? ' is-disabled' : '';
+    $nextCls = $nextDisabled ? ' is-disabled' : '';
+
+    $statusText = 'Page ' . $page . ' of ' . $lastPage . ' • ' . $totalPending . ' total';
+
+    $pagerHtml = '
+    <nav class="pagerbar" aria-label="Pagination">
+      <div class="pagerbar__status">'.h($statusText).'</div>
+      <div class="pagerbar__controls">
+        <a class="pagerbtn'.$prevCls.'" href="'.$prevHref.'" aria-disabled="'.($prevDisabled?'true':'false').'" rel="prev">← Prev</a>
+        <a class="pagerbtn'.$nextCls.'" href="'.$nextHref.'" aria-disabled="'.($nextDisabled?'true':'false').'" rel="next">Next →</a>
+      </div>
+    </nav>';
+}
+/* ========= /pager html ========= */
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -302,11 +320,11 @@ if ($topCategory !== '') {
                 <div>actor_id: <code><?= h((string)$securityId); ?></code></div>
                 <table>
                     <thead>
-                        <tr>
-                            <th scope="col">Submitted role</th>
-                            <th scope="col">Status (normalized)</th>
-                            <th scope="col" style="text-align:right;">Count</th>
-                        </tr>
+                    <tr>
+                        <th scope="col">Submitted role</th>
+                        <th scope="col">Status (normalized)</th>
+                        <th scope="col" style="text-align:right;">Count</th>
+                    </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($debugRows as $debugRow): ?>
@@ -324,7 +342,7 @@ if ($topCategory !== '') {
             </div>
         <?php endif; ?>
 
-        <?php if ($pendingCount > 0): ?>
+        <?php if ($totalPending > 0): ?>
             <section class="queue-summary" aria-label="Queue highlights">
                 <div class="summary-card">
                     <span class="summary-label">Pending cases</span>
@@ -402,6 +420,9 @@ if ($topCategory !== '') {
                         </article>
                     <?php endforeach; ?>
                 </div>
+
+                <?= $pagerHtml ?>
+
             </section>
         <?php else: ?>
             <section class="empty-state" aria-label="No pending reports">
