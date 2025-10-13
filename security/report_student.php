@@ -1,11 +1,7 @@
 ﻿<?php
-
 include '../config.php';
 include '../includes/security_header.php';
 include __DIR__ . '/_scanner.php';
-
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -97,9 +93,13 @@ include __DIR__ . '/_scanner.php';
                     </div>
                 </div>
 
+
                 <div class="cardContainer" id="studentContainer">
                     <div class="loading-state">Loading students...</div>
                 </div>
+
+                <!-- PAGER (bottom) -->
+                <nav id="pagerBottom" class="pagerbar" aria-label="Pagination"></nav>
             </section>
         </div>
     </div>
@@ -112,91 +112,138 @@ include __DIR__ . '/_scanner.php';
     const courseSelect = document.querySelector(".course");
     const levelSelect = document.querySelector(".level");
     const sectionSelect = document.querySelector(".section");
+    const pagerTop = document.getElementById("pagerTop");
+    const pagerBottom = document.getElementById("pagerBottom");
 
-    // Fetch and render students
-    function loadStudents(filters = {}) {
-        if (!studentContainer) {
-            return;
-        }
+    // Pagination state
+    let currentPage = 1;
+    const perPage = 12; // change page size if you like
+    let currentFilters = {};
+
+    // Fetch and render students (with pagination)
+    function loadStudents(filters = currentFilters, page = currentPage) {
+        if (!studentContainer) return;
+
+        currentFilters = filters;
+        currentPage = page;
 
         studentContainer.innerHTML = `<div class="loading-state">Loading students...</div>`;
 
         fetch("get_students.php")
         .then(response => response.json())
         .then(data => {
-            studentContainer.innerHTML = ""; // Clear previous content
-
+            // Filter
             const filtered = data.filter(student => {
                 return (!filters.institute || student.institute === filters.institute) &&
                        (!filters.course || student.course === filters.course) &&
                        (!filters.level || student.level === filters.level) &&
                        (!filters.section || student.section === filters.section) &&
                        (!filters.search || (
-                           student.student_id.toLowerCase().includes(filters.search) ||
-                           student.first_name.toLowerCase().includes(filters.search) ||
-                           student.last_name.toLowerCase().includes(filters.search)
+                           (student.student_id || '').toLowerCase().includes(filters.search) ||
+                           (student.first_name || '').toLowerCase().includes(filters.search) ||
+                           (student.last_name || '').toLowerCase().includes(filters.search)
                        ));
             });
 
-            if (!filtered.length) {
-                if (resultCountEl) {
-                    resultCountEl.textContent = "0";
-                }
+            // Total count text (always total filtered)
+            if (resultCountEl) resultCountEl.textContent = String(filtered.length);
+
+            // Pagination math
+            const total = filtered.length;
+            const lastPage = Math.max(1, Math.ceil(total / perPage));
+            if (currentPage > lastPage) currentPage = lastPage;
+
+            const start = (currentPage - 1) * perPage;
+            const end = start + perPage;
+            const pageItems = filtered.slice(start, end);
+
+            // Render cards for current page
+            studentContainer.innerHTML = "";
+            if (!pageItems.length) {
                 studentContainer.innerHTML = `<div class="empty-state">We couldn't find any students that match the current filters. Adjust your search criteria and try again.</div>`;
-                return;
-            }
+            } else {
+                pageItems.forEach(student => {
+                    const card = document.createElement("div");
+                    card.classList.add("student-card");
+                    card.onclick = () => viewStudent(student.student_id);
 
-            if (resultCountEl) {
-                resultCountEl.textContent = filtered.length;
-            }
+                    const section = student.section ? student.section : "";
+                    const yearLabel = student.level ? `Year ${student.level}${section}` : "Level pending";
 
-            // Render student cards
-            filtered.forEach(student => {
-                const card = document.createElement("div");
-                card.classList.add("student-card");
-
-                card.onclick = () => viewStudent(student.student_id);
-
-                const section = student.section ? student.section : "";
-                const yearLabel = student.level ? `Year ${student.level}${section}` : "Level pending";
-
-                card.innerHTML = `
-                    <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Student photo">
-                    <div class="student-details">
-                        <div class="student-id">${student.student_id}</div>
-                        <div class="student-name">${student.last_name}, ${student.first_name} ${student.middle_name ?? ""}</div>
-                        <div class="student-tags">
-                            <span class="badge">${student.institute}</span>
-                            <span class="badge">${student.course}</span>
-                            <span class="badge">${yearLabel}</span>
+                    card.innerHTML = `
+                        <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Student photo">
+                        <div class="student-details">
+                            <div class="student-id">${student.student_id}</div>
+                            <div class="student-name">${student.last_name}, ${student.first_name} ${student.middle_name ?? ""}</div>
+                            <div class="student-tags">
+                                <span class="badge">${student.institute}</span>
+                                <span class="badge">${student.course}</span>
+                                <span class="badge">${yearLabel}</span>
+                            </div>
                         </div>
-                    </div>
-                    <span class="chevron">&rarr;</span>
-                `;
-                studentContainer.appendChild(card);
-            });
+                        <span class="chevron">&rarr;</span>
+                    `;
+                    studentContainer.appendChild(card);
+                });
+            }
+
+            // Render pagerbars
+            renderPager(pagerTop, total, currentPage, lastPage);
+            renderPager(pagerBottom, total, currentPage, lastPage);
         })
         .catch(error => {
-            if (resultCountEl) {
-                resultCountEl.textContent = "0";
-            }
+            if (resultCountEl) resultCountEl.textContent = "0";
             if (studentContainer) {
                 studentContainer.innerHTML = `<div class="empty-state error-state">We couldn't load the student list right now. Please try again shortly.</div>`;
             }
+            if (pagerTop) pagerTop.innerHTML = '';
+            if (pagerBottom) pagerBottom.innerHTML = '';
             console.error("Error fetching student data: ", error);
         });
     }
 
-    // Apply filters
+    function renderPager(container, total, page, lastPage) {
+        if (!container) return;
+        if (total === 0) { container.innerHTML = ''; return; }
+
+        const prevDisabled = page <= 1;
+        const nextDisabled = page >= lastPage;
+
+        container.innerHTML = `
+          <div class="pagerbar__status">Page ${page} of ${lastPage} • ${total} total</div>
+          <div class="pagerbar__controls">
+            <a href="#" class="pagerbtn ${prevDisabled ? 'is-disabled' : ''}" data-nav="prev" aria-disabled="${prevDisabled}">← Prev</a>
+            <a href="#" class="pagerbtn ${nextDisabled ? 'is-disabled' : ''}" data-nav="next" aria-disabled="${nextDisabled}">Next →</a>
+          </div>
+        `;
+
+        const prev = container.querySelector('[data-nav="prev"]');
+        const next = container.querySelector('[data-nav="next"]');
+
+        if (prev && !prevDisabled) {
+            prev.addEventListener('click', e => {
+                e.preventDefault();
+                loadStudents(currentFilters, page - 1);
+            });
+        }
+        if (next && !nextDisabled) {
+            next.addEventListener('click', e => {
+                e.preventDefault();
+                loadStudents(currentFilters, page + 1);
+            });
+        }
+    }
+
+    // Apply filters (always go back to page 1)
     function filterStudents() {
         const filters = {
             institute: instituteSelect.value,
             course: courseSelect.value,
             level: levelSelect.value,
             section: sectionSelect.value,
-            search: searchInput.value.toLowerCase()
+            search: (searchInput.value || '').toLowerCase()
         };
-        loadStudents(filters);
+        loadStudents(filters, 1);
     }
 
     function resetFilters() {
@@ -209,7 +256,7 @@ include __DIR__ . '/_scanner.php';
     }
 
     function viewStudent(student_id){
-        window.location.href = "view_student.php?student_id=" + student_id;
+        window.location.href = "view_student.php?student_id=" + encodeURIComponent(student_id);
     }
 
     // Predefined dropdown data
@@ -226,10 +273,7 @@ include __DIR__ . '/_scanner.php';
     // Update course dropdown when institute changes
     instituteSelect.addEventListener("change", function () {
         const selectedInstitute = this.value;
-
-        // reset course dropdown
         courseSelect.innerHTML = '<option value="">All courses</option>';
-
         if (selectedInstitute && courses[selectedInstitute]) {
             courses[selectedInstitute].forEach(course => {
                 const opt = document.createElement("option");
@@ -238,15 +282,13 @@ include __DIR__ . '/_scanner.php';
                 courseSelect.appendChild(opt);
             });
         }
-
-        // reload students immediately by institute
         filterStudents();
     });
 
-    // Reload students directly when course is changed (independent filter)
+    // Reload on other refiners
     courseSelect.addEventListener("change", filterStudents);
 
-    // Populate levels dropdown once
+    // Populate levels
     levels.forEach(level => {
         const opt = document.createElement("option");
         opt.value = level;
@@ -254,7 +296,7 @@ include __DIR__ . '/_scanner.php';
         levelSelect.appendChild(opt);
     });
 
-    // Populate sections dropdown once
+    // Populate sections
     sections.forEach(section => {
         const opt = document.createElement("option");
         opt.value = section;
@@ -262,7 +304,6 @@ include __DIR__ . '/_scanner.php';
         sectionSelect.appendChild(opt);
     });
 
-    // Add event listeners for secondary refiners
     levelSelect.addEventListener("change", filterStudents);
     sectionSelect.addEventListener("change", filterStudents);
     searchInput.addEventListener("keyup", filterStudents);
@@ -271,7 +312,6 @@ include __DIR__ . '/_scanner.php';
 
     // Load all students on page load
     loadStudents();
-</script> 
+</script>
 </body>
 </html>
-

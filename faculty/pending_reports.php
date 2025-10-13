@@ -92,6 +92,29 @@ if (!$facultyId) {
     die('No faculty id in session. Please login again.');
 }
 
+/* ========= PAGINATION (add-only) ========= */
+$page    = max(1, (int)($_GET['page'] ?? 1));
+$perPage = min(50, max(1, (int)($_GET['per_page'] ?? 12)));
+$offset  = ($page - 1) * $perPage;
+
+$countSql = "
+  SELECT COUNT(*)
+  FROM student_violation sv
+  JOIN student_account s ON sv.student_id = s.student_id
+  WHERE sv.submitted_by = ?
+    AND LOWER(sv.status) = 'pending'
+";
+$cnt = $conn->prepare($countSql) ?: die('Prepare failed: ' . $conn->error);
+$cnt->bind_param('s', $facultyId);
+$cnt->execute();
+$cnt->bind_result($totalPending);
+$cnt->fetch();
+$cnt->close();
+$totalPending = (int)($totalPending ?? 0);
+$lastPage = max(1, (int)ceil($totalPending / $perPage));
+if ($page > $lastPage) { $page = $lastPage; $offset = ($page - 1) * $perPage; }
+/* ========= /PAGINATION ========= */
+
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -108,10 +131,11 @@ JOIN student_account s ON sv.student_id = s.student_id
 WHERE sv.submitted_by = ?
   AND LOWER(sv.status) = 'pending'
 ORDER BY sv.reported_at DESC, sv.violation_id DESC
+LIMIT ? OFFSET ?
 ";
 
 $stmt = $conn->prepare($sql) ?: die('Prepare failed: ' . $conn->error);
-$stmt->bind_param('s', $facultyId);
+$stmt->bind_param('sii', $facultyId, $perPage, $offset);
 if (!$stmt->execute()) {
     die('Execute failed: ' . $stmt->error);
 }
@@ -209,6 +233,7 @@ if ($result) {
 $stmt->close();
 $conn->close();
 
+/* keep your existing computed values */
 $pendingCount = count($violations);
 $uniqueStudents = count($studentIds);
 
@@ -224,6 +249,39 @@ $topCategorySummary = '';
 if ($topCategory !== '') {
     $topCategorySummary = $topCategory . ' / ' . ($topCategoryCount === 1 ? '1 case' : $topCategoryCount . ' cases');
 }
+
+/* ========= PAGER HTML (REPLACE THIS BLOCK) ========= */
+function build_page_link(int $targetPage): string {
+    $base = strtok($_SERVER['REQUEST_URI'], '?');
+    $q = $_GET; unset($q['page']);
+    $q['page'] = $targetPage;
+    return htmlspecialchars($base . '?' . http_build_query($q), ENT_QUOTES, 'UTF-8');
+}
+
+$pagerHtml = '';
+if ($totalPending > 0) {
+    $prevDisabled = $page <= 1;
+    $nextDisabled = $page >= $lastPage;
+
+    $prevHref = $prevDisabled ? '#' : build_page_link($page - 1);
+    $nextHref = $nextDisabled ? '#' : build_page_link($page + 1);
+
+    $prevCls = $prevDisabled ? ' is-disabled' : '';
+    $nextCls = $nextDisabled ? ' is-disabled' : '';
+
+    $statusText = 'Page ' . $page . ' of ' . $lastPage . ' • ' . $totalPending . ' total';
+
+    $pagerHtml = '
+    <nav class="pagerbar" aria-label="Pagination">
+      <div class="pagerbar__status">'.h($statusText).'</div>
+      <div class="pagerbar__controls">
+        <a class="pagerbtn'.$prevCls.'" href="'.$prevHref.'" aria-disabled="'.($prevDisabled?'true':'false').'" rel="prev">← Prev</a>
+        <a class="pagerbtn'.$nextCls.'" href="'.$nextHref.'" aria-disabled="'.($nextDisabled?'true':'false').'" rel="next">Next →</a>
+      </div>
+    </nav>';
+}
+/* ========= /PAGER HTML ========= */
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -400,6 +458,9 @@ if ($topCategory !== '') {
             </article>
           <?php endforeach; ?>
         </div>
+
+        <?= $pagerHtml ?>
+
       </section>
     <?php else: ?>
       <section class="empty-state" aria-label="No pending reports">
