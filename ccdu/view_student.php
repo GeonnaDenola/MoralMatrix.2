@@ -255,6 +255,11 @@ function viol_page_url($p, $pp = null){
                 Required: <?= number_format((float)$requiredHours, 0) ?> hrs •
                 Logged: <?= number_format((float)$loggedHours, 2) ?> hrs
               </p>
+               <?php if ($remainingHours <= 0.00001): ?>
+    <a class="btn btn-primary btn-block" href="<?= $selfDir ?>/gmrc_customize.php?student_id=<?= urlencode($student_id) ?>">
+      Download GMRC Certificate
+    </a>
+  <?php endif; ?>
               <a class="btn btn-primary btn-block" href="<?= $selfDir ?>/add_violation.php?student_id=<?= urlencode($student_id) ?>">Add Violation</a>
             </article>
 
