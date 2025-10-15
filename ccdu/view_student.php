@@ -256,7 +256,7 @@ function viol_page_url($p, $pp = null){
                 Logged: <?= number_format((float)$loggedHours, 2) ?> hrs
               </p>
                <?php if ($remainingHours <= 0.00001): ?>
-    <a class="btn btn-primary btn-block" href="<?= $selfDir ?>/gmrc_customize.php?student_id=<?= urlencode($student_id) ?>">
+    <a class="btn btn-primary btn-block" href="<?= $selfDir ?>/gmrc_customize.php?student_id=<?= urlencode($student_id) ?>" style ="margin-bottom: 10px;">
       Download GMRC Certificate
     </a>
   <?php endif; ?>
