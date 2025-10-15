@@ -2,7 +2,6 @@
 // ccdu/add_violation.php
 
 // Start output buffering FIRST so accidental output in included files won't break redirects.
-// Long-term: make included files (like _scanner.php) silent instead of relying on buffering.
 ob_start();
 
 session_start();
@@ -10,17 +9,45 @@ session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/email_lib.php';
 
-// Include scanner (it should be silent). If your scanner needs to run only for GET/HTML rendering,
-// you can move this include further down (after POST handling). Keeping it here is fine when the scanner
-// does not echo/print anything.
+// Include scanner (it should be silent)
 include __DIR__ . '/_scanner.php';
+
+// Helper to escape HTML consistently across templates.
+if (!function_exists('h')) {
+    function h(?string $value): string
+    {
+        return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+/**
+ * Helper: verify SMTP "from" is configured so moralmatrix_mailer() won't throw.
+ * We read from $smtp['from'] or environment fallbacks used in email_lib.php.
+ */
+if (!function_exists('smtp_from_configured')) {
+    function smtp_from_configured(): bool
+    {
+        $cfg  = $GLOBALS['smtp'] ?? [];
+        $from = $cfg['from']
+            ?? (getenv('MORALMATRIX_FROM_EMAIL')
+            ?: ($cfg['user'] ?? getenv('MORALMATRIX_SMTP_USER') ?: ''));
+        return $from && filter_var($from, FILTER_VALIDATE_EMAIL);
+    }
+}
+
+$errorMessage  = null;
+$student       = null;
+$studentName   = '';
+$studentCourse = '';
+$studentLevel  = '';
+$studentEmail  = '';
+$studentPhoto  = '../admin/uploads/placeholder.png';
 
 /* ---------- STUDENT ID FROM GET OR POST ---------- */
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
 if (!$studentId && ($_SERVER['REQUEST_METHOD'] !== 'POST')) {
     // For GET views we need a student id; for POST we use the hidden input
     echo "<p>No student selected!</p>";
-    // flush buffer and exit
     ob_end_flush();
     exit;
 }
@@ -34,7 +61,6 @@ $dbname     = $database_settings['dbname'];
 $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     http_response_code(500);
-    // flush buffer before dying
     ob_end_flush();
     die("Connection failed: " . $conn->connect_error);
 }
@@ -71,10 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---- Photo upload (optional) ----
     $photo = "";
     if (isset($_FILES["photo"]) && is_uploaded_file($_FILES["photo"]["tmp_name"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-        // Ensure correct path with slash
         $uploadDir = dirname(__DIR__) . "/admin/uploads/";
         if (!is_dir($uploadDir)) {
-            // create directory (restrict permissions if appropriate for your environment)
             mkdir($uploadDir, 0777, true);
         }
 
@@ -91,9 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $submitted_by  = $_SESSION['actor_id'] ?? 'unknown';
+    $submitted_by = $_SESSION['actor_id'] ?? 'unknown';
 
-    // Insert (no output before this!)
+    // Insert
     $sql = "INSERT INTO student_violation
             (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by)
             VALUES (?, ?, ?, ?, ?, ?, 'approved', ?)";
@@ -105,9 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Prepare failed: " . $conn->error);
     }
 
-    // Bind parameters: use strings; NULL will be converted to empty string by mysqli bind,
-    // but if you want true SQL NULL you can use bind_result + explicit NULL handling.
-    $detail_for_bind = $offense_details ?? null; // keep as-is; note: bind_param will treat null as empty string
+    $detail_for_bind = $offense_details; // may be null
     $stmtIns->bind_param(
         "sssssss",
         $student_id,
@@ -128,52 +150,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $stmtIns->close();
 
+    // Fetch student recipient for notification
     $stmtStu = $conn->prepare("SELECT first_name, last_name, email FROM student_account WHERE student_id = ?");
-$stmtStu->bind_param("s", $student_id);
-$stmtStu->execute();
-$resStu = $stmtStu->get_result();
+    $stmtStu->bind_param("s", $student_id);
+    $stmtStu->execute();
+    $resStu = $stmtStu->get_result();
 
-if ($stu = $resStu->fetch_assoc()) {
-    $toEmail = $stu['email'];
-    $toName  = trim($stu['first_name'].' '.$stu['last_name']);
+    if ($stu = $resStu->fetch_assoc()) {
+        $toEmail = trim((string)$stu['email']);
+        $toName  = trim((string)($stu['first_name'] ?? '') . ' ' . (string)($stu['last_name'] ?? ''));
 
-    if (!empty($toEmail)) {
-        $mail = moralmatrix_mailer();
-        $mail->addAddress($toEmail, $toName);
-        $mail->Subject = 'Violation Recorded in Moral Matrix';
+        $recipientOk = $toEmail !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL);
+        $smtpOk      = smtp_from_configured();
 
-        $html = '
-            <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
-                <h2>Dear '.htmlspecialchars($toName).',</h2>
-                <p>A new violation has been recorded in your account.</p>
-                <p><strong>Category:</strong> '.htmlspecialchars($violation_category).'</p>
-                <p><strong>Details:</strong> '.nl2br(htmlspecialchars($offense_details ?? 'N/A')).'</p>
-                <p><strong>Date:</strong> '.date("F j, Y g:i A").'</p>
-                <p>You may log in to your Moral Matrix account for more details.</p>
-            </div>';
+        if ($recipientOk && $smtpOk) {
+            $mail = moralmatrix_mailer();
+            $mail->addAddress($toEmail, $toName);
+            $mail->Subject = 'Violation Recorded in Moral Matrix';
 
-        $mail->Body    = $html;
-        $mail->AltBody = strip_tags($html);
+            $html = '
+                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
+                    <h2>Dear '.htmlspecialchars($toName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8').',</h2>
+                    <p>A new violation has been recorded in your account.</p>
+                    <p><strong>Category:</strong> '.htmlspecialchars($offense_category, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8').'</p>
+                    <p><strong>Details:</strong> '.nl2br(htmlspecialchars($offense_details ?? 'N/A', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')).'</p>
+                    <p><strong>Date:</strong> '.date("F j, Y g:i A").'</p>
+                    <p>You may log in to your Moral Matrix account for more details.</p>
+                </div>';
 
-        try {
-            $mail->send();
-            error_log("Violation email sent to $toEmail");
-        } catch (Throwable $e) {
-            error_log("Violation email error: ".$mail->ErrorInfo);
+            $mail->Body    = $html;
+            $mail->AltBody = strip_tags($html);
+
+            try {
+                $mail->send();
+                error_log("Violation email sent to $toEmail");
+            } catch (Throwable $e) {
+                error_log("Violation email error: ".$mail->ErrorInfo);
+            }
+        } else {
+            if (!$recipientOk) {
+                error_log("Skipping violation email: invalid or missing recipient for student_id=$student_id");
+            }
+            if (!$smtpOk) {
+                error_log("Skipping violation email: SMTP FROM not configured (set \$smtp['from'] or env).");
+            }
         }
     }
-}
-
+    $stmtStu->close();
 
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
     ob_end_flush();
     exit;
 }
-
 /* ========= END INSERT HANDLER ========= */
 
 /* From here on, it's safe to output HTML */
-// include page header (this may echo HTML)
 include __DIR__ . '/../includes/header.php';
 
 /* ---------- FETCH STUDENT FOR DISPLAY ---------- */
@@ -193,320 +224,567 @@ if ($studentId) {
     $student = null;
 }
 
-// rest of the HTML / form rendering goes here...
-// (omit closing PHP tag to avoid accident
+if (!$student) {
+    $errorMessage = 'Student record not found.';
+} else {
+    $nameParts = array_filter([
+        $student['first_name'] ?? '',
+        $student['middle_name'] ?? '',
+        $student['last_name'] ?? '',
+    ], static fn($part) => $part !== null && trim((string)$part) !== '');
+
+    $studentName   = trim(implode(' ', $nameParts)) ?: 'Unnamed student';
+    $studentCourse = trim((string)($student['course'] ?? ''));
+    $studentLevel  = trim((string)($student['level'] ?? '') . ' ' . (string)($student['section'] ?? ''));
+    $studentEmail  = trim((string)($student['email'] ?? ''));
+
+    if (!empty($student['photo'])) {
+        $studentPhoto = '../admin/uploads/' . rawurlencode((string)$student['photo']);
+    }
+}
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Add Violation</title>
-  <link rel="stylesheet" href="../css/add_violation.css"/>
-</head>
-<body>
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Violation</title>
+    <link rel="stylesheet" href="../css/add_violation.css">
+  </head>
+  <body>
 
-<main class="page">
-  <section class="card page__body">
-    <!-- Profile -->
-    <div class="profile">
-      <?php if (!empty($student)): ?>
-        <div class="profile__media">
-          <img
-            src="<?= !empty($student['photo']) ? '../admin/uploads/'.htmlspecialchars($student['photo'], ENT_QUOTES) : 'placeholder.png' ?>"
-            alt="Student photo"
-            class="profile__img"
-          >
+  <main class="page">
+    <div class="violation-shell">
+      <aside class="student-card">
+        <div class="student-card__header">
+          <span class="card-label">Student</span>
+          <h1><?= $student ? h($studentName) : 'Profile unavailable'; ?></h1>
+          <p class="student-card__subtitle">
+            <?= $student ? 'Verify the details before filing a report.' : 'Choose a student from the roster to begin.'; ?>
+          </p>
         </div>
-        <div class="profile__info">
-          <div class="profile__name">
-            <strong><?= htmlspecialchars(trim(($student['first_name'] ?? '').' '.($student['middle_name'] ?? '').' '.($student['last_name'] ?? ''))) ?></strong>
+
+        <div class="student-card__body">
+          <div class="student-card__photo">
+            <img src="<?= h($studentPhoto); ?>" alt="Student photo"
+                onerror="this.src='../admin/uploads/placeholder.png'; this.onerror=null;">
           </div>
-          <div class="profile__meta">
-            <span class="badge"><?= htmlspecialchars($student['student_id']) ?></span>
-            <span class="divider" aria-hidden="true">•</span>
-            <span><?= htmlspecialchars($student['course']) ?> —
-              <?= htmlspecialchars(($student['level'] ?? '').($student['section'] ?? '')) ?>
-            </span>
-          </div>
+
+          <?php if ($student): ?>
+            <dl class="student-meta">
+              <div>
+                <dt>ID number</dt>
+                <dd><?= h($student['student_id'] ?? '-'); ?></dd>
+              </div>
+              <div>
+                <dt>Course</dt>
+                <dd><?= $studentCourse !== '' ? h($studentCourse) : 'Not provided'; ?></dd>
+              </div>
+              <?php if ($studentLevel !== ''): ?>
+                <div>
+                  <dt>Year &amp; section</dt>
+                  <dd><?= h($studentLevel); ?></dd>
+                </div>
+              <?php endif; ?>
+              <div>
+                <dt>Email</dt>
+                <dd><?= $studentEmail !== '' ? h($studentEmail) : 'Not listed'; ?></dd>
+              </div>
+            </dl>
+          <?php else: ?>
+            <div class="student-card__empty">
+              <p>We couldn't load any information for this student.</p>
+            </div>
+          <?php endif; ?>
         </div>
-      <?php else: ?>
-        <p>Student not found.</p>
-      <?php endif; ?>
-    </div>
+      </aside>
 
-    <!-- Category selector -->
-    <div class="section">
-      <h2 class="section__title">Add Violation</h2>
-      <div class="form-row">
-        <label for="offense_category" class="label">Offense Category <span class="req">*</span></label>
-        <select id="offense_category" class="select" onchange="toggleForms()" required>
-          <option value="">— Select —</option>
-          <option value="light">Light</option>
-          <option value="moderate">Moderate</option>
-          <option value="grave">Grave</option>
-        </select>
-      </div>
-    </div>
+      <section class="form-card">
+        <header class="form-card__header">
+          <span class="badge badge--accent">CCDU action</span>
+          <h2>Log a student violation</h2>
+          <p>Capture the incident details so the review board can take the right next steps.</p>
+        </header>
 
-    <!-- LIGHT -->
-    <div id="lightForm" class="offense-form" hidden>
-      <form method="POST" enctype="multipart/form-data" class="form">
-        <input type="hidden" name="offense_category" value="light">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id'] ?? '') ?>">
-
-        <fieldset class="section">
-          <legend class="section__title">Light Offenses</legend>
-
-          <div class="form-row">
-            <label for="lightOffenses" class="label">Type <span class="req">*</span></label>
-            <select id="lightOffenses" name="offense_type" class="select" required>
-              <option value="">— Select —</option>
-              <option value="id">ID</option>
-              <option value="uniform">Dress Code (Uniform)</option>
-              <option value="civilian">Revealing Clothes (Civilian Attire)</option>
-              <option value="accessories">Accessories</option>
-            </select>
+        <?php if ($errorMessage !== null): ?>
+          <div class="empty-state">
+            <h3>Unable to display the form</h3>
+            <p><?= h($errorMessage); ?></p>
+            <a class="btn btn-ghost" href="dashboard.php">Return to dashboard</a>
           </div>
-
-          <div id="light_idCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="id_offense[]" value="no_id"> No ID</label>
-            <label class="chip"><input type="checkbox" name="id_offense[]" value="borrowed"> Borrowed ID</label>
-          </div>
-
-          <div id="light_uniformCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="uniform_offense[]" value="socks"> Socks</label>
-            <label class="chip"><input type="checkbox" name="uniform_offense[]" value="skirt"> Skirt</label>
-          </div>
-
-          <div id="light_civilianCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="civilian_offense[]" value="crop_top"> Crop Top</label>
-            <label class="chip"><input type="checkbox" name="civilian_offense[]" value="sando"> Sando</label>
-          </div>
-
-          <div id="light_accessoriesCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="accessories_offense[]" value="piercings"> Piercing/s</label>
-            <label class="chip"><input type="checkbox" name="accessories_offense[]" value="hair_color"> Loud Hair Color</label>
-          </div>
-
-          <div class="form-row">
-            <label for="description_light" class="label">Report Description</label>
-            <textarea id="description_light" name="description" class="input" rows="3" placeholder="Short description..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <label class="label">Attach Photo</label>
-            <div class="upload">
-              <input type="file" name="photo" accept="image/*" class="file" onchange="previewPhoto(this, 'lightPreview')">
-              <div class="preview-wrap">
-                <img id="lightPreview" class="preview-lg" alt="" hidden>
+        <?php else: ?>
+          <div class="form-context">
+            <div class="field">
+              <label for="offense_category" class="field-label">Offense category</label>
+              <div class="select-wrapper">
+                <select id="offense_category" class="select-control" required>
+                  <option value="">Choose a category</option>
+                  <option value="light" selected>Light</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="grave">Grave</option>
+                </select>
               </div>
+            </div>
+            <div class="context-note">
+              <strong>Reminder:</strong> Entries submitted here are approved immediately and visible to CCDU records.
             </div>
           </div>
 
-          <div class="actions">
-            <button type="submit" class="btn">Add Violation</button>
-          </div>
-        </fieldset>
-      </form>
-    </div>
-
-    <!-- MODERATE -->
-    <div id="moderateForm" class="offense-form" hidden>
-      <form method="POST" enctype="multipart/form-data" class="form">
-        <input type="hidden" name="offense_category" value="moderate">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id'] ?? '') ?>">
-
-        <fieldset class="section">
-          <legend class="section__title">Moderate Offenses</legend>
-
-          <div class="form-row">
-            <label for="moderateOffenses" class="label">Type <span class="req">*</span></label>
-            <select id="moderateOffenses" name="offense_type" class="select" required>
-              <option value="">— Select —</option>
-              <option value="improper_conduct">Improper Language & Conduct</option>
-              <option value="gadget_misuse">Gadget Misuse</option>
-              <option value="unauthorized_acts">Unauthorized Acts</option>
-            </select>
-          </div>
-
-          <div id="moderate_improper_conductCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="conduct_offense[]" value="vulgar"> Use of curses and vulgar words</label>
-            <label class="chip"><input type="checkbox" name="conduct_offense[]" value="rough_behavior"> Roughness in behavior</label>
-          </div>
-
-          <div id="moderate_gadget_misuseCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="gadget_offense[]" value="cp_classes"> Use of cellular phones during classes</label>
-            <label class="chip"><input type="checkbox" name="gadget_offense[]" value="gadgets_functions"> Use of gadgets during academic functions</label>
-          </div>
-
-          <div id="moderate_unauthorized_actsCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="acts_offense[]" value="illegal_posters"> Posting posters/streamers/banners without approval</label>
-            <label class="chip"><input type="checkbox" name="acts_offense[]" value="pda"> PDA (Public Display of Affection)</label>
-          </div>
-
-          <div class="form-row">
-            <label for="description_moderate" class="label">Report Description</label>
-            <textarea id="description_moderate" name="description" class="input" rows="3" placeholder="Short description..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <label class="label">Attach Photo</label>
-            <div class="upload">
-              <input type="file" name="photo" accept="image/*" class="file" onchange="previewPhoto(this, 'moderatePreview')">
-              <div class="preview-wrap">
-                <img id="moderatePreview" class="preview-lg" alt="" hidden>
+          <div class="forms-stack">
+            <!-- Light -->
+            <form id="lightForm" class="category-panel" method="POST" enctype="multipart/form-data" novalidate>
+              <div class="panel-header">
+                <span class="panel-eyebrow">Category - Light</span>
+                <h3>Uniform, ID, and accessories</h3>
+                <p>Flag dress-code concerns and pick every item that applies.</p>
               </div>
-            </div>
-          </div>
 
-          <div class="actions">
-            <button type="submit" class="btn">Add Violation</button>
-          </div>
-        </fieldset>
-      </form>
-    </div>
+              <input type="hidden" name="offense_category" value="light">
+              <input type="hidden" name="student_id" value="<?= h($student['student_id'] ?? ''); ?>">
 
-    <!-- GRAVE -->
-    <div id="graveForm" class="offense-form" hidden>
-      <form method="POST" enctype="multipart/form-data" class="form">
-        <input type="hidden" name="offense_category" value="grave">
-        <input type="hidden" name="student_id" value="<?= htmlspecialchars($student['student_id'] ?? '') ?>">
-
-        <fieldset class="section">
-          <legend class="section__title">Grave Offenses</legend>
-
-          <div class="form-row">
-            <label for="graveOffenses" class="label">Type <span class="req">*</span></label>
-            <select id="graveOffenses" name="offense_type" class="select" required>
-              <option value="">— Select —</option>
-              <option value="substance_addiction">Substance & Addiction</option>
-              <option value="integrity_dishonesty">Academic Integrity & Dishonesty</option>
-              <option value="violence_misconduct">Violence & Misconduct</option>
-              <option value="property_theft">Property & Theft</option>
-              <option value="threats_disrespect">Threats & Disrespect</option>
-            </select>
-          </div>
-
-          <div id="grave_substance_addictionCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="substance_offense[]" value="smoking"> Smoking</label>
-            <label class="chip"><input type="checkbox" name="substance_offense[]" value="gambling"> Gambling</label>
-          </div>
-
-          <div id="grave_integrity_dishonestyCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="integrity_offense[]" value="forgery"> Forgery, falsifying, tampering of documents</label>
-            <label class="chip"><input type="checkbox" name="integrity_offense[]" value="dishonesty"> Dishonesty</label>
-          </div>
-
-          <div id="grave_violence_misconductCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="violence_offense[]" value="assault"> Assault</label>
-            <label class="chip"><input type="checkbox" name="violence_offense[]" value="hooliganism"> Hooliganism</label>
-          </div>
-
-          <div id="grave_property_theftCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="property_offense[]" value="theft"> Theft</label>
-            <label class="chip"><input type="checkbox" name="property_offense[]" value="destruction_of_property"> Willful destruction of school property</label>
-          </div>
-
-          <div id="grave_threats_disrespectCheckbox" class="chips" hidden>
-            <span class="chips__label">Select specific issue(s):</span>
-            <label class="chip"><input type="checkbox" name="threats_offense[]" value="firearms"> Carrying deadly weapons/firearms/explosives</label>
-            <label class="chip"><input type="checkbox" name="threats_offense[]" value="disrespect"> Offensive words / disrespectful deeds</label>
-          </div>
-
-          <div class="form-row">
-            <label for="description_grave" class="label">Report Description</label>
-            <textarea id="description_grave" name="description" class="input" rows="3" placeholder="Short description..."></textarea>
-          </div>
-
-          <div class="form-row">
-            <label class="label">Attach Photo</label>
-            <div class="upload">
-              <input type="file" name="photo" accept="image/*" class="file" onchange="previewPhoto(this, 'gravePreview')">
-              <div class="preview-wrap">
-                <img id="gravePreview" class="preview-lg" alt="" hidden>
+              <div class="field">
+                <label for="lightOffenses" class="field-label">Offense type</label>
+                <div class="select-wrapper">
+                  <select id="lightOffenses" name="offense_type" class="select-control" required>
+                    <option value="">Select an offense type</option>
+                    <option value="id">ID</option>
+                    <option value="uniform">Dress code (uniform)</option>
+                    <option value="civilian">Revealing clothes (civilian attire)</option>
+                    <option value="accessories">Accessories</option>
+                  </select>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div class="actions">
-            <button type="submit" class="btn">Add Violation</button>
+              <div id="light_idCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">ID issues</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="id_offense[]" value="no_id">
+                    <span>No ID</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="id_offense[]" value="borrowed">
+                    <span>Borrowed ID</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="light_uniformCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Uniform reminders</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="uniform_offense[]" value="socks">
+                    <span>Socks</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="uniform_offense[]" value="skirt">
+                    <span>Skirt length</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="light_civilianCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Civilian attire</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="civilian_offense[]" value="crop_top">
+                    <span>Crop top</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="civilian_offense[]" value="sando">
+                    <span>Sando</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="light_accessoriesCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Accessories</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="accessories_offense[]" value="piercings">
+                    <span>Piercing/s</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="accessories_offense[]" value="hair_color">
+                    <span>Loud hair color</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="description_light" class="field-label">Report description</label>
+                <textarea id="description_light" name="description" rows="3"
+                          placeholder="Summarize what happened, when, and where."></textarea>
+              </div>
+
+              <div class="field upload-field">
+                <label for="lightPhoto" class="field-label">Attach photo (optional)</label>
+                <input type="file" id="lightPhoto" name="photo" accept="image/*"
+                      onchange="previewPhoto(this, 'lightPreview')" class="file-control">
+                <span class="helper-text">Accepted formats: JPG, PNG, or HEIC up to 5MB.</span>
+                <img id="lightPreview" class="photo-preview" alt="Light offense preview" hidden>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Submit violation</button>
+              </div>
+            </form>
+
+            <!-- Moderate -->
+            <form id="moderateForm" class="category-panel" method="POST" enctype="multipart/form-data" novalidate>
+              <div class="panel-header">
+                <span class="panel-eyebrow">Category - Moderate</span>
+                <h3>Conduct and gadget use</h3>
+                <p>Document actions that disrupt the learning environment.</p>
+              </div>
+
+              <input type="hidden" name="offense_category" value="moderate">
+              <input type="hidden" name="student_id" value="<?= h($student['student_id'] ?? ''); ?>">
+
+              <div class="field">
+                <label for="moderateOffenses" class="field-label">Offense type</label>
+                <div class="select-wrapper">
+                  <select id="moderateOffenses" name="offense_type" class="select-control" required>
+                    <option value="">Select an offense type</option>
+                    <option value="improper_conduct">Improper language &amp; conduct</option>
+                    <option value="gadget_misuse">Gadget misuse</option>
+                    <option value="unauthorized_acts">Unauthorized acts</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="moderate_improper_conductCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Improper language &amp; conduct</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="conduct_offense[]" value="vulgar">
+                    <span>Use of curses and vulgar words</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="conduct_offense[]" value="rough_behavior">
+                    <span>Roughness in behavior</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="moderate_gadget_misuseCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Gadget misuse</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="gadget_offense[]" value="cp_classes">
+                    <span>Use of cellular phones during classes</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="gadget_offense[]" value="gadgets_functions">
+                    <span>Use of gadgets during academic functions</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="moderate_unauthorized_actsCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Unauthorized acts</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="acts_offense[]" value="illegal_posters">
+                    <span>Posting materials without approval</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="acts_offense[]" value="pda">
+                    <span>Public display of affection</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="description_moderate" class="field-label">Report description</label>
+                <textarea id="description_moderate" name="description" rows="3"
+                          placeholder="Provide context, witnesses, or devices involved."></textarea>
+              </div>
+
+              <div class="field upload-field">
+                <label for="moderatePhoto" class="field-label">Attach photo (optional)</label>
+                <input type="file" id="moderatePhoto" name="photo" accept="image/*"
+                      onchange="previewPhoto(this, 'moderatePreview')" class="file-control">
+                <span class="helper-text">Attach screenshots, photos, or other supporting files.</span>
+                <img id="moderatePreview" class="photo-preview" alt="Moderate offense preview" hidden>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Submit violation</button>
+              </div>
+            </form>
+
+            <!-- Grave -->
+            <form id="graveForm" class="category-panel" method="POST" enctype="multipart/form-data" novalidate>
+              <div class="panel-header">
+                <span class="panel-eyebrow">Category - Grave</span>
+                <h3>Critical incidents</h3>
+                <p>Escalate serious violations and capture all essential details.</p>
+              </div>
+
+              <input type="hidden" name="offense_category" value="grave">
+              <input type="hidden" name="student_id" value="<?= h($student['student_id'] ?? ''); ?>">
+
+              <div class="field">
+                <label for="graveOffenses" class="field-label">Offense type</label>
+                <div class="select-wrapper">
+                  <select id="graveOffenses" name="offense_type" class="select-control" required>
+                    <option value="">Select an offense type</option>
+                    <option value="substance_addiction">Substance abuse &amp; addiction</option>
+                    <option value="integrity_dishonesty">Academic integrity &amp; dishonesty</option>
+                    <option value="violence_misconduct">Violence &amp; misconduct</option>
+                    <option value="property_theft">Property damage or theft</option>
+                    <option value="threats_disrespect">Threats &amp; disrespect</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="grave_substance_addictionCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Substance issues</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="substance_offense[]" value="smoking">
+                    <span>Smoking on campus</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="substance_offense[]" value="gambling">
+                    <span>Gambling</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="grave_integrity_dishonestyCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Integrity &amp; honesty</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="integrity_offense[]" value="forgery">
+                    <span>Forgery, falsifying, or tampering documents</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="integrity_offense[]" value="dishonesty">
+                    <span>Dishonesty</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="grave_violence_misconductCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Violence &amp; misconduct</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="violence_offense[]" value="assault">
+                    <span>Assault</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="violence_offense[]" value="hooliganism">
+                    <span>Hooliganism</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="grave_property_theftCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Property damage or theft</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="property_offense[]" value="theft">
+                    <span>Theft</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="property_offense[]" value="destruction_of_property">
+                    <span>Willful destruction of school property</span>
+                  </label>
+                </div>
+              </div>
+
+              <div id="grave_threats_disrespectCheckbox" class="chip-group is-hidden">
+                <span class="chip-group__label">Threats &amp; disrespect</span>
+                <div class="chip-list">
+                  <label class="chip">
+                    <input type="checkbox" name="threats_offense[]" value="firearms">
+                    <span>Carrying deadly weapons/firearms/explosives</span>
+                  </label>
+                  <label class="chip">
+                    <input type="checkbox" name="threats_offense[]" value="disrespect">
+                    <span>Offensive words / disrespectful deeds</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="description_grave" class="field-label">Report description</label>
+                <textarea id="description_grave" name="description" rows="3"
+                          placeholder="Include witness names, locations, and immediate response."></textarea>
+              </div>
+
+              <div class="field upload-field">
+                <label for="gravePhoto" class="field-label">Attach photo (optional)</label>
+                <input type="file" id="gravePhoto" name="photo" accept="image/*"
+                      onchange="previewPhoto(this, 'gravePreview')" class="file-control">
+                <span class="helper-text">Add photos, documents, or screenshots that support the report.</span>
+                <img id="gravePreview" class="photo-preview" alt="Grave offense preview" hidden>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Submit violation</button>
+              </div>
+            </form>
           </div>
-        </fieldset>
-      </form>
+        <?php endif; ?>
+      </section>
     </div>
-  </section>
-</main>
+  </main>
 
-<script>
-  // Show image preview centered under the chooser
+  <script>
   function previewPhoto(input, previewId){
-    const img = document.getElementById(previewId);
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+
     if (input.files && input.files[0]) {
       const reader = new FileReader();
-      reader.onload = e => {
-        img.src = e.target.result;
-        img.hidden = false;
+      reader.onload = event => {
+        preview.src = event.target?.result || '';
+        preview.hidden = false;
       };
       reader.readAsDataURL(input.files[0]);
+    } else {
+      preview.hidden = true;
+      preview.removeAttribute('src');
     }
   }
 
-  // Toggle which category form is visible
-  function toggleForms(){
-    const selected = document.getElementById('offense_category').value;
-    ['light','moderate','grave'].forEach(key=>{
-      const el = document.getElementById(key+'Form');
-      if (el) el.hidden = (selected !== key);
+  function initOptionSwitch(selectId, prefix, values, suffix){
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const hideAll = () => {
+      values.forEach(value => {
+        const group = document.getElementById(prefix + value + suffix);
+        if (group) {
+          group.classList.add('is-hidden');
+        }
+      });
+    };
+
+    const showSelected = () => {
+      const group = document.getElementById(prefix + select.value + suffix);
+      if (group) {
+        group.classList.remove('is-hidden');
+      }
+    };
+
+    hideAll();
+    showSelected();
+
+    select.addEventListener('change', () => {
+      hideAll();
+      showSelected();
     });
   }
 
-  // Handle sub-type checkbox groups
-  window.addEventListener('DOMContentLoaded', () => {
-    const lightSel = document.getElementById('lightOffenses');
-    const modSel   = document.getElementById('moderateOffenses');
-    const graveSel = document.getElementById('graveOffenses');
+  document.addEventListener('DOMContentLoaded', () => {
+    const categorySelect = document.getElementById('offense_category');
+    const panels = ['light', 'moderate', 'grave'];
 
-    if (lightSel) lightSel.addEventListener('change', function(){
-      ['id','uniform','civilian','accessories'].forEach(k=>{
-        const box = document.getElementById('light_'+k+'Checkbox');
-        if (box) box.hidden = true;
+    const syncPanels = () => {
+      const selected = categorySelect ? categorySelect.value : '';
+      panels.forEach(type => {
+        const panel = document.getElementById(type + 'Form');
+        if (panel) {
+          panel.classList.toggle('is-active', selected === type);
+        }
       });
-      const box = document.getElementById('light_'+this.value+'Checkbox');
-      if (box) box.hidden = false;
-    });
+    };
 
-    if (modSel) modSel.addEventListener('change', function(){
-      ['improper_conduct','gadget_misuse','unauthorized_acts'].forEach(k=>{
-        const box = document.getElementById('moderate_'+k+'Checkbox');
-        if (box) box.hidden = true;
-      });
-      const box = document.getElementById('moderate_'+this.value+'Checkbox');
-      if (box) box.hidden = false;
-    });
+    if (categorySelect) {
+      categorySelect.addEventListener('change', syncPanels);
+    }
+    syncPanels();
 
-    if (graveSel) graveSel.addEventListener('change', function(){
-      ['substance_addiction','integrity_dishonesty','violence_misconduct','property_theft','threats_disrespect'].forEach(k=>{
-        const box = document.getElementById('grave_'+k+'Checkbox');
-        if (box) box.hidden = true;
-      });
-      const box = document.getElementById('grave_'+this.value+'Checkbox');
-      if (box) box.hidden = false;
-    });
-
-    toggleForms();
+    initOptionSwitch('lightOffenses', 'light_', ['id', 'uniform', 'civilian', 'accessories'], 'Checkbox');
+    initOptionSwitch('moderateOffenses', 'moderate_', ['improper_conduct', 'gadget_misuse', 'unauthorized_acts'], 'Checkbox');
+    initOptionSwitch('graveOffenses', 'grave_', ['substance_addiction', 'integrity_dishonesty', 'violence_misconduct', 'property_theft', 'threats_disrespect'], 'Checkbox');
   });
-</script>
-</body>
-</html>
+
+  (function(){
+    const sheet = document.getElementById('sideSheet');
+    const scrim = document.getElementById('sheetScrim');
+    const openBtn = document.getElementById('openMenu');
+    const closeBtn = document.getElementById('closeMenu');
+    if (!sheet || !scrim || !openBtn || !closeBtn) return;
+
+    let lastFocusedEl = null;
+
+    function trapFocus(container, e){
+      const focusables = container.querySelectorAll('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])');
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last  = focusables[focusables.length - 1];
+
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
+    const focusTrapHandler = e => trapFocus(sheet, e);
+
+    function openSheet(){
+      lastFocusedEl = document.activeElement;
+      sheet.classList.add('open');
+      scrim.classList.add('open');
+      sheet.setAttribute('aria-hidden', 'false');
+      scrim.setAttribute('aria-hidden', 'false');
+      openBtn.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('no-scroll');
+
+      setTimeout(() => {
+        const firstFocusable = sheet.querySelector('#pageButtons a, #pageButtons button, [tabindex]:not([tabindex="-1"])');
+        (firstFocusable || sheet).focus();
+      }, 10);
+
+      sheet.addEventListener('keydown', focusTrapHandler);
+    }
+
+    function closeSheet(){
+      sheet.classList.remove('open');
+      scrim.classList.remove('open');
+      sheet.setAttribute('aria-hidden', 'true');
+      scrim.setAttribute('aria-hidden', 'true');
+      openBtn.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('no-scroll');
+
+      sheet.removeEventListener('keydown', focusTrapHandler);
+      if (lastFocusedEl) {
+        lastFocusedEl.focus();
+      }
+    }
+
+    openBtn.addEventListener('click', openSheet);
+    closeBtn.addEventListener('click', closeSheet);
+    scrim.addEventListener('click', closeSheet);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeSheet();
+      }
+    });
+
+    sheet.addEventListener('click', e => {
+      const link = e.target.closest('a[href]');
+      if (!link) return;
+      const sameTab = !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
+      if (sameTab) {
+        closeSheet();
+      }
+    });
+  })();
+  </script>
+
+  <button id="openMenu" class="menu-launcher" aria-controls="sideSheet" aria-expanded="false"
+          style="position:fixed;left:-9999px;opacity:0" tabindex="-1">Menu</button>
+
+  </body>
+  </html>
