@@ -159,20 +159,46 @@ $IMG_FOOTER = data_uri($ASSET_FILES['footer_logo']);
   }
 
   .printbar { display:flex; gap:10px; justify-content:flex-end; margin:14px auto 0; max-width:900px; }
-  .btn{appearance:none;border:1px solid #e5e7eb;background:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer}
+  .btn{
+    appearance:none;
+    border:1px solid #a3131f;
+    background:#c51f2c;
+    color:#fff;
+    border-radius:12px;
+    padding:10px 20px;
+    font-weight:700;
+    letter-spacing:.02em;
+    cursor:pointer;
+    transition:background .18s ease, transform .18s ease, box-shadow .18s ease;
+    box-shadow:0 12px 24px rgba(197,31,44,.25);
+  }
+  .btn:hover{
+    background:#ab1b26;
+    transform:translateY(-1px);
+    box-shadow:0 16px 28px rgba(197,31,44,.35);
+  }
+  .btn:focus-visible{
+    outline:3px solid rgba(197,31,44,.35);
+    outline-offset:3px;
+  }
 
   .page {
-    max-width: 794px; margin: 12px auto 32px; background:#fff; box-shadow:0 12px 40px rgba(0,0,0,.08);
-    position:relative; overflow:hidden;
+    width:210mm;
+    min-height:297mm;
+    margin:12px auto 32px;
+    background:#fff;
+    box-shadow:0 12px 40px rgba(0,0,0,.08);
+    position:relative;
+    overflow:hidden;
   }
 
   /* HEADER */
   .header {
-    display:flex; align-items:center; gap:14px; padding:12mm 10mm 6mm; position:relative;
+    display:flex; align-items:center; gap:12mm; padding:14mm 16mm 8mm; position:relative;
     border-bottom:1px solid #d1d5db;
   }
-  .hdr-seal { width:38mm; display:flex; align-items:center; justify-content:center; }
-  .hdr-seal img { max-width:38mm; height:auto; object-fit:contain; }
+  .hdr-seal { width:32mm; display:flex; align-items:center; justify-content:center; }
+  .hdr-seal img { max-width:32mm; height:auto; object-fit:contain; }
   .hdr-text { flex:1; text-align:left; }
   .hdr-line-1 { font-weight:700; font-size:20pt; letter-spacing:.02em; color:#9b1c2a; }
   .hdr-line-2 { margin-top:2mm; font-weight:600; font-size:12pt; letter-spacing:.04em; color:#697279; text-transform:uppercase; }
@@ -184,7 +210,7 @@ $IMG_FOOTER = data_uri($ASSET_FILES['footer_logo']);
   }
 
   /* TITLE & BODY */
-  .content { padding: 0 14mm 10mm; position:relative; }
+  .content { padding: 0 18mm 12mm; position:relative; }
   .title { text-align:center; margin:12mm 0 8mm; font-weight:800; letter-spacing:.06em; font-size:13.5pt; text-transform:uppercase; }
   .body { font-size:12pt; line-height:1.65; position:relative; z-index:1; }
   .body p { margin: 0 0 6mm; text-align: justify; text-justify: inter-word; }
