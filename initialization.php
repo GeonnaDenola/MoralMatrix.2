@@ -320,6 +320,25 @@ if ($conn->query($sqlCreateCommunityServiceEvidenceSchema) === FALSE) {
     handleQueryError($sqlCreateCommunityServiceEvidenceSchema, $conn);
 }
 
+$sqlCreateNotificationsSchema = "CREATE TABLE IF NOT EXISTS notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  target_role ENUM('student','faculty','security','ccdu') NOT NULL,
+  target_user_id VARCHAR(64) NULL,           
+  type ENUM('info','success','warning','danger') NOT NULL DEFAULT 'info',
+  title VARCHAR(150) NOT NULL,
+  body TEXT NULL,
+  url VARCHAR(255) NULL,
+  violation_id INT NULL,
+  created_by VARCHAR(64) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at DATETIME NULL,                    
+  KEY idx_target (target_role, target_user_id, read_at, created_at),
+  KEY idx_violation (violation_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+if ($conn->query($sqlCreateNotificationsSchema) === FALSE) {
+    handleQueryError($sqlCreateNotificationsSchema, $conn);
+}
+
 /* =========================
    Decide where to go next:
    - If ANY account already exists, go to login.php

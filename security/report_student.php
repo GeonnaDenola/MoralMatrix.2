@@ -171,7 +171,7 @@ include __DIR__ . '/_scanner.php';
                     const yearLabel = student.level ? `Year ${student.level}${section}` : "Level pending";
 
                     card.innerHTML = `
-                        <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : 'placeholder.png'}" alt="Student photo">
+                        <img class="student-photo" src="${student.photo ? '../admin/uploads/' + student.photo : '../admin/uploads/placeholder.png'}" alt="Student photo">
                         <div class="student-details">
                             <div class="student-id">${student.student_id}</div>
                             <div class="student-name">${student.last_name}, ${student.first_name} ${student.middle_name ?? ""}</div>

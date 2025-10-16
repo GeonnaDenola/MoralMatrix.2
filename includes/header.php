@@ -28,6 +28,8 @@ if (!function_exists('activeClass')) {
     </a>
 
     <div class="actions">
+       <?php include $_SERVER['DOCUMENT_ROOT'].'/MoralMatrix/includes/notif_bar.php'; ?>
+        
       <details class="dropdown" id="logoutDropdown">
         <summary class="dropdown-toggle" aria-haspopup="menu" aria-expanded="false">
           <span>Logout</span>

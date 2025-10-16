@@ -8,6 +8,7 @@ session_start();
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/email_lib.php';
+require_once __DIR__ . '/../lib/notify.php';
 
 // Include scanner (it should be silent)
 include __DIR__ . '/_scanner.php';
@@ -150,6 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $stmtIns->close();
 
+    $violationId = $conn->insert_id; 
+
+    // BEFORE notifications:
+    $studentFullName = 'Student ' . $student_id;  // default
+    $toEmail = '';
+    $toName  = '';
+
     // Fetch student recipient for notification
     $stmtStu = $conn->prepare("SELECT first_name, last_name, email FROM student_account WHERE student_id = ?");
     $stmtStu->bind_param("s", $student_id);
@@ -197,6 +205,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     $stmtStu->close();
+
+    // === NOTIFICATIONS (create records) ===
+$studentFullName = trim(
+    (string)($stu['first_name'] ?? '') . ' ' . (string)($stu['last_name'] ?? '')
+);
+if ($studentFullName === '') $studentFullName = 'Student ' . $student_id;
+
+$actorRole = strtolower($_SESSION['account_type'] ?? '');
+$actorId   = $_SESSION['actor_id'] ?? 'unknown';
+
+// 1) CCDU broadcast (everyone in CCDU sees it)
+//    With Option A, read_at is shared for the row (one marks read = read for everyone).
+Notify::create($conn, [
+  'type'         => ($actorRole === 'ccdu') ? 'success' : 'warning',
+  'target_role'  => 'ccdu',
+  'title'        => ($actorRole === 'ccdu')
+                      ? 'New violation added by CCDU'
+                      : 'Violation reported by ' . ucfirst($actorRole ?: 'staff'),
+  'body'         => $studentFullName . ' • Student ID: ' . $student_id,
+  'url'          => '/MoralMatrix/ccdu/view_student.php?student_id=' . urlencode($student_id) . '#v' . $violationId,
+  'violation_id' => $violationId,
+  'created_by'   => $actorId,
+]);
+
+// 2) Student targeted (only that student sees it)
+Notify::create($conn, [
+  'type'           => 'info',
+  'target_role'    => 'student',
+  'target_user_id' => $student_id, // student logs in as their student_id
+  'title'          => 'A violation was filed on your account',
+  'body'           => 'Please review the entry for ' . $studentFullName . '.',
+  'url'            => '/MoralMatrix/student/violations.php#v' . $violationId,
+  'violation_id'   => $violationId,
+  'created_by'     => $actorId,
+]);
+
 
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
     ob_end_flush();
