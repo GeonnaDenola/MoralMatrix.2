@@ -45,6 +45,12 @@ if (!function_exists('activeClass')) {
             </button>
           </form>
         </div>
+
+        <div>
+          <a href = "../profile.php">
+            <button>User Profile</button>
+          </a>
+        </div>
       </details>
     </div>
   </div>

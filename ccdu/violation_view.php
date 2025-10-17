@@ -338,7 +338,7 @@ ob_start(); ?>
 
     <div class="nv-meta" role="group" aria-label="Summary">
       <div class="nv-item"><b>Student ID</b><span><?= htmlspecialchars($r['student_id']) ?></span></div>
-      <div class="nv-item"><b>Ordinal</b><span>#<?= (int)$studentNo ?> for this student</span></div>
+      <div class="nv-item"><b>Ordinal</b><span>#<?= (int)$studentNo ?></span></div>
       <div class="nv-item"><b>Category</b><span><?= htmlspecialchars(ucfirst($cat)) ?></span></div>
       <div class="nv-item"><b>Type</b><span><?= $type ?: '—' ?></span></div>
 
@@ -398,11 +398,13 @@ ob_start(); ?>
           </div>
         </div>
 
-       <div class="nv-actions">
+<div class="nv-actions">
   <?php $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile); ?>
 
+  <!-- Contact Guardian -->
   <?php if (!empty($guardianMobile) && !empty($telClean)): ?>
-    <form method="POST" id="contactGuardianForm" action="send_sms.php" onsubmit="return confirm('Send SMS to guardian?');" style="display:inline">
+    <form method="POST" id="contactGuardianForm" action="send_sms.php"
+          onsubmit="return confirm('Send SMS to guardian?');" style="display:inline">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
       <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
       <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violationNo) ?>">
@@ -412,30 +414,44 @@ ob_start(); ?>
     <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
   <?php endif; ?>
 
+
   <?php
+    // Build redirect URL for service log / set CS
     $logUrl = 'student_details.php?student_id=' . urlencode($r['student_id'])
-            . '&violation_id=' . urlencode((string)$violationNo)
-            . '&return=' . urlencode('violation_view.php?id='.$violationNo.'&student_id='.$r['student_id']);
+             . '&violation_id=' . urlencode((string)$violationNo)
+             . '&return=' . urlencode('violation_view.php?id='.$violationNo.'&student_id='.$r['student_id']);
   ?>
 
-  <?php if ($remainingForThis <= 0): ?>
-    <a class="btn" href="<?= $logUrl ?>">🧾 View / Add Notes</a>
+  <?php
+    // --- determine button state ---
+    // $isVoided = true/false
+    // $csAssigned = true if community service is already paired with this violation
+    // $remainingForThis = remaining hours specific to this violation
+  ?>
 
-  <?php elseif ($isVoided): ?>
-    <!-- Voided record → disable button -->
+  <?php if ($isVoided): ?>
+    <!-- Voided -->
     <a class="btn btn-primary" href="#" disabled title="Violation is voided">🧹 Set for Community Service (Unavailable)</a>
 
   <?php elseif ($csAssigned): ?>
-    <!-- Already assigned → show link to logs -->
-    <a class="btn" href="<?= $logUrl ?>">🧾 View Service Progress</a>
+    <!-- Already paired to community service -->
+    <a class="btn btn-primary" href="<?= htmlspecialchars($logUrl) ?>">🧾 View Community Service Progress</a>
+
+  <?php elseif ($remainingForThis <= 0): ?>
+    <!-- Already completed -->
+    <a class="btn" href="<?= htmlspecialchars($logUrl) ?>">🧾 View / Add Notes</a>
 
   <?php else: ?>
-    <!-- Available → allow CCDU to assign -->
+    <!-- Available for assignment -->
     <a class="btn btn-primary" href="<?= htmlspecialchars($setCsUrl) ?>">🧹 Set for Community Service</a>
   <?php endif; ?>
 
+
+  <!-- Void Button -->
   <?php if (empty($isVoided)): ?>
-    <form method="POST" action="void_violation.php" onsubmit="return confirm('Void this violation?');" style="display:inline">
+    <form method="POST" action="void_violation.php"
+          onsubmit="return confirm('Void this violation?');"
+          style="display:inline">
       <input type="hidden" name="violation_id" value="<?= (int)$violationNo ?>">
       <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
@@ -446,6 +462,7 @@ ob_start(); ?>
     <span class="badge badge-danger" title="Voided">● Voided</span>
   <?php endif; ?>
 </div>
+
 
 </div>
 

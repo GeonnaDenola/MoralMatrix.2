@@ -385,7 +385,7 @@ if ($totalReports > 0) {
               $statusLabelRaw = trim((string)($violation['status'] ?? ''));
               $statusLabel = $statusLabelRaw !== '' ? ucwords(str_replace('_',' ', strtolower($statusLabelRaw))) : 'Approved';
               $photoFile = trim((string)($violation['student_photo'] ?? ''));
-              $photoSrc  = $photoFile !== '' ? '../admin/uploads/' . $photoFile : 'placeholder.png';
+              $photoSrc  = $photoFile !== '' ? '../admin/uploads/' . $photoFile : '../admin/uploads/placeholder.png';
               $description = trim((string)($violation['description'] ?? ''));
               $dateInfo = describeDate($violation['reported_at'] ?? null);
               $searchIndex = toSearchIndex($studentName.' '.$studentId.' '.$categoryLabel.' '.$typeLabel.' '.$description);
