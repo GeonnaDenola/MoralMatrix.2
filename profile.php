@@ -171,7 +171,7 @@ $mobile = $user['mobile'] ?? '';
         <div>
           <h1><?= htmlspecialchars($fullName ?: 'Unnamed') ?></h1>
           <div class="muted"><?= ucfirst($accountType) ?> Account</div>
-          <div><b><?= htmlspecialchars($idCol) ?>:</b> <?= htmlspecialchars($idNumber) ?></div>
+          <div><b>ID:</b> <?= htmlspecialchars($idNumber) ?></div>
         </div>
       </div>
 
