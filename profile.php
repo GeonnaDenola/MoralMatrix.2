@@ -14,6 +14,33 @@ if (empty($_SESSION['record_id']) || empty($_SESSION['account_type'])) {
 $recordId = (int) $_SESSION['record_id'];
 $accountType = $_SESSION['account_type'];
 
+switch (strtolower($accountType)) {
+  case 'super_admin':
+    $headerFile = __DIR__ . '/includes/superadmin_header.php';
+    break;
+  case 'administrator':
+    $headerFile = __DIR__ . '/includes/admin_header.php';
+    break;
+  case 'ccdu':
+    $headerFile = __DIR__ . '/includes/header.php';
+    break;
+  case 'faculty':
+    $headerFile = __DIR__ . '/includes/faculty_header.php';
+    break;
+  case 'security':
+    $headerFile = __DIR__ . '/includes/security_header.php';
+    break;
+  case 'student':
+    $headerFile = __DIR__ . '/includes/student_header.php';
+    break;
+}
+
+if (file_exists($headerFile)) {
+  include $headerFile;
+} else {
+  echo "<!-- Missing header for role: $accountType -->";
+}
+
 // ==============================
 // 2. Database connection
 // ==============================
