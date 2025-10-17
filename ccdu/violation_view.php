@@ -398,7 +398,7 @@ ob_start(); ?>
           </div>
         </div>
 
-        <div class="nv-actions">
+       <div class="nv-actions">
   <?php $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile); ?>
 
   <?php if (!empty($guardianMobile) && !empty($telClean)): ?>
@@ -420,10 +420,18 @@ ob_start(); ?>
 
   <?php if ($remainingForThis <= 0): ?>
     <a class="btn" href="<?= $logUrl ?>">🧾 View / Add Notes</a>
+
+  <?php elseif ($isVoided): ?>
+    <!-- Voided record → disable button -->
+    <a class="btn btn-primary" href="#" disabled title="Violation is voided">🧹 Set for Community Service (Unavailable)</a>
+
   <?php elseif ($csAssigned): ?>
+    <!-- Already assigned → show link to logs -->
+    <a class="btn" href="<?= $logUrl ?>">🧾 View Service Progress</a>
+
   <?php else: ?>
-    <!-- Disabled Community Service button -->
-    <a class="btn btn-primary" href="#" disabled title="Only CCDU can assign">🧹 Set for Community Service (Unavailable)</a>
+    <!-- Available → allow CCDU to assign -->
+    <a class="btn btn-primary" href="<?= htmlspecialchars($setCsUrl) ?>">🧹 Set for Community Service</a>
   <?php endif; ?>
 
   <?php if (empty($isVoided)): ?>
@@ -437,6 +445,8 @@ ob_start(); ?>
   <?php else: ?>
     <span class="badge badge-danger" title="Voided">● Voided</span>
   <?php endif; ?>
+</div>
+
 </div>
 
       </section>
