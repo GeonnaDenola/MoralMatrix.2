@@ -1,4 +1,20 @@
-<?php if (session_status() !== PHP_SESSION_ACTIVE) session_start(); ?>
+<?php
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
+$mm_base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+if ($mm_base === '') {
+  $doc_root = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT']), '/') : '';
+  $dir_path = rtrim(str_replace('\\', '/', __DIR__), '/');
+  if ($doc_root !== '' && strpos($dir_path, $doc_root) === 0) {
+    $relative = substr($dir_path, strlen($doc_root)); 
+    $mm_base = rtrim(preg_replace('#/includes/?$#', '', $relative), '/');
+    if ($mm_base === '') {
+      $mm_base = '';
+    }
+  }
+}
+$notifications_api_url = ($mm_base === '' ? '' : $mm_base) . '/api/notifications_api.php';
+?>
 <style>
   .nb { position: relative; display: inline-flex; align-items: center; }
   .nb-btn {
@@ -217,7 +233,7 @@
 <script>
 (function(){
   const container = document.getElementById('nb');
-  const API = '/MoralMatrix/notifications_api.php'; // absolute path used for fetch requests.
+  const API = <?php echo json_encode($notifications_api_url); ?>; // absolute path used for fetch requests.
   const btn = document.getElementById('nbBtn');
   const panel = document.getElementById('nbPanel');
   const list = document.getElementById('nbList');
