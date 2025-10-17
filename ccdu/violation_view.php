@@ -34,12 +34,26 @@ if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) {
   $hasStatus = (bool)$res->num_rows; $res->close();
 }
 
+// --- detect void/audit columns ---
+$hasIsVoid = $hasVoidReason = $hasVoidedBy = $hasVoidedAt = false;
+
+if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'is_void'"))     { $hasIsVoid = (bool)$res->num_rows; $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'void_reason'")) { $hasVoidReason = (bool)$res->num_rows; $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'voided_by'"))   { $hasVoidedBy = (bool)$res->num_rows; $res->close(); }
+if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'voided_at'"))   { $hasVoidedAt = (bool)$res->num_rows; $res->close(); }
+
 /* Fetch violation */
 $r = null;
 if ($violationId > 0) {
   $cols = "violation_id, student_id, offense_category, offense_type, offense_details, description, reported_at, photo";
   if ($hasReportedBy) $cols .= ", reported_by";
   if ($hasStatus)     $cols .= ", status";
+  // include void/audit fields if present
+  if ($hasIsVoid)     $cols .= ", is_void";
+  if ($hasVoidReason) $cols .= ", void_reason";
+  if ($hasVoidedBy)   $cols .= ", voided_by";
+  if ($hasVoidedAt)   $cols .= ", voided_at";
+
 
   $sql = "SELECT $cols FROM student_violation WHERE violation_id = ?";
   $stmt = $conn->prepare($sql);
@@ -216,6 +230,13 @@ $desc        = htmlspecialchars($r['description'] ?? '');
 $datePretty  = !empty($r['reported_at']) ? date('M d, Y h:i A', strtotime($r['reported_at'])) : '—';
 $reportedBy  = $hasReportedBy ? htmlspecialchars($r['reported_by'] ?? '—') : '—';
 $statusVal   = $hasStatus ? htmlspecialchars($r['status'] ?? 'active') : 'active';
+// compute void flag for this record
+$isVoided = false;
+if ($hasIsVoid) {
+  $isVoided = ((int)($r['is_void'] ?? 0) === 1);
+} else {
+  $isVoided = (strtolower($r['status'] ?? '') === 'void');
+}
 
 /* Flatten chips */
 $detailsText = '—';
@@ -378,43 +399,46 @@ ob_start(); ?>
         </div>
 
         <div class="nv-actions">
-          <?php $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile); ?>
+  <?php $telClean = preg_replace('/[^+\\d]/', '', (string)$guardianMobile); ?>
 
-          <?php if (!empty($guardianMobile) && !empty($telClean)): ?>
-            <form method="POST" id="contactGuardianForm" action="send_sms.php" onsubmit="return confirm('Send SMS to guardian?');" style="display:inline">
-              <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
-              <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
-              <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violationNo) ?>">
-              <button type="submit" class="btn">📞 Contact Guardian<?= $guardianName ? ' — '.htmlspecialchars($guardianName) : '' ?></button>
-            </form>
-          <?php else: ?>
-            <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
-          <?php endif; ?>
+  <?php if (!empty($guardianMobile) && !empty($telClean)): ?>
+    <form method="POST" id="contactGuardianForm" action="send_sms.php" onsubmit="return confirm('Send SMS to guardian?');" style="display:inline">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
+      <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
+      <input type="hidden" name="violation_id" value="<?= htmlspecialchars((string)$violationNo) ?>">
+      <button type="submit" class="btn">📞 Contact Guardian<?= $guardianName ? ' — '.htmlspecialchars($guardianName) : '' ?></button>
+    </form>
+  <?php else: ?>
+    <button class="btn" disabled title="No guardian mobile on file">📞 Contact Guardian</button>
+  <?php endif; ?>
 
-          <?php
-            // Link to logging page with violation preselected (so logs subtract from THIS violation)
-            $logUrl = 'student_details.php?student_id=' . urlencode($r['student_id'])
-                    . '&violation_id=' . urlencode((string)$violationNo)
-                    . '&return=' . urlencode('violation_view.php?id='.$violationNo.'&student_id='.$r['student_id']);
-          ?>
+  <?php
+    $logUrl = 'student_details.php?student_id=' . urlencode($r['student_id'])
+            . '&violation_id=' . urlencode((string)$violationNo)
+            . '&return=' . urlencode('violation_view.php?id='.$violationNo.'&student_id='.$r['student_id']);
+  ?>
 
-          <?php if ($remainingForThis <= 0): ?>
-            <a class="btn" href="<?= $logUrl ?>">🧾 View / Add Notes</a>
-          <?php elseif ($csAssigned): ?>
-          <?php else: ?>
-            <a class="btn btn-primary" href="<?= $setCsUrl ?>">🧹 Set for Community Service</a>
-          <?php endif; ?>
+  <?php if ($remainingForThis <= 0): ?>
+    <a class="btn" href="<?= $logUrl ?>">🧾 View / Add Notes</a>
+  <?php elseif ($csAssigned): ?>
+  <?php else: ?>
+    <!-- Disabled Community Service button -->
+    <a class="btn btn-primary" href="#" disabled title="Only CCDU can assign">🧹 Set for Community Service (Unavailable)</a>
+  <?php endif; ?>
 
-          <?php if ($hasStatus && strtolower($statusVal) !== 'void'): ?>
-            <form method="POST" action="violation_void.php" onsubmit="return confirm('Void this violation?');" style="display:inline">
-              <input type="hidden" name="id" value="<?= $violationNo ?>">
-              <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
-              <button type="submit" class="btn btn-danger">🛑 Void</button>
-            </form>
-          <?php elseif ($hasStatus): ?>
-            <span class="badge badge-danger" title="Voided">● Voided</span>
-          <?php endif; ?>
-        </div>
+  <?php if (empty($isVoided)): ?>
+    <form method="POST" action="void_violation.php" onsubmit="return confirm('Void this violation?');" style="display:inline">
+      <input type="hidden" name="violation_id" value="<?= (int)$violationNo ?>">
+      <input type="hidden" name="student_id" value="<?= htmlspecialchars($r['student_id']) ?>">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+      <input type="hidden" name="return" value="<?= htmlspecialchars($_SERVER['REQUEST_URI']) ?>">
+      <button type="submit" class="btn btn-danger">🛑 Void</button>
+    </form>
+  <?php else: ?>
+    <span class="badge badge-danger" title="Voided">● Voided</span>
+  <?php endif; ?>
+</div>
+
       </section>
 
       <section class="nv-photo nv-card" aria-labelledby="photo-label">
@@ -503,7 +527,19 @@ if (isset($_GET['sms_status'])) {
         </div>
       </header>
       <?= $smsAlert ?>
+      <?php if (isset($_GET['void_status'])): ?>
+        <?php if ($_GET['void_status'] === 'ok'): ?>
+          <div style="padding:10px;background:#d1fae5;color:#065f46;border:1px solid #059669;margin:10px 0;border-radius:8px">
+            ✅ Violation voided.
+          </div>
+        <?php else: ?>
+          <div style="padding:10px;background:#fee2e2;color:#991b1b;border:1px solid #f87171;margin:10px 0;border-radius:8px">
+            ⚠️ Couldn’t void: <?= htmlspecialchars($_GET['msg'] ?? 'Unknown error') ?>
+          </div>
+        <?php endif; ?>
+      <?php endif; ?>
       <?= $inner ?>
+
     </div>
     <footer>© <?= date('Y') ?> Discipline Management</footer>
   </div>

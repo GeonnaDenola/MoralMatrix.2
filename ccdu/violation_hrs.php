@@ -3,7 +3,7 @@
  * violation_hrs.php
  * Helper functions to compute community-service hours.
  *
- * Rule:
+ * Rules:
  *   - Each GRAVE (category contains 'grave' but NOT 'less') = 20 hours
  *   - Every 3 of all other categories (light/moderate/less grave/minor/blank) = 10 hours
  *
@@ -31,6 +31,7 @@ function _hasColumn(mysqli $conn, string $table, string $column): bool {
 /** REQUIRED hours from violations */
 function communityServiceHours(mysqli $conn, string $student_id): int {
     $hasStatus = _hasColumn($conn, 'student_violation', 'status');
+    $hasIsVoid = _hasColumn($conn, 'student_violation', 'is_void');
 
     // Normalize category to handle NULL/blank
     $cat = "LOWER(TRIM(COALESCE(offense_category,'')))";
@@ -49,8 +50,13 @@ function communityServiceHours(mysqli $conn, string $student_id): int {
         FROM student_violation
         WHERE student_id = ?
     ";
+
+    // Ignore voided or rejected violations
+    if ($hasIsVoid) {
+        $sql .= " AND (is_void = 0 OR is_void IS NULL)";
+    }
     if ($hasStatus) {
-        $sql .= " AND LOWER(status) NOT IN ('void','voided','canceled','cancelled')";
+        $sql .= " AND LOWER(status) NOT IN ('void','voided','canceled','cancelled','rejected')";
     }
 
     $stmt = $conn->prepare($sql);
@@ -68,6 +74,7 @@ function communityServiceHours(mysqli $conn, string $student_id): int {
     $grave    = (int)($row['grave_cnt'] ?? 0);
     $nonGrave = (int)($row['non_grave_cnt'] ?? 0);
 
+    // Formula: each grave = 20 hrs; every 3 non-grave = 10 hrs
     return (int)(($grave * 20) + (intdiv($nonGrave, 3) * 10));
 }
 
@@ -98,3 +105,4 @@ function communityServiceRemaining(mysqli $conn, string $student_id): float {
     $logged   = communityServiceLogged($conn, $student_id);
     return max(0.0, (float)$required - (float)$logged);
 }
+?>
