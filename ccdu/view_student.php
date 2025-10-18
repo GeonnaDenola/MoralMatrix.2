@@ -404,7 +404,7 @@ function viol_page_url($p, $pp = null){
   <!-- Modal -->
   <div id="violationModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="violationModalTitle">
     <button type="button" class="modal-close" id="violationClose" aria-label="Close">✕</button>
-    <div id="violationContent" class="modal-content" style="margin-top:20px; margin-left:200px;"></div>
+    <div id="violationContent" class="modal-content" style="margin-top:50px; margin-left:200px;"></div>
   </div>
 
   <script>
