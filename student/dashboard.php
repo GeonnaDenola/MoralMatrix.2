@@ -37,7 +37,7 @@ $first_name = $student['first_name'] ?? 'Student';
 // ---------- FETCH VIOLATIONS ----------
 $sql = "SELECT offense_category, offense_type, offense_details, description, photo, status, submitted_by, reported_at
         FROM student_violation
-        WHERE student_id = ?
+        WHERE student_id = ? AND status = 'Approved'
         ORDER BY reported_at DESC";
 
 $stmt = $conn->prepare($sql);
@@ -78,9 +78,9 @@ include '../includes/student_header.php';
                         <p><strong>Details:</strong> <?= htmlspecialchars($row['offense_details']) ?></p>
                         <p><strong>Description:</strong> <?= htmlspecialchars($row['description']) ?></p>
                     </div>
-                    <div class="card-footer">
+                 <!--   <div class="card-footer">
                         <span class="badge <?= strtolower($row['status']) ?>"><?= htmlspecialchars($row['status']) ?></span>
-                    </div>
+                    </div> -->
                 </div>
             <?php endwhile; ?>
         <?php else: ?>

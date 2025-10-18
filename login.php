@@ -167,9 +167,6 @@ unset($_SESSION['old_email']);
         </div>
 
         <div class="form-options">
-          <label class="remember-me" for="remember">
-            <input type="checkbox" id="remember" /> <span>Remember Me</span>
-          </label>
           <a href="#" class="forgot-password">Forgot Password?</a>
         </div>
 
