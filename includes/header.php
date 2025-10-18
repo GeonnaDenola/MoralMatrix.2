@@ -4,11 +4,188 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Ensure base URL + config are available for asset building
+if (!defined('BASE_URL')) {
+    include_once __DIR__ . '/../config.php';
+}
+$baseUrl = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+$asset = static function (string $path) use ($baseUrl): string {
+    $trimmed = ltrim($path, '/');
+    $prefix = $baseUrl !== '' ? $baseUrl : '';
+    return ($prefix . '/' . $trimmed);
+};
+
 // Active link helper
 if (!isset($active)) { $active = basename($_SERVER['PHP_SELF']); }
 if (!function_exists('activeClass')) {
   function activeClass($file){ global $active; return $active === $file ? ' is-active' : ''; }
 }
+
+// Build user profile data for header chip
+$headerUser = [
+    'name'     => '',
+    'initials' => '',
+    'photo'    => '',
+    'role'     => ''
+];
+
+$accountTypeRaw = $_SESSION['account_type'] ?? '';
+$accountTypeKey = strtolower((string)$accountTypeRaw);
+
+$roleLabel = '';
+if ($accountTypeRaw !== '') {
+    $roleLabel = ucwords(str_replace('_', ' ', (string)$accountTypeRaw));
+    $headerUser['role'] = $roleLabel;
+}
+
+if (!empty($_SESSION['record_id']) && $accountTypeKey !== '') {
+    $recordId = (int) $_SESSION['record_id'];
+
+    // Re-use connection settings if available
+    if (isset($database_settings) && is_array($database_settings)) {
+        $dbSettings = $database_settings;
+    } else {
+        include_once __DIR__ . '/../config.php';
+        $dbSettings = isset($database_settings) && is_array($database_settings) ? $database_settings : [];
+    }
+
+    if (!empty($dbSettings)) {
+        $conn = @new mysqli(
+            $dbSettings['servername'],
+            $dbSettings['username'],
+            $dbSettings['password'],
+            $dbSettings['dbname']
+        );
+
+        if (!$conn->connect_error) {
+            $conn->set_charset('utf8mb4');
+
+            $stmt = $conn->prepare("SELECT id_number FROM accounts WHERE record_id = ? LIMIT 1");
+            if ($stmt) {
+                $stmt->bind_param("i", $recordId);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                $accountRow = $res ? $res->fetch_assoc() : null;
+                $stmt->close();
+
+                if ($accountRow && !empty($accountRow['id_number'])) {
+                    $idNumber = $accountRow['id_number'];
+                    $table = '';
+                    $idCol = '';
+                    $fields = '';
+
+                    switch ($accountTypeKey) {
+                        case 'student':
+                            $table = 'student_account';
+                            $idCol = 'student_id';
+                            $fields = 'first_name, middle_name, last_name, photo';
+                            break;
+                        case 'ccdu':
+                            $table = 'ccdu_account';
+                            $idCol = 'ccdu_id';
+                            $fields = 'first_name, last_name, photo';
+                            break;
+                        case 'faculty':
+                            $table = 'faculty_account';
+                            $idCol = 'faculty_id';
+                            $fields = 'first_name, last_name, photo';
+                            break;
+                        case 'security':
+                            $table = 'security_account';
+                            $idCol = 'security_id';
+                            $fields = 'first_name, last_name, photo';
+                            break;
+                        case 'administrator':
+                        case 'admin':
+                        case 'super_admin':
+                            $table = 'admin_account';
+                            $idCol = 'admin_id';
+                            $fields = 'first_name, middle_name, last_name, photo';
+                            break;
+                        default:
+                            $table = '';
+                    }
+
+                    if ($table !== '') {
+                        $detailSql = sprintf(
+                            "SELECT %s FROM %s WHERE %s = ? LIMIT 1",
+                            $fields,
+                            $table,
+                            $idCol
+                        );
+                        $detailStmt = $conn->prepare($detailSql);
+                        if ($detailStmt) {
+                            $detailStmt->bind_param("s", $idNumber);
+                            $detailStmt->execute();
+                            $detailRes = $detailStmt->get_result();
+                            $detail = $detailRes ? $detailRes->fetch_assoc() : null;
+                            $detailStmt->close();
+
+                            if ($detail) {
+                                $char = static function (string $value): string {
+                                    if ($value === '') {
+                                        return '';
+                                    }
+                                    if (function_exists('mb_substr')) {
+                                        return mb_substr($value, 0, 1);
+                                    }
+                                    return substr($value, 0, 1);
+                                };
+
+                                $first = trim((string)($detail['first_name'] ?? ''));
+                                $middle = trim((string)($detail['middle_name'] ?? ''));
+                                $last = trim((string)($detail['last_name'] ?? ''));
+                                $middleInitial = $middle !== '' ? strtoupper($char($middle)) . '. ' : '';
+                                $fullName = trim($first . ' ' . $middleInitial . $last);
+
+                                $headerUser['name'] = $fullName !== '' ? $fullName : ($_SESSION['email'] ?? 'My Profile');
+
+                                $initials = '';
+                                if ($first !== '') { $initials .= strtoupper($char($first)); }
+                                if ($last !== '') { $initials .= strtoupper($char($last)); }
+                                if ($initials === '' && !empty($_SESSION['email'])) {
+                                    $initials = strtoupper($_SESSION['email'][0]);
+                                }
+                                $headerUser['initials'] = $initials !== '' ? $initials : 'U';
+
+                                if (!empty($detail['photo'])) {
+                                    $uploadDir = realpath(__DIR__ . '/../admin/uploads/');
+                                    $photoFile = basename((string)$detail['photo']);
+                                    if ($uploadDir && is_file($uploadDir . DIRECTORY_SEPARATOR . $photoFile)) {
+                                        $headerUser['photo'] = $asset('admin/uploads/' . $photoFile);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            $conn->close();
+        }
+    }
+}
+
+if ($headerUser['name'] === '') {
+    $headerUser['name'] = $_SESSION['email'] ?? 'My Profile';
+}
+if ($headerUser['initials'] === '') {
+    $headerUser['initials'] = strtoupper(substr($headerUser['name'], 0, 1));
+}
+
+$profileUrl = $asset('profile.php');
+$logoutUrl = $asset('logout.php');
+$homeTargets = [
+    'ccdu'         => 'ccdu/dashboard.php',
+    'student'      => 'student/index.php',
+    'faculty'      => 'faculty/index.php',
+    'security'     => 'security/index.php',
+    'administrator'=> 'admin/index.php',
+    'admin'        => 'admin/index.php',
+    'super_admin'  => 'super_admin/dashboard.php'
+];
+$homeTarget = $homeTargets[$accountTypeKey] ?? 'home.php';
+$homeUrl = $asset($homeTarget);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,20 +193,36 @@ if (!function_exists('activeClass')) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Moral Matrix</title>
-  <link rel="stylesheet" href="../css/header.css">
+  <link rel="stylesheet" href="<?php echo htmlspecialchars($asset('css/header.css'), ENT_QUOTES); ?>">
 </head>
 <body>
 
 <!-- ===== Sticky Header (always above sidebar) ===== -->
 <header class="site-header" role="banner">
   <div class="header-inner">
-    <a href="dashboard.php" class="brand" aria-label="Moral Matrix home">
+    <a href="<?php echo htmlspecialchars($homeUrl, ENT_QUOTES); ?>" class="brand" aria-label="Moral Matrix home">
       MORAL MATRIX
     </a>
 
     <div class="actions">
        <?php include $_SERVER['DOCUMENT_ROOT'].'/MoralMatrix/includes/notif_bar.php'; ?>
-        
+
+      <a class="profile-chip" href="<?php echo htmlspecialchars($profileUrl, ENT_QUOTES); ?>" aria-label="View profile">
+        <span class="profile-avatar">
+          <?php if (!empty($headerUser['photo'])): ?>
+            <img src="<?php echo htmlspecialchars($headerUser['photo'], ENT_QUOTES); ?>" alt="Profile photo">
+          <?php else: ?>
+            <span class="profile-initials"><?php echo htmlspecialchars($headerUser['initials'], ENT_QUOTES); ?></span>
+          <?php endif; ?>
+        </span>
+        <span class="profile-text">
+          <span class="profile-name"><?php echo htmlspecialchars($headerUser['name'], ENT_QUOTES); ?></span>
+          <?php if (!empty($headerUser['role'])): ?>
+            <span class="profile-role"><?php echo htmlspecialchars($headerUser['role'], ENT_QUOTES); ?></span>
+          <?php endif; ?>
+        </span>
+      </a>
+
       <details class="dropdown" id="logoutDropdown">
         <summary class="dropdown-toggle" aria-haspopup="menu" aria-expanded="false">
           <span>Logout</span>
@@ -39,7 +232,7 @@ if (!function_exists('activeClass')) {
         </summary>
 
         <div class="dropdown-menu" role="menu" aria-label="Logout menu">
-          <form action="../logout.php" method="post">
+          <form action="<?php echo htmlspecialchars($logoutUrl, ENT_QUOTES); ?>" method="post">
             <button type="submit" name="logout" class="dropdown-item" role="menuitem">
               <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -48,12 +241,6 @@ if (!function_exists('activeClass')) {
               Confirm logout
             </button>
           </form>
-        </div>
-
-        <div>
-          <a href = "../profile.php">
-            <button>User Profile</button>
-          </a>
         </div>
       </details>
     </div>
@@ -72,7 +259,7 @@ if (!function_exists('activeClass')) {
 
   <div class="nav-group">
     <a class="nav-item<?php echo activeClass('dashboard.php'); ?>"
-       href="dashboard.php"
+       href="<?php echo htmlspecialchars($asset('ccdu/dashboard.php'), ENT_QUOTES); ?>"
        <?php echo $active==='dashboard.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
@@ -81,7 +268,7 @@ if (!function_exists('activeClass')) {
     </a>
 
     <a class="nav-item<?php echo activeClass('pending_reports.php'); ?>"
-       href="pending_reports.php"
+       href="<?php echo htmlspecialchars($asset('ccdu/pending_reports.php'), ENT_QUOTES); ?>"
        <?php echo $active==='pending_reports.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16l4-4h10a2 2 0 0 0 2-2V8l-6-6zM13 9V3.5L18.5 9H13z"/></svg>
@@ -90,29 +277,28 @@ if (!function_exists('activeClass')) {
     </a>
 
     <a class="nav-item<?php echo activeClass('community_validators.php'); ?>"
-       href="community_validators.php"
+       href="<?php echo htmlspecialchars($asset('ccdu/community_validators.php'), ENT_QUOTES); ?>"
        <?php echo $active==='community_validators.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05C16.18 13.6 18 14.53 18 16V20h4v-3.5c0-2.33-4.67-3.5-6-3.5z"/></svg>
       </span>
       <span class="nav-label">Community Service Validators</span>
     </a>
-<a class="nav-item<?php echo activeClass('community_service.php'); ?>"
-   href="community_service.php"
-   <?php echo $active==='community_service.php'?'aria-current="page"':''; ?>>
-  <span class="nav-ico" aria-hidden="true">
-    <!-- Clock icon -->
-    <svg viewBox="0 0 24 24" width="20" height="20" focusable="false" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-      <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </span>
-  <span class="nav-label">Ongoing Community Service</span>
-</a>
-
+    <a class="nav-item<?php echo activeClass('community_service.php'); ?>"
+       href="<?php echo htmlspecialchars($asset('ccdu/community_service.php'), ENT_QUOTES); ?>"
+       <?php echo $active==='community_service.php'?'aria-current="page"':''; ?>>
+      <span class="nav-ico" aria-hidden="true">
+        <!-- Clock icon -->
+        <svg viewBox="0 0 24 24" width="20" height="20" focusable="false" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="nav-label">Ongoing Community Service</span>
+    </a>
 
     <a class="nav-item<?php echo activeClass('summary_report.php'); ?>"
-       href="summary_report.php"
+       href="<?php echo htmlspecialchars($asset('ccdu/summary_report.php'), ENT_QUOTES); ?>"
        <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z"/></svg>

@@ -624,4 +624,5 @@ $cardsPage   = array_slice($cards, $offset, $perPage);
 
 </body>
 </html>
-<?php $conn->close(); ?>
+
+
