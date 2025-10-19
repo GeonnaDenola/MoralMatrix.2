@@ -59,7 +59,7 @@ include '../includes/student_header.php';
 </head>
 <body>
 
-<div class="dashboard-container">
+<div class="dashboard-container" style = "margin-top: 80px;">
     <h2 class="welcome-text">Welcome, <?= htmlspecialchars($first_name) ?>!</h2>
     <h3 class="section-title">Your Violation History</h3>
 

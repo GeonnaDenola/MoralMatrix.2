@@ -15,7 +15,7 @@ include '../config.php';
 <!-- Skip link for accessibility -->
 <a class="skip-link" href="#main-content">Skip to content</a>
 
-<div class="hb-container">
+<div class="hb-container" style="margin-top: 80px;">
     <!-- Sidebar (Table of Contents) -->
     <aside class="hb-sidebar" aria-labelledby="toc-title">
         <div class="hb-sidebar__section">
