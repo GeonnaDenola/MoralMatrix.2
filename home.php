@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -13,13 +13,14 @@
   <header class="site-header">
     <div class="container header-inner">
       <!-- logo (now pinned to the left by CSS) -->
-      <a class="brand" href="#">MORAL MATRIX</a>
+      <a class="brand" href="home.php">MORAL MATRIX</a>
 
       <!-- Centered top nav: visible on desktop per CSS -->
       <nav class="primary-nav" aria-label="Primary">
         <ul>
+          <li><a href="home.php" aria-current="page">Home</a></li>
           <li><a href="#about">About</a></li>
-          <li><a href="handbook.php">Policies on Student Conduct</a></li>
+          <li><a href="handbook.php">Handbook</a></li>
           <li><a href="#services">Services</a></li>
         </ul>
       </nav>
@@ -45,17 +46,16 @@
 
   <nav class="nav-drawer" id="navDrawer" aria-hidden="true">
     <div class="drawer-header">
-      <strong>Menu</strong>
-      <button class="close-drawer" id="closeDrawer" aria-label="Close menu">×</button>
+      <strong>Navigation</strong>
+      <button class="close-drawer" id="closeDrawer" aria-label="Close menu">
+        <span aria-hidden="true">&times;</span>
+      </button>
     </div>
     <ul class="drawer-links" role="menu">
-      <!-- Pages (hidden on desktop by CSS nth-of-type rule) -->
+      <li><a href="home.php" role="menuitem" aria-current="page">Home</a></li>
       <li><a href="#about" role="menuitem">About</a></li>
-      <li><a href="handbook.php" role="menuitem">Student Violation Handbook</a></li>
+      <li><a href="handbook.php" role="menuitem">Handbook</a></li>
       <li><a href="#services" role="menuitem">Services</a></li>
-
-      <!-- Logins -->
-      <li class="divider" aria-hidden="true"></li>
       <li><a href="login.php" role="menuitem">Student Login</a></li>
       <li><a href="login.php" role="menuitem">Faculty Login</a></li>
       <li><a href="login.php" role="menuitem">Security Login</a></li>
@@ -67,8 +67,11 @@
   <section class="hero" id="about" aria-label="Welcome section">
     <div class="container hero-content">
       <h1>Welcome to Moral Matrix</h1>
-      <p><b>Where Character Development is the priority.</b></p>
-      <a class="btn" href="https://mcc.edu.ph/" rel="noopener">Visit MCC Page</a>
+      <p>Where character development and community values guide every student journey.</p>
+      <div class="hero-actions">
+        <a class="btn" href="https://mcc.edu.ph/" rel="noopener">Visit MCC Page</a>
+        <a class="btn-secondary" href="handbook.php">Read Student Handbook</a>
+      </div>
     </div>
   </section>
 
@@ -103,7 +106,7 @@
         <div class="card-body">
           <h3>Marc Christian Paul Ylan</h3>
           <p class="role"><b><i>System Analyst</i></b></p>
-          <p>A system analyst studies an organization’s processes to design and improve computer systems. They gather requirements, analyze needs, propose solutions, and ensure systems meet business goals. Key skills include problem-solving, communication, and technical knowledge.</p>
+          <p>A system analyst studies an organizationâ€™s processes to design and improve computer systems. They gather requirements, analyze needs, propose solutions, and ensure systems meet business goals. Key skills include problem-solving, communication, and technical knowledge.</p>
         </div>
       </article>
 
@@ -131,18 +134,19 @@
   <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
-      <p>© <span id="year"></span> Moral Matrix</p>
+      <p>Â© <span id="year"></span> Moral Matrix</p>
     </div>
   </footer>
 
   <script>
-    // Off-canvas drawer logic (accessible)
     (function () {
       const btn = document.getElementById('hamburgerBtn');
       const drawer = document.getElementById('navDrawer');
       const overlay = document.getElementById('navOverlay');
       const closeBtn = document.getElementById('closeDrawer');
-      const focusable = () => drawer.querySelectorAll('a, button');
+      if (!btn || !drawer || !overlay || !closeBtn) return;
+
+      const focusable = () => drawer.querySelectorAll('a, button:not([disabled])');
 
       function openDrawer() {
         drawer.classList.add('open');
@@ -150,7 +154,7 @@
         overlay.hidden = false;
         document.body.classList.add('no-scroll');
         btn.setAttribute('aria-expanded', 'true');
-        // focus first link
+
         const items = focusable();
         if (items.length) items[0].focus();
       }
@@ -164,32 +168,65 @@
         btn.focus();
       }
 
-      btn.addEventListener('click', () =>
-        drawer.classList.contains('open') ? closeDrawer() : openDrawer()
-      );
-      closeBtn.addEventListener('click', closeDrawer);
-      overlay.addEventListener('click', closeDrawer);
-
-      // ESC to close
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
-      });
-
-      // Trap focus inside the drawer
-      drawer.addEventListener('keydown', (e) => {
-        if (e.key !== 'Tab') return;
-        const items = Array.from(focusable());
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault(); last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault(); first.focus();
+      btn.addEventListener('click', () => {
+        if (drawer.classList.contains('open')) {
+          closeDrawer();
+        } else {
+          openDrawer();
         }
       });
 
-      // Year in footer
-      document.getElementById('year').textContent = new Date().getFullYear();
+      closeBtn.addEventListener('click', closeDrawer);
+      overlay.addEventListener('click', closeDrawer);
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && drawer.classList.contains('open')) {
+          closeDrawer();
+        }
+      });
+
+      drawer.addEventListener('keydown', (event) => {
+        if (event.key !== 'Tab') return;
+        const items = Array.from(focusable());
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      });
+    })();
+
+    (function () {
+      const yearEl = document.getElementById('year');
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+      }
+    })();
+
+    (function () {
+      const backToTop = document.getElementById('backToTop');
+      if (!backToTop) return;
+
+      const toggleVisibility = () => {
+        if (window.scrollY > 360) {
+          backToTop.classList.add('is-visible');
+        } else {
+          backToTop.classList.remove('is-visible');
+        }
+      };
+
+      backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      window.addEventListener('scroll', toggleVisibility, { passive: true });
+      toggleVisibility();
     })();
   </script>
 </body>
