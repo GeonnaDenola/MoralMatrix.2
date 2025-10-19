@@ -56,6 +56,19 @@ include '../config.php';
             <p class="hb-subtitle">Standards of Conduct</p>
         </header>
 
+        <section>
+            <div>
+                <h2>
+                    POLICIES ON STUDENT CONDUCT
+                </h2>
+                <p>
+                    It is axiomatic that a school should maintain good school discipline inside the school campus as well as outside the school premises when the students are engaged in school-sanctioned activities. The College recognizes the necessity of spelling out the procedures providing for remedies in case of infractions committed by any student against the institution, the employees or co-students.
+	All students in this College are expected to conduct themselves properly and strictly observe the following policies:
+
+                </p>
+            </div>
+        </section>
+
         <!-- Section 1 -->
         <section id="light-offenses" class="hb-section" aria-labelledby="light-title">
             <div class="hb-section__header">

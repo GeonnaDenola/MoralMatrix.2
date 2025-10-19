@@ -19,7 +19,7 @@
       <nav class="primary-nav" aria-label="Primary">
         <ul>
           <li><a href="#about">About</a></li>
-          <li><a href="handbook.php">Student Violation Handbook</a></li>
+          <li><a href="handbook.php">Policies on Student Conduct</a></li>
           <li><a href="#services">Services</a></li>
         </ul>
       </nav>

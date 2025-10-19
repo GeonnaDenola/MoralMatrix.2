@@ -48,4 +48,18 @@ function moralmatrix_mailer(): PHPMailer {
 
     return $mail;
 }
+function moralmatrix_send_mail($to, $subject, $body, $name = ''): bool {
+    try {
+        $mail = moralmatrix_mailer(); // get preconfigured PHPMailer
+        $mail->addAddress($to, $name);
+        $mail->Subject = $subject;
+        $mail->Body    = $body;
+
+        return $mail->send(); // true if successful
+    } catch (Exception $e) {
+        error_log("Mailer Error: {$e->getMessage()}");
+        return false;
+    }
+}
+
 ?>

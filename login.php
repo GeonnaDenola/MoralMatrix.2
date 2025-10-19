@@ -167,7 +167,7 @@ unset($_SESSION['old_email']);
         </div>
 
         <div class="form-options">
-          <a href="#" class="forgot-password">Forgot Password?</a>
+          <a href="forgot_password.php" class="forgot-password">Forgot Password?</a>
         </div>
 
         <button type="submit" class="btn-login">LOGIN</button>
