@@ -1,3 +1,5 @@
+<?php require __DIR__ . '/config.php'; ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,10 +58,10 @@
 
       <!-- Logins -->
       <li class="divider" aria-hidden="true"></li>
-      <li><a href="login.php" role="menuitem">Student Login</a></li>
-      <li><a href="login.php" role="menuitem">Faculty Login</a></li>
-      <li><a href="login.php" role="menuitem">Security Login</a></li>
-      <li><a href="/moralmatrix/validator/validator_login.php" role="menuitem">Validator Login</a></li>
+      <li><a href="<?= BASE_PATH ?>/login.php" role="menuitem">Student Login</a></li>
+      <li><a href="<?= BASE_PATH ?>/login.php" role="menuitem">Faculty Login</a></li>
+      <li><a href="<?= BASE_PATH ?>/login.php" role="menuitem">Security Login</a></li>
+      <li><a href="<?= BASE_PATH ?>/validator/validator_login.php" role="menuitem">Validator Login</a></li>
     </ul>
   </nav>
 

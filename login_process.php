@@ -1,7 +1,8 @@
 <?php
 // login_process.php
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-require __DIR__ . '/config.php';
+require_once __DIR__ . '/config.php';
+
 
 // DB connect
 $conn = new mysqli(
@@ -20,7 +21,7 @@ $conn->set_charset('utf8mb4');
 function bounce_with_error(string $email = ''): never {
   $_SESSION['error'] = "Invalid email or password.";
   $_SESSION['old_email'] = $email;
-  header("Location: /MoralMatrix/login.php"); exit;
+  header("Location: /login.php"); exit; // ✅ Removed /MoralMatrix
 }
 
 // Require POST
@@ -35,7 +36,6 @@ $passRaw  = $_POST['password'] ?? '';
 $email = trim($emailRaw);
 $inputPassword = (string)$passRaw;
 
-// Basic guard
 if ($email === '' || $inputPassword === '') {
   bounce_with_error($email);
 }
@@ -60,56 +60,52 @@ if (!$res || $res->num_rows !== 1) {
 $row = $res->fetch_assoc();
 $stmt->close();
 
-// Verify password
 if (!password_verify($inputPassword, $row['password'])) {
   $conn->close();
   bounce_with_error($email);
 }
 
-// Good login
 session_regenerate_id(true);
 
 // Common session keys
-$_SESSION['record_id']    = $row['record_id'];                 // PK
-$_SESSION['actor_id']     = $row['id_number'];                 // e.g. 2024-1234
+$_SESSION['record_id']    = $row['record_id'];
+$_SESSION['actor_id']     = $row['id_number'];
 $_SESSION['email']        = $row['email'];
 $_SESSION['account_type'] = $row['account_type'];
 $_SESSION['actor_role']   = strtolower((string)$row['account_type']);
 
-// Optional: convenience for some roles (won't error if column wasn't selected)
 if ($_SESSION['actor_role'] === 'student') {
   $_SESSION['student_id'] = $row['id_number'];
-  $_SESSION['first_name'] = $row['first_name'] ?? '';
 }
 if ($_SESSION['actor_role'] === 'security') {
   $_SESSION['security_id'] = $row['id_number'];
-  $_SESSION['first_name']  = $row['first_name'] ?? '';
 }
 
-// Force password change?
 if ((int)$row['change_pass'] === 1) {
   $conn->close();
-  header("Location: /MoralMatrix/change_password.php"); exit;
+  header("Location: /change_password.php"); exit; // ✅ Removed /MoralMatrix
 }
 
-// Route by role
 $role = $_SESSION['actor_role'];
 $conn->close();
 
+// ✅ Route by role (no /MoralMatrix prefix)
 switch ($role) {
   case 'super_admin':
-    header("Location: /MoralMatrix/super_admin/dashboard.php"); exit;
+    header("Location: $basePath/super_admin/dashboard.php"); exit;
   case 'administrator':
-    header("Location: /MoralMatrix/admin/index.php"); exit;
+    header("Location: $basePath/admin/index.php"); exit;
   case 'faculty':
-    header("Location: /MoralMatrix/faculty/index.php"); exit;
+    header("Location: $basePath/faculty/index.php"); exit;
   case 'student':
-    header("Location: /MoralMatrix/student/index.php"); exit;
+    header("Location: $basePath/student/index.php"); exit;
   case 'ccdu':
-    header("Location: /MoralMatrix/ccdu/index.php"); exit;
+    header("Location: $basePath/ccdu/index.php"); exit;
   case 'security':
-    header("Location: /MoralMatrix/security/index.php"); exit;
+    header("Location: $basePath/security/index.php"); exit;
   default:
     $_SESSION['error'] = "Invalid email or password.";
-    header("Location: /MoralMatrix/login.php"); exit;
+    header("Location: $basePath/login.php"); exit;
 }
+
+?>

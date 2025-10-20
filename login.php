@@ -1,20 +1,31 @@
 <?php
+require_once __DIR__ . '/config.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 /* Redirect already logged-in users based on account type */
-if (isset($_SESSION['email'])) {
-    switch ($_SESSION['account_type'] ?? '') {
-        case 'super_admin': header("Location: /MoralMatrix/super_admin/dashboard.php"); exit;
-        case 'administrator': header("Location: /MoralMatrix/admin/index.php"); exit;
-        case 'faculty': header("Location: /MoralMatrix/faculty/index.php"); exit;
-        case 'student': header("Location: /MoralMatrix/student/index.php"); exit;
-        case 'ccdu': header("Location: /MoralMatrix/ccdu/index.php"); exit;
-        case 'security': header("Location: /MoralMatrix/security/index.php"); exit;
-        default: header("Location: /MoralMatrix/dashboard.php"); exit;
+require __DIR__ . '/config.php'; 
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+/* ✅ Redirect already logged-in users only if they are logged in */
+if (!empty($_SESSION['account_type'])) {
+    switch ($_SESSION['account_type']) {
+        case 'super_admin': header("Location: " . BASE_PATH . "/super_admin/dashboard.php"); exit;
+        case 'administrator': header("Location: " . BASE_PATH . "/admin/index.php"); exit;
+        case 'faculty': header("Location: " . BASE_PATH . "/faculty/index.php"); exit;
+        case 'student': header("Location: " . BASE_PATH . "/student/index.php"); exit;
+        case 'ccdu': header("Location: " . BASE_PATH . "/ccdu/index.php"); exit;
+        case 'security': header("Location: " . BASE_PATH . "/security/index.php"); exit;
+        default: header("Location: " . BASE_PATH . "/dashboard.php"); exit;
     }
 }
+
+
 
 /* Flash error + old email (set by login_process.php) */
 $errorMsg = $_SESSION['error'] ?? '';
