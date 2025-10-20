@@ -76,11 +76,21 @@ function student_profile_url(array $student): string {
   return is_file($fs) ? ('../admin/uploads/' . $file) : '../admin/uploads/placeholder.png';
 }
 function compute_required_hours(mysqli $conn, string $student_id): float {
+  // detect optional columns
   $hasStatus = false;
+  $hasIsVoid = false;
   if ($r = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) { $hasStatus = ($r->num_rows > 0); $r->close(); }
+  if ($r = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'is_void'")) { $hasIsVoid = ($r->num_rows > 0); $r->close(); }
+
   $sql = "SELECT offense_category FROM student_violation WHERE student_id = ? ";
-  if ($hasStatus) $sql .= "AND LOWER(status) NOT IN ('void','voided','canceled','cancelled') ";
+  if ($hasIsVoid) {
+    $sql .= "AND (is_void = 0 OR is_void IS NULL OR is_void = '') ";
+  }
+  if ($hasStatus) {
+    $sql .= "AND LOWER(status) NOT IN ('void','voided','canceled','cancelled','rejected') ";
+  }
   $sql .= "ORDER BY reported_at ASC, violation_id ASC";
+
   $grave = 0; $bucket = 0;
   $st = $conn->prepare($sql);
   $st->bind_param("s", $student_id);
@@ -94,6 +104,7 @@ function compute_required_hours(mysqli $conn, string $student_id): float {
   $st->close();
   return ($grave * 20) + (intdiv($bucket, 3) * 10);
 }
+
 function total_logged_hours(mysqli $conn, string $student_id): float {
   $sum = $conn->prepare("SELECT COALESCE(SUM(hours),0) FROM community_service_entries WHERE student_id = ?");
   $sum->bind_param("s", $student_id);
@@ -131,8 +142,12 @@ function count_entries(mysqli $conn, string $student_id, ?string $minServiceDate
   return (int)$c;
 }
 function ongoing_student_ids(mysqli $conn, bool $hasEntries): array {
+  // detect optional columns
   $hasStatus = false;
+  $hasIsVoid = false;
   if ($r = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) { $hasStatus = ($r->num_rows > 0); $r->close(); }
+  if ($r = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'is_void'")) { $hasIsVoid = ($r->num_rows > 0); $r->close(); }
+
   $sqlReq = "
     SELECT student_id,
       SUM(CASE WHEN (LOWER(offense_category) LIKE '%grave%' AND LOWER(offense_category) NOT LIKE '%less%')
@@ -140,9 +155,12 @@ function ongoing_student_ids(mysqli $conn, bool $hasEntries): array {
       SUM(CASE WHEN NOT (LOWER(offense_category) LIKE '%grave%' AND LOWER(offense_category) NOT LIKE '%less%')
                THEN 1 ELSE 0 END) AS non_grave_cnt
     FROM student_violation
+    WHERE 1=1
   ";
-  if ($hasStatus) $sqlReq .= " WHERE LOWER(status) NOT IN ('void','voided','canceled','cancelled') ";
+  if ($hasIsVoid)  $sqlReq .= " AND (is_void = 0 OR is_void IS NULL OR is_void = '') ";
+  if ($hasStatus)  $sqlReq .= " AND LOWER(status) NOT IN ('void','voided','canceled','cancelled','rejected') ";
   $sqlReq .= " GROUP BY student_id";
+
   $requiredByStudent = [];
   if ($rs = $conn->query($sqlReq)) {
     while ($row = $rs->fetch_assoc()) {
@@ -154,6 +172,7 @@ function ongoing_student_ids(mysqli $conn, bool $hasEntries): array {
     $rs->close();
   }
   if (empty($requiredByStudent)) return [];
+
   $loggedByStudent = [];
   if ($hasEntries) {
     if ($rs = $conn->query("SELECT student_id, COALESCE(SUM(hours),0) AS total FROM community_service_entries GROUP BY student_id")) {
@@ -163,6 +182,7 @@ function ongoing_student_ids(mysqli $conn, bool $hasEntries): array {
       $rs->close();
     }
   }
+
   $ongoing = [];
   foreach ($requiredByStudent as $sid => $req) {
     $logged = (float)($loggedByStudent[$sid] ?? 0.0);
@@ -170,6 +190,7 @@ function ongoing_student_ids(mysqli $conn, bool $hasEntries): array {
   }
   return array_keys($ongoing);
 }
+
 
 /* ------- Students for cards ------- */
 $studentIds = [];
@@ -508,6 +529,15 @@ $cardsPage   = array_slice($cards, $offset, $perPage);
                 <div class="stat"><b>Logged</b><div class="val ok"><?= number_format($log, 2) ?> h</div></div>
                 <div class="stat"><b>Remaining</b><div class="val <?= $rem>0?'warn':'ok' ?>"><?= number_format($rem, 2) ?> h</div></div>
               </div>
+
+              <?php if ($done): ?>
+                <form method="post" action="mark_complete.php" style="margin-top:10px; text-align:right;">
+                  <input type="hidden" name="student_id" value="<?= htmlspecialchars($c['student_id']) ?>">
+                  <button type="submit" class="btn primary" style="font-size:.85rem;padding:6px 14px;">
+                    ✅ Mark as Complete
+                  </button>
+                </form>
+              <?php endif; ?>
 
               <?php if ($latest && !empty($latest['remarks'])): ?>
                 <div class="meta" style="margin-top:8px">Latest remarks: <em><?= htmlspecialchars($latest['remarks']) ?></em></div>

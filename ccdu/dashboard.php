@@ -1,4 +1,12 @@
 <?php
+session_start();
+
+// Redirect to login if not logged in or wrong role
+if (empty($_SESSION['account_type']) || $_SESSION['account_type'] !== 'ccdu') {
+    header('Location: ../login.php');
+    exit();
+}
+
 include '../includes/header.php';
 include '../config.php';
 include __DIR__ . '/_scanner.php';

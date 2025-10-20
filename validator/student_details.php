@@ -47,7 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_entry'])) {
     // Basic validation
     if ($hours <= 0) {
         $flashError = "Please enter a positive number of hours.";
+    } elseif (!is_numeric($hours)) {
+        $flashError = "Hours must be a valid number.";
     }
+
 
     // If a violation is provided, ensure it belongs to the student
     if (!$flashError && $violation_id !== null) {
@@ -187,6 +190,19 @@ if (!is_file($photoFs)) {
   $photoUrl = '../admin/uploads/placeholder.png';
 }
 
+// Helper: check if a table column exists (safe, identical to CCDU logic)
+function _hasColumn(mysqli $conn, string $table, string $column): bool {
+    $table  = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $column = preg_replace('/[^a-zA-Z0-9_]/', '', $column);
+    if ($table === '' || $column === '') return false;
+
+    $res = $conn->query("SHOW COLUMNS FROM `$table` LIKE '$column'");
+    if (!$res) return false;
+    $ok = ($res->num_rows > 0);
+    $res->free();
+    return $ok;
+}
+
 /* ---------- HOURS: Required (by rule) vs Logged (entries) ---------- */
 /* Rule:
    - 1 Grave = 20 hrs
@@ -203,12 +219,23 @@ if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) {
 }
 
 /* Pull categories for this student */
-$sqlCats = "SELECT offense_category FROM student_violation WHERE student_id = ? ";
-if ($hasStatusCol) {
-  // adjust this list if you want to also exclude 'resolved', etc.
-  $sqlCats .= "AND LOWER(status) NOT IN ('void','voided','canceled','cancelled') ";
+$sqlCats = "SELECT offense_category, is_void FROM student_violation WHERE student_id = ? ";
+$filters = [];
+
+if (_hasColumn($conn, 'student_violation', 'is_void')) {
+    $filters[] = "(is_void = 0 OR is_void IS NULL OR is_void = '')";
 }
+
+if ($hasStatusCol) {
+    $filters[] = "LOWER(status) NOT IN ('void','voided','canceled','cancelled','rejected')";
+}
+
+if ($filters) {
+    $sqlCats .= "AND " . implode(' AND ', $filters) . " ";
+}
+
 $sqlCats .= "ORDER BY reported_at ASC, violation_id ASC";
+
 
 $catRows = [];
 $q = $conn->prepare($sqlCats);
@@ -732,3 +759,76 @@ if ($hasCsEntriesTable) {
     </section>
   </div>
 </main>
+
+<!-- Enforce: Save enabled unless remaining hours are 0 -->
+<script>
+(function () {
+  // PHP -> JS: student's remaining community-service hours
+  const remaining = Number(<?= json_encode((float)$remainingHours) ?>);
+
+  function init() {
+    const form = document.getElementById('entryForm');
+    if (!form) return console.warn('[CS form] entryForm not found');
+
+    const btn = form.querySelector('button[type="submit"]');
+    if (!btn) return console.warn('[CS form] submit button not found');
+
+    const lock = () => {
+      btn.disabled = true;
+      btn.style.pointerEvents = 'none';
+      btn.style.opacity = '0.6';
+      btn.style.cursor = 'not-allowed';
+      btn.title = 'Community service completed; additional entries are disabled.';
+    };
+    const unlock = () => {
+      btn.disabled = false;
+      btn.style.pointerEvents = '';
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+      btn.removeAttribute('title');
+    };
+
+    if (remaining <= 0) {
+      lock();
+    } else {
+      // Allow saving entries while there are remaining hours
+      unlock();
+
+      // Guard: if any other script disables it, re-enable it.
+      const obs = new MutationObserver(muts => {
+        for (const m of muts) {
+          if (m.attributeName === 'disabled' && btn.disabled && remaining > 0) {
+            unlock();
+          }
+        }
+      });
+      obs.observe(btn, { attributes: true, attributeFilter: ['disabled'] });
+
+      // Extra safety net (in case something toggles it later)
+      setInterval(() => {
+        if (remaining > 0 && btn.disabled) unlock();
+      }, 500);
+    }
+
+    // Final gate on submit
+    form.addEventListener('submit', e => {
+      if (remaining <= 0) {
+        e.preventDefault();
+        alert('This student has completed all required hours. Additional entries are disabled.');
+      }
+    });
+
+    console.debug('[CS form] remaining hours =', remaining, '=>',
+      remaining > 0 ? 'Save enabled' : 'Save disabled');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>

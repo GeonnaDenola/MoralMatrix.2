@@ -16,6 +16,8 @@ $validatorId = (int)$_SESSION['validator_id'];
 $vUsername   = $_SESSION['v_username'] ?? 'Validator';
 
 require_once '../config.php';
+require_once '../ccdu/violation_hrs.php'; // reuse CCDU’s hour logic
+
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $conn = new mysqli(
@@ -92,16 +94,36 @@ function assignment_status(array $row): array {
     return ['Ongoing', 'ongoing'];
 }
 
-foreach ($assignments as $assignment) {
-    [, $statusSlug] = assignment_status($assignment);
+foreach ($assignments as &$assignment) {
+    [$statusLabel, $statusSlug] = assignment_status($assignment);
+
+    // --- Check hours if the assignment is ongoing ---
+    $studentId = $assignment['student_id'];
+    $required  = communityServiceHours($conn, $studentId);
+    $logged    = communityServiceLogged($conn, $studentId);
+    $remaining = max(0, $required - $logged);
+
+    if ($remaining <= 0.00001) {
+        // mark as completed (override time-based status)
+        $statusLabel = 'Completed';
+        $statusSlug  = 'completed';
+    }
+
+    // store back updated values
+    $assignment['statusLabel'] = $statusLabel;
+    $assignment['statusSlug']  = $statusSlug;
+
+    // count stats
     if ($statusSlug === 'ongoing') {
         $ongoingCount++;
-    } elseif ($statusSlug === 'ended') {
+    } elseif ($statusSlug === 'completed' || $statusSlug === 'ended') {
         $completedCount++;
     } elseif ($statusSlug === 'upcoming') {
         $upcomingCount++;
     }
 }
+unset($assignment);
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -150,7 +172,11 @@ foreach ($assignments as $assignment) {
           </div>
           <div class="vd-grid">
             <?php foreach ($assignments as $row): ?>
-              <?php [$statusLabel, $statusSlug] = assignment_status($row); ?>
+              <?php
+                // use precomputed status with hours check
+                $statusLabel = $row['statusLabel'] ?? 'Ongoing';
+                $statusSlug  = $row['statusSlug']  ?? 'ongoing';
+              ?>
               <a class="vd-card vd-card--<?= e($statusSlug) ?>" href="student_details.php?student_id=<?= urlencode((string)$row['student_id']) ?>">
                 <header class="vd-card__header">
                   <div>

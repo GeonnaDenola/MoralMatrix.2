@@ -53,18 +53,65 @@ if (!is_file($profileFs)) {
 }
 
 /* ---------- Hours: required vs logged vs remaining ---------- */
-/* Rule: GRAVE (not "less grave") = 20h; every set of 3 others = 10h */
+/* Rule: GRAVE (not "less grave") = 20h; every set of 3 others = 10h, ignoring voided/rejected */
 $hasStatusCol = false;
+$hasIsVoidCol = false;
+
 if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'status'")) {
   $hasStatusCol = ($res->num_rows > 0);
   $res->close();
 }
+if ($res = $conn->query("SHOW COLUMNS FROM student_violation LIKE 'is_void'")) {
+  $hasIsVoidCol = ($res->num_rows > 0);
+  $res->close();
+}
 
 $sqlCats = "SELECT offense_category FROM student_violation WHERE student_id = ? ";
+if ($hasIsVoidCol) {
+  $sqlCats .= "AND (is_void = 0 OR is_void IS NULL OR is_void = '') ";
+}
 if ($hasStatusCol) {
-  $sqlCats .= "AND LOWER(status) NOT IN ('void','voided','canceled','cancelled') ";
+  $sqlCats .= "AND LOWER(status) NOT IN ('void','voided','canceled','cancelled','rejected') ";
 }
 $sqlCats .= "ORDER BY reported_at ASC, violation_id ASC";
+
+$catRows = [];
+$qc = $conn->prepare($sqlCats);
+$qc->bind_param("s", $student_id);
+$qc->execute();
+$rs = $qc->get_result();
+while ($row = $rs->fetch_assoc()) {
+  $catRows[] = strtolower(trim((string)$row['offense_category']));
+}
+$qc->close();
+
+/* Count hours per category */
+$graveCount = 0;
+$modLightCount = 0;
+foreach ($catRows as $raw) {
+  $isGrave = (preg_match('/\bgrave\b/i', $raw) && !preg_match('/\bless\b/i', $raw));
+  if ($isGrave) $graveCount++; else $modLightCount++;
+}
+$requiredHours = (float)(($graveCount * 20) + (intdiv($modLightCount, 3) * 10));
+
+/* Logged hours */
+$totalLogged = 0.0;
+$hasCsEntriesTable = false;
+if ($res = $conn->query("SHOW TABLES LIKE 'community_service_entries'")) {
+  $hasCsEntriesTable = ($res->num_rows > 0);
+  $res->close();
+}
+if ($hasCsEntriesTable) {
+  $sum = $conn->prepare("SELECT COALESCE(SUM(hours),0) FROM community_service_entries WHERE student_id = ?");
+  $sum->bind_param("s", $student_id);
+  $sum->execute();
+  $sum->bind_result($sumHours);
+  $sum->fetch();
+  $sum->close();
+  $totalLogged = (float)$sumHours;
+}
+$remainingHours = max(0, $requiredHours - $totalLogged);
+
 
 $catRows = [];
 $qc = $conn->prepare($sqlCats);

@@ -1,33 +1,25 @@
 <?php
 // ccdu/add_violation.php
-
-// Start output buffering FIRST so accidental output in included files won't break redirects.
 ob_start();
-
 session_start();
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/email_lib.php';
 require_once __DIR__ . '/../lib/notify.php';
 
-// Include scanner (it should be silent)
+// Include scanner (silent)
 include __DIR__ . '/_scanner.php';
 
-// Helper to escape HTML consistently across templates.
+// HTML escape helper
 if (!function_exists('h')) {
-    function h(?string $value): string
-    {
+    function h(?string $value): string {
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
 
-/**
- * Helper: verify SMTP "from" is configured so moralmatrix_mailer() won't throw.
- * We read from $smtp['from'] or environment fallbacks used in email_lib.php.
- */
+// Check SMTP "from" configured
 if (!function_exists('smtp_from_configured')) {
-    function smtp_from_configured(): bool
-    {
+    function smtp_from_configured(): bool {
         $cfg  = $GLOBALS['smtp'] ?? [];
         $from = $cfg['from']
             ?? (getenv('MORALMATRIX_FROM_EMAIL')
@@ -36,18 +28,17 @@ if (!function_exists('smtp_from_configured')) {
     }
 }
 
-$errorMessage  = null;
-$student       = null;
-$studentName   = '';
-$studentCourse = '';
-$studentLevel  = '';
-$studentEmail  = '';
-$studentPhoto  = '../admin/uploads/placeholder.png';
+$errorMessage = null;
+$student      = null;
+$studentName  = '';
+$studentCourse= '';
+$studentLevel = '';
+$studentEmail = '';
+$studentPhoto = '../admin/uploads/placeholder.png';
 
-/* ---------- STUDENT ID FROM GET OR POST ---------- */
+/* ---------- STUDENT ID ---------- */
 $studentId = $_GET['student_id'] ?? $_POST['student_id'] ?? '';
-if (!$studentId && ($_SERVER['REQUEST_METHOD'] !== 'POST')) {
-    // For GET views we need a student id; for POST we use the hidden input
+if (!$studentId && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo "<p>No student selected!</p>";
     ob_end_flush();
     exit;
@@ -66,7 +57,7 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-/* ========= INSERT HANDLER (RUNS BEFORE ANY OUTPUT) ========= */
+/* ========= INSERT HANDLER ========= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $student_id       = $_POST['student_id']       ?? '';
@@ -80,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Missing required fields.");
     }
 
-    // Collect all picked detail checkboxes into one array
+    // Collect offense details
     $detailGroups = [
         'id_offense','uniform_offense','civilian_offense','accessories_offense',
         'conduct_offense','gadget_offense','acts_offense',
@@ -95,34 +86,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $offense_details = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : null;
 
-    // ---- Photo upload (optional) ----
+    // ---- Photo upload ----
     $photo = "";
     if (isset($_FILES["photo"]) && is_uploaded_file($_FILES["photo"]["tmp_name"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
         $uploadDir = dirname(__DIR__) . "/admin/uploads/";
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
-        // Safer filename: keep dots, dashes, underscores, alnum
         $original = basename($_FILES["photo"]["name"]);
         $safeBase = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
         $photo = time() . "_" . $safeBase;
 
         $targetPath = $uploadDir . $photo;
-
         if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
-            // If upload fails, don't block the whole request
             $photo = "";
         }
     }
 
     $submitted_by = $_SESSION['actor_id'] ?? 'unknown';
 
-    // Insert
+    // Insert violation
     $sql = "INSERT INTO student_violation
             (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by)
             VALUES (?, ?, ?, ?, ?, ?, 'approved', ?)";
-
     $stmtIns = $conn->prepare($sql);
     if (!$stmtIns) {
         http_response_code(500);
@@ -130,9 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Prepare failed: " . $conn->error);
     }
 
-    $detail_for_bind = $offense_details; // may be null
-    $stmtIns->bind_param(
-        "sssssss",
+    $detail_for_bind = $offense_details;
+    $stmtIns->bind_param("sssssss",
         $student_id,
         $offense_category,
         $offense_type,
@@ -141,7 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photo,
         $submitted_by
     );
-
     if (!$stmtIns->execute()) {
         http_response_code(500);
         $err = $stmtIns->error;
@@ -150,97 +133,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("Insert failed: " . $err);
     }
     $stmtIns->close();
+    $violationId = $conn->insert_id;
 
-    $violationId = $conn->insert_id; 
-
-    // BEFORE notifications:
-    $studentFullName = 'Student ' . $student_id;  // default
-    $toEmail = '';
-    $toName  = '';
-
-    // Fetch student recipient for notification
+    // Fetch student email info
     $stmtStu = $conn->prepare("SELECT first_name, last_name, email FROM student_account WHERE student_id = ?");
     $stmtStu->bind_param("s", $student_id);
     $stmtStu->execute();
     $resStu = $stmtStu->get_result();
-
-    if ($stu = $resStu->fetch_assoc()) {
-        $toEmail = trim((string)$stu['email']);
-        $toName  = trim((string)($stu['first_name'] ?? '') . ' ' . (string)($stu['last_name'] ?? ''));
-
-        $recipientOk = $toEmail !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL);
-        $smtpOk      = smtp_from_configured();
-
-        if ($recipientOk && $smtpOk) {
-            $mail = moralmatrix_mailer();
-            $mail->addAddress($toEmail, $toName);
-            $mail->Subject = 'Violation Recorded in Moral Matrix';
-
-            $html = '
-                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
-                    <h2>Dear '.htmlspecialchars($toName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8').',</h2>
-                    <p>A new violation has been recorded in your account.</p>
-                    <p><strong>Category:</strong> '.htmlspecialchars($offense_category, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8').'</p>
-                    <p><strong>Details:</strong> '.nl2br(htmlspecialchars($offense_details ?? 'N/A', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')).'</p>
-                    <p><strong>Date:</strong> '.date("F j, Y g:i A").'</p>
-                    <p>You may log in to your Moral Matrix account for more details.</p>
-                </div>';
-
-            $mail->Body    = $html;
-            $mail->AltBody = strip_tags($html);
-
-            try {
-                $mail->send();
-                error_log("Violation email sent to $toEmail");
-            } catch (Throwable $e) {
-                error_log("Violation email error: ".$mail->ErrorInfo);
-            }
-        } else {
-            if (!$recipientOk) {
-                error_log("Skipping violation email: invalid or missing recipient for student_id=$student_id");
-            }
-            if (!$smtpOk) {
-                error_log("Skipping violation email: SMTP FROM not configured (set \$smtp['from'] or env).");
-            }
-        }
-    }
+    $stu = $resStu->fetch_assoc();
     $stmtStu->close();
 
-    // === NOTIFICATIONS (create records) ===
-$studentFullName = trim(
-    (string)($stu['first_name'] ?? '') . ' ' . (string)($stu['last_name'] ?? '')
-);
-if ($studentFullName === '') $studentFullName = 'Student ' . $student_id;
+    $toEmail = trim((string)($stu['email'] ?? ''));
+    $toName  = trim((string)($stu['first_name'] ?? '') . ' ' . (string)($stu['last_name'] ?? ''));
+    $studentFullName = $toName ?: 'Student ' . $student_id;
 
-$actorRole = strtolower($_SESSION['account_type'] ?? '');
-$actorId   = $_SESSION['actor_id'] ?? 'unknown';
+    // --- EMAIL NOTIFICATION ---
+    $recipientOk = $toEmail !== '' && filter_var($toEmail, FILTER_VALIDATE_EMAIL);
+    $smtpOk      = smtp_from_configured();
 
-// 1) CCDU broadcast (everyone in CCDU sees it)
-//    With Option A, read_at is shared for the row (one marks read = read for everyone).
-Notify::create($conn, [
-  'type'         => ($actorRole === 'ccdu') ? 'success' : 'warning',
-  'target_role'  => 'ccdu',
-  'title'        => ($actorRole === 'ccdu')
-                      ? 'New violation added by CCDU'
-                      : 'Violation reported by ' . ucfirst($actorRole ?: 'staff'),
-  'body'         => $studentFullName . ' • Student ID: ' . $student_id,
-  'url'          => '/MoralMatrix/ccdu/view_student.php?student_id=' . urlencode($student_id) . '#v' . $violationId,
-  'violation_id' => $violationId,
-  'created_by'   => $actorId,
-]);
+    if ($recipientOk && $smtpOk) {
+        $mail = moralmatrix_mailer();
+        $mail->addAddress($toEmail, $toName);
+        $mail->Subject = 'Violation Recorded in Moral Matrix';
+        $html = '
+            <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
+                <h2>Dear '.h($toName).',</h2>
+                <p>A new violation has been recorded in your account.</p>
+                <p><strong>Category:</strong> '.h($offense_category).'</p>
+                <p><strong>Details:</strong> '.nl2br(h($offense_details ?? 'N/A')).'</p>
+                <p><strong>Date:</strong> '.date("F j, Y g:i A").'</p>
+                <p>You may log in to your Moral Matrix account for more details.</p>
+            </div>';
+        $mail->Body = $html;
+        $mail->AltBody = strip_tags($html);
+        try {
+            $mail->send();
+        } catch (Throwable $e) {
+            error_log("Mailer error: ".$mail->ErrorInfo);
+        }
+    }
 
-// 2) Student targeted (only that student sees it)
-Notify::create($conn, [
-  'type'           => 'info',
-  'target_role'    => 'student',
-  'target_user_id' => $student_id, // student logs in as their student_id
-  'title'          => 'A violation was filed on your account',
-  'body'           => 'Please review the entry for ' . $studentFullName . '.',
-  'url'            => '/MoralMatrix/student/violations.php#v' . $violationId,
-  'violation_id'   => $violationId,
-  'created_by'     => $actorId,
-]);
+    // --- NOTIFY CCDU & STUDENT ---
+    $actorRole = strtolower($_SESSION['account_type'] ?? '');
+    $actorId   = $_SESSION['actor_id'] ?? 'unknown';
 
+    Notify::create($conn, [
+        'type'         => ($actorRole === 'ccdu') ? 'success' : 'warning',
+        'target_role'  => 'ccdu',
+        'title'        => ($actorRole === 'ccdu')
+                          ? 'New violation added by CCDU'
+                          : 'Violation reported by ' . ucfirst($actorRole ?: 'staff'),
+        'body'         => $studentFullName . ' • Student ID: ' . $student_id,
+        'url'          => '/MoralMatrix/ccdu/view_student.php?student_id=' . urlencode($student_id) . '#v' . $violationId,
+        'violation_id' => $violationId,
+        'created_by'   => $actorId,
+    ]);
+
+    Notify::create($conn, [
+        'type'           => 'info',
+        'target_role'    => 'student',
+        'target_user_id' => $student_id,
+        'title'          => 'A violation was filed on your account',
+        'body'           => 'Please review the entry for ' . $studentFullName . '.',
+        'url'            => '/MoralMatrix/student/violations.php#v' . $violationId,
+        'violation_id'   => $violationId,
+        'created_by'     => $actorId,
+    ]);
 
     header("Location: view_student.php?student_id=" . urlencode($student_id) . "&saved=1");
     ob_end_flush();
@@ -248,8 +206,44 @@ Notify::create($conn, [
 }
 /* ========= END INSERT HANDLER ========= */
 
-/* From here on, it's safe to output HTML */
 include __DIR__ . '/../includes/header.php';
+
+/* ---------- RECONNECT (fix for closed $conn) ---------- */
+// Reconnect if $conn is missing or already closed
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    $conn = new mysqli(
+        $database_settings['servername'],
+        $database_settings['username'],
+        $database_settings['password'],
+        $database_settings['dbname']
+    );
+} else {
+    // ping safely only if still an active mysqli object
+    try {
+        if (!$conn->ping()) {
+            $conn = new mysqli(
+                $database_settings['servername'],
+                $database_settings['username'],
+                $database_settings['password'],
+                $database_settings['dbname']
+            );
+        }
+    } catch (Throwable $e) {
+        // object was already closed or invalid, reconnect
+        $conn = new mysqli(
+            $database_settings['servername'],
+            $database_settings['username'],
+            $database_settings['password'],
+            $database_settings['dbname']
+        );
+    }
+}
+
+if ($conn->connect_error) {
+    http_response_code(500);
+    die("Reconnection failed: " . $conn->connect_error);
+}
+
 
 /* ---------- FETCH STUDENT FOR DISPLAY ---------- */
 if ($studentId) {
@@ -261,11 +255,7 @@ if ($studentId) {
         $result  = $stmt->get_result();
         $student = $result->fetch_assoc();
         $stmt->close();
-    } else {
-        $student = null;
     }
-} else {
-    $student = null;
 }
 
 if (!$student) {
@@ -275,18 +265,28 @@ if (!$student) {
         $student['first_name'] ?? '',
         $student['middle_name'] ?? '',
         $student['last_name'] ?? '',
-    ], static fn($part) => $part !== null && trim((string)$part) !== '');
+    ], fn($p) => trim((string)$p) !== '');
 
     $studentName   = trim(implode(' ', $nameParts)) ?: 'Unnamed student';
     $studentCourse = trim((string)($student['course'] ?? ''));
     $studentLevel  = trim((string)($student['level'] ?? '') . ' ' . (string)($student['section'] ?? ''));
     $studentEmail  = trim((string)($student['email'] ?? ''));
-
     if (!empty($student['photo'])) {
         $studentPhoto = '../admin/uploads/' . rawurlencode((string)$student['photo']);
     }
 }
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Violation</title>
+  <link rel="stylesheet" href="../css/add_violation.css">
+</head>
+<body>
+<!-- your HTML below stays identical -->
+
   <!DOCTYPE html>
   <html lang="en">
   <head>

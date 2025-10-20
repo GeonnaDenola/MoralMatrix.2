@@ -380,7 +380,7 @@ if ($existingAccounts === 0) {
 $conn->close();
 
 if ($existingAccounts > 0) {
-    header("Location: login.php");
+    header("Location: home.php");
     exit();
 } else {
     header("Location: create_admin_account.php");
