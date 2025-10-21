@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Student Discipline and Affairs – Standards of Conduct</title>
   <link rel="stylesheet" href="css/handbook.css" />
+  <link rel="stylesheet" href="css/shared-header.css" />
 </head>
 <body class="handbook-page">
   <?php include 'includes/home_header.php'; ?>

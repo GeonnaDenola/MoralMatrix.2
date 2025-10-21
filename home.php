@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Moral Matrix</title>
   <link rel="stylesheet" href="css/home.css" />
+  <link rel="stylesheet" href="css/shared-header.css" />
 </head>
 <body>
 
