@@ -2,23 +2,28 @@
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 $isHome = in_array($currentScript, ['home.php', 'index.php'], true);
 $isHandbook = $currentScript === 'handbook.php';
-$aboutHref = $isHome ? '#about' : 'home.php#about';
-$servicesHref = $isHome ? '#services' : 'home.php#services';
+$baseUrl = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+$homeHref = $baseUrl !== '' ? $baseUrl . '/home.php' : 'home.php';
+$handbookHref = $baseUrl !== '' ? $baseUrl . '/handbook.php' : 'handbook.php';
+$loginHref = $baseUrl !== '' ? $baseUrl . '/login.php' : 'login.php';
+$validatorHref = $baseUrl !== '' ? $baseUrl . '/validator/validator_login.php' : 'validator/validator_login.php';
+$aboutHref = $isHome ? '#about' : $homeHref . '#about';
+$servicesHref = $isHome ? '#services' : $homeHref . '#services';
 ?>
 
 <!-- Header -->
 <header class="site-header">
   <div class="container header-inner">
     <!-- logo (now pinned to the left by CSS) -->
-    <a class="brand" href="home.php">MORAL MATRIX</a>
+    <a class="brand" href="<?= htmlspecialchars($homeHref, ENT_QUOTES) ?>">MORAL MATRIX</a>
 
     <!-- Centered top nav: visible on desktop per CSS -->
     <nav class="primary-nav" aria-label="Primary">
       <ul>
-        <li><a href="home.php"<?= $isHome ? ' aria-current="page"' : '' ?>>Home</a></li>
-        <li><a href="<?= $aboutHref ?>">About</a></li>
-        <li><a href="handbook.php"<?= $isHandbook ? ' aria-current="page"' : '' ?>>Policies on Student Conduct</a></li>
-        <li><a href="<?= $servicesHref ?>">Services</a></li>
+        <li><a href="<?= htmlspecialchars($homeHref, ENT_QUOTES) ?>"<?= $isHome ? ' aria-current="page"' : '' ?>>Home</a></li>
+        <li><a href="<?= htmlspecialchars($aboutHref, ENT_QUOTES) ?>">About</a></li>
+        <li><a href="<?= htmlspecialchars($handbookHref, ENT_QUOTES) ?>"<?= $isHandbook ? ' aria-current="page"' : '' ?>>Policies on Student Conduct</a></li>
+        <li><a href="<?= htmlspecialchars($servicesHref, ENT_QUOTES) ?>">Services</a></li>
       </ul>
     </nav>
 
@@ -50,22 +55,22 @@ $servicesHref = $isHome ? '#services' : 'home.php#services';
   </div>
   <ul class="drawer-links" role="menu">
     <li data-desktop-hide="primary">
-      <a href="home.php" role="menuitem"<?= $isHome ? ' aria-current="page"' : '' ?>>Home</a>
+      <a href="<?= htmlspecialchars($homeHref, ENT_QUOTES) ?>" role="menuitem"<?= $isHome ? ' aria-current="page"' : '' ?>>Home</a>
     </li>
     <li data-desktop-hide="primary">
-      <a href="<?= $aboutHref ?>" role="menuitem">About</a>
+      <a href="<?= htmlspecialchars($aboutHref, ENT_QUOTES) ?>" role="menuitem">About</a>
     </li>
     <li data-desktop-hide="primary">
-      <a href="handbook.php" role="menuitem"<?= $isHandbook ? ' aria-current="page"' : '' ?>>Policies on Student Conduct</a>
+      <a href="<?= htmlspecialchars($handbookHref, ENT_QUOTES) ?>" role="menuitem"<?= $isHandbook ? ' aria-current="page"' : '' ?>>Policies on Student Conduct</a>
     </li>
     <li data-desktop-hide="primary">
-      <a href="<?= $servicesHref ?>" role="menuitem">Services</a>
+      <a href="<?= htmlspecialchars($servicesHref, ENT_QUOTES) ?>" role="menuitem">Services</a>
     </li>
     <li class="divider" aria-hidden="true" data-desktop-hide="primary"></li>
-    <li><a href="login.php" role="menuitem">Student Login</a></li>
-    <li><a href="login.php" role="menuitem">Faculty Login</a></li>
-    <li><a href="login.php" role="menuitem">Security Login</a></li>
-    <li><a href="/moralmatrix/validator/validator_login.php" role="menuitem">Validator Login</a></li>
+    <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Student Login</a></li>
+    <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Faculty Login</a></li>
+    <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Security Login</a></li>
+    <li><a href="<?= htmlspecialchars($validatorHref, ENT_QUOTES) ?>" role="menuitem">Validator Login</a></li>
   </ul>
 </nav>
 

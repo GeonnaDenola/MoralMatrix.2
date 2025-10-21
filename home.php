@@ -9,62 +9,10 @@
   <link rel="stylesheet" href="css/home.css" />
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+
 
   <!-- Header -->
-  <header class="site-header">
-    <div class="container header-inner">
-      <!-- logo (now pinned to the left by CSS) -->
-      <a class="brand" href="#">MORAL MATRIX</a>
-
-      <!-- Centered top nav: visible on desktop per CSS -->
-      <nav class="primary-nav" aria-label="Primary">
-        <ul>
-          <li><a href="#about">About</a></li>
-          <li><a href="handbook.php">Policies on Student Conduct</a></li>
-          <li><a href="#services">Services</a></li>
-        </ul>
-      </nav>
-
-      <!-- Hamburger -->
-      <button
-        class="hamburger"
-        id="hamburgerBtn"
-        aria-label="Open menu"
-        aria-controls="navDrawer"
-        aria-expanded="false"
-        type="button"
-      >
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Off-canvas Navigation -->
-  <div class="nav-overlay" id="navOverlay" hidden></div>
-
-  <nav class="nav-drawer" id="navDrawer" aria-hidden="true">
-    <div class="drawer-header">
-      <strong>Menu</strong>
-      <button class="close-drawer" id="closeDrawer" aria-label="Close menu">×</button>
-    </div>
-    <ul class="drawer-links" role="menu">
-      <!-- Pages (hidden on desktop by CSS nth-of-type rule) -->
-      <li><a href="#about" role="menuitem">About</a></li>
-      <li><a href="handbook.php" role="menuitem">Student Violation Handbook</a></li>
-      <li><a href="#services" role="menuitem">Services</a></li>
-
-      <!-- Logins -->
-      <li class="divider" aria-hidden="true"></li>
-      <li><a href="<?= BASE_PATH ?>/login.php" role="menuitem">Student Login</a></li>
-      <li><a href="<?= BASE_PATH ?>/login.php" role="menuitem">Faculty Login</a></li>
-      <li><a href="<?= BASE_PATH ?>/login.php" role="menuitem">Security Login</a></li>
-      <li><a href="<?= BASE_PATH ?>/validator/validator_login.php" role="menuitem">Validator Login</a></li>
-    </ul>
-  </nav>
-
+  <?php include __DIR__ . '/includes/home_header.php'; ?>
   <!-- Hero -->
   <section class="hero" id="about" aria-label="Welcome section">
     <div class="container hero-content">

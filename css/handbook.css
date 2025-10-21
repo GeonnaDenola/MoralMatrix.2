@@ -48,6 +48,23 @@ body.handbook-page {
 }
 .skip-link:focus { top: 8px; }
 
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255,255,255,.05), 0 10px 30px rgba(0,0,0,.15);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  gap: 12px;
+  position: relative;
+}
 
 .brand {
   color: #fff; font-weight: 800; letter-spacing: .08em;
