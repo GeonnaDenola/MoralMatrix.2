@@ -15,7 +15,8 @@ html { -webkit-text-size-adjust: 100%; }
   --muted: #6b7280;  /* slate-500 */
   --ring: rgba(0,68,102,.18);
   --glass: rgba(255,255,255,.86);
-  --glass-border: rgba(15, 23, 42, .08);}
+  --glass-border: rgba(15, 23, 42, .08);
+}
 
 /* PAGE */
 body{

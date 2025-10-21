@@ -1,21 +1,28 @@
 <?php
-// login.php — Validator Login (styled like the reference page)
+// Validator Login (mirrors main login UI while preserving validator functionality)
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// If already logged in, send to dashboard
+// If already logged in, redirect to dashboard
 if (!empty($_SESSION['validator_id'])) {
     header('Location: dashboard.php');
     exit();
 }
 
-// Optional messages
+// Flash messages
 $msg = isset($_GET['msg']) ? $_GET['msg'] : '';
-$errorMsg = '';
-if (isset($_SESSION['error'])) {
-    $errorMsg = $_SESSION['error'];
-    unset($_SESSION['error']);
+$errorMsg = $_SESSION['error'] ?? '';
+unset($_SESSION['error']);
+
+$alertMessage = '';
+$alertType = '';
+if ($errorMsg !== '') {
+    $alertMessage = $errorMsg;
+    $alertType = 'error';
+} elseif ($msg !== '') {
+    $alertMessage = $msg;
+    $alertType = ($msg === 'loggedout' || stripos($msg, 'success') !== false) ? 'info' : 'error';
 }
 ?>
 <!doctype html>
@@ -34,13 +41,34 @@ if (isset($_SESSION['error'])) {
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Styles -->
-  <link rel="stylesheet" href="../css/validator_login.css" />
+  <link rel="stylesheet" href="../css/validators_login.css" />
+  <link rel="stylesheet" href="../css/shared-header.css" />
+
+  <!-- Inline alert styles to match main login page banner -->
+  <style>
+    .alert{
+      margin: 0 0 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .alert.error{
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+    .alert.info{
+      background: #dcfce7;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+  </style>
 </head>
 <body>
-
+  <?php include __DIR__ . '/../includes/home_header.php'; ?>
 
   <main class="login-page">
-    <!-- You can rename or customize this callout -->
     <div class="violation-message">
       <h3>VALIDATOR PORTAL</h3>
       <p>
@@ -52,15 +80,9 @@ if (isset($_SESSION['error'])) {
     <div class="login-box" role="form" aria-labelledby="validator-welcome">
       <h3 id="validator-welcome" class="login-welcome">VALIDATOR LOGIN</h3>
 
-      <?php if (!empty($errorMsg) || !empty($msg)) : ?>
-        <?php
-          // Class based on message type
-          $isInfo = ($msg === 'loggedout' || stripos($msg, 'success') !== false);
-          $alertClass = $isInfo ? 'alert info' : 'alert error';
-          $displayMsg = $errorMsg ?: $msg;
-        ?>
-        <div class="<?= htmlspecialchars($alertClass) ?>">
-          <?= htmlspecialchars($displayMsg) ?>
+      <?php if ($alertMessage !== '') : ?>
+        <div class="alert <?= htmlspecialchars($alertType) ?>" role="alert" aria-live="assertive">
+          <?= htmlspecialchars($alertMessage) ?>
         </div>
       <?php endif; ?>
 
@@ -149,48 +171,6 @@ if (isset($_SESSION['error'])) {
       ['mouseup','mouseleave','blur','touchend','touchcancel'].forEach(evt =>
         btn.addEventListener(evt, () => setState(false))
       );
-    })();
-
-    /* --- Mobile hamburger / menu --- */
-    (function () {
-      const body = document.body;
-      const hamBtn = document.querySelector('.hamburger');
-      const menu = document.getElementById('mobile-menu');
-      const backdrop = document.querySelector('.menu-backdrop');
-      const closeBtn = menu?.querySelector('.close-menu');
-
-      if (!hamBtn || !menu || !backdrop) return;
-
-      function setMenu(open){
-        body.classList.toggle('menu-open', open);
-        body.classList.toggle('no-scroll', open);
-        hamBtn.classList.toggle('is-active', open);
-        hamBtn.setAttribute('aria-expanded', String(open));
-        hamBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        if (open) {
-          const firstLink = menu.querySelector('a,button,[tabindex]:not([tabindex="-1"])');
-          firstLink && firstLink.focus();
-        } else {
-          hamBtn.focus();
-        }
-      }
-
-      function toggle(){ setMenu(!body.classList.contains('menu-open')); }
-
-      hamBtn.addEventListener('click', toggle);
-      closeBtn && closeBtn.addEventListener('click', () => setMenu(false));
-      backdrop.addEventListener('click', () => setMenu(false));
-
-      // Close on Escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && body.classList.contains('menu-open')) setMenu(false);
-      });
-
-      // Ensure menu closes if resized to desktop
-      const mq = window.matchMedia('(min-width: 521px)');
-      mq.addEventListener('change', () => {
-        if (mq.matches && body.classList.contains('menu-open')) setMenu(false);
-      });
     })();
   </script>
 </body>

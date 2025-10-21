@@ -210,11 +210,13 @@
   border-radius: 10px;
   font-weight: 600;
   color: #fff;
+  text-decoration: none;
 }
 
 .drawer-links li a:hover {
   background: rgba(255,255,255,.10);
   color: #fff;
+  text-decoration: none;
 }
 
 .drawer-links li a[aria-current="page"] {

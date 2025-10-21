@@ -50,6 +50,7 @@ $logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo.jpg' : 'assets/cert/l
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/login.css" />
+  <link rel="stylesheet" href="css/shared-header.css" />
 
   <!-- Inline styles just for the error banner -->
   <style>
@@ -65,6 +66,8 @@ $logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo.jpg' : 'assets/cert/l
   </style>
 </head>
 <body>
+  <?php include __DIR__ . '/includes/home_header.php'; ?>
+
   
   <main class="login-page">
     <div class="violation-message">

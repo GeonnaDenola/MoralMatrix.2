@@ -23,6 +23,7 @@ $errorMsg = isset($_GET['error']) ? trim($_GET['error']) : '';
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="css/login.css" />
+  <link rel="stylesheet" href="css/shared-header.css" />
 
   <style>
     .alert-error,
@@ -60,7 +61,7 @@ $errorMsg = isset($_GET['error']) ? trim($_GET['error']) : '';
   </style>
 </head>
 <body>
- 
+   <?php include __DIR__ . '/includes/home_header.php'; ?>
   <main class="login-page login-page--forgot">
     <div class="login-box" role="form">
       <h3 class="login-welcome">Forgot Password</h3>
