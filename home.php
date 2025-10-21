@@ -69,8 +69,11 @@
   <section class="hero" id="about" aria-label="Welcome section">
     <div class="container hero-content">
       <h1>Welcome to Moral Matrix</h1>
-      <p><b>Where Character Development is the priority.</b></p>
-      <a class="btn" href="https://mcc.edu.ph/" rel="noopener">Visit MCC Page</a>
+      <p>Where character development and community values guide every student journey.</p>
+      <div class="hero-actions">
+        <a class="btn" href="https://mcc.edu.ph/" rel="noopener">Visit MCC Page</a>
+        <a class="btn-secondary" href="handbook.php">Read Student Handbook</a>
+      </div>
     </div>
   </section>
 
@@ -105,7 +108,7 @@
         <div class="card-body">
           <h3>Marc Christian Paul Ylan</h3>
           <p class="role"><b><i>System Analyst</i></b></p>
-          <p>A system analyst studies an organization’s processes to design and improve computer systems. They gather requirements, analyze needs, propose solutions, and ensure systems meet business goals. Key skills include problem-solving, communication, and technical knowledge.</p>
+          <p>A system analyst studies an organizationâ€™s processes to design and improve computer systems. They gather requirements, analyze needs, propose solutions, and ensure systems meet business goals. Key skills include problem-solving, communication, and technical knowledge.</p>
         </div>
       </article>
 
@@ -133,65 +136,36 @@
   <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
-      <p>© <span id="year"></span> Moral Matrix</p>
+      <p>Â© <span id="year"></span> Moral Matrix</p>
     </div>
   </footer>
 
   <script>
-    // Off-canvas drawer logic (accessible)
     (function () {
-      const btn = document.getElementById('hamburgerBtn');
-      const drawer = document.getElementById('navDrawer');
-      const overlay = document.getElementById('navOverlay');
-      const closeBtn = document.getElementById('closeDrawer');
-      const focusable = () => drawer.querySelectorAll('a, button');
-
-      function openDrawer() {
-        drawer.classList.add('open');
-        drawer.setAttribute('aria-hidden', 'false');
-        overlay.hidden = false;
-        document.body.classList.add('no-scroll');
-        btn.setAttribute('aria-expanded', 'true');
-        // focus first link
-        const items = focusable();
-        if (items.length) items[0].focus();
+      const yearEl = document.getElementById('year');
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
       }
+    })();
 
-      function closeDrawer() {
-        drawer.classList.remove('open');
-        drawer.setAttribute('aria-hidden', 'true');
-        overlay.hidden = true;
-        document.body.classList.remove('no-scroll');
-        btn.setAttribute('aria-expanded', 'false');
-        btn.focus();
-      }
+    (function () {
+      const backToTop = document.getElementById('backToTop');
+      if (!backToTop) return;
 
-      btn.addEventListener('click', () =>
-        drawer.classList.contains('open') ? closeDrawer() : openDrawer()
-      );
-      closeBtn.addEventListener('click', closeDrawer);
-      overlay.addEventListener('click', closeDrawer);
-
-      // ESC to close
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
-      });
-
-      // Trap focus inside the drawer
-      drawer.addEventListener('keydown', (e) => {
-        if (e.key !== 'Tab') return;
-        const items = Array.from(focusable());
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault(); last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault(); first.focus();
+      const toggleVisibility = () => {
+        if (window.scrollY > 360) {
+          backToTop.classList.add('is-visible');
+        } else {
+          backToTop.classList.remove('is-visible');
         }
+      };
+
+      backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      // Year in footer
-      document.getElementById('year').textContent = new Date().getFullYear();
+      window.addEventListener('scroll', toggleVisibility, { passive: true });
+      toggleVisibility();
     })();
   </script>
 </body>
