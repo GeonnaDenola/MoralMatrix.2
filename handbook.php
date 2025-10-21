@@ -7,44 +7,8 @@
   <link rel="stylesheet" href="css/handbook.css" />
 </head>
 <body class="handbook-page">
-  <a class="skip-link" href="#main">Skip to content</a>
+  <?php include 'includes/home_header.php'; ?>
 
-  <!-- Sticky site header -->
-  <header class="site-header" role="banner" aria-label="Site Header">
-    <div class="container header-inner">
-      <a class="brand" href="home.php">MORAL MATRIX</a>
-
-      <nav class="primary-nav" aria-label="Primary">
-        <ul>
-          <li><a href="home.php">Home</a></li>
-          <li><a href="home.php#about">About</a></li>
-          <li><a href="handbook.php" aria-current="page">Handbook</a></li>
-          <li><a href="home.php#services">Services</a></li>
-        </ul>
-      </nav>
-
-      <button class="hamburger" id="openDrawer" aria-controls="siteDrawer" aria-expanded="false" aria-label="Open menu">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Drawer + overlay -->
-  <div class="nav-overlay" id="drawerOverlay" hidden></div>
-  <aside class="nav-drawer" id="siteDrawer" aria-hidden="true" aria-label="Mobile Navigation">
-    <div class="drawer-header">
-      <strong>Menu</strong>
-      <button class="close-drawer" id="closeDrawer" aria-label="Close menu">&times;</button>
-    </div>
-    <ul class="drawer-links">
-      <li><a href="login.php" role="menuitem">Student Login</a></li>
-      <li><a href="login.php" role="menuitem">Faculty Login</a></li>
-      <li><a href="login.php" role="menuitem">Security Login</a></li>
-      <li><a href="/moralmatrix/validator/validator_login.php" role="menuitem">Validator Login</a></li>
-    </ul>
-  </aside>
 
   <!-- Handbook hero -->
   <section class="page-hero" role="img" aria-label="Standards of Conduct hero">
@@ -274,49 +238,6 @@
 
   <button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
 
-  <script>
-    // Mobile drawer controls
-    (function () {
-      const body = document.body;
-      const openBtn = document.getElementById('openDrawer');
-      const closeBtn = document.getElementById('closeDrawer');
-      const drawer = document.getElementById('siteDrawer');
-      const overlay = document.getElementById('drawerOverlay');
-
-      function openDrawer() {
-        drawer.classList.add('open');
-        overlay.hidden = false;
-        body.classList.add('no-scroll');
-        openBtn.setAttribute('aria-expanded', 'true');
-        drawer.setAttribute('aria-hidden', 'false');
-      }
-      function closeDrawerFn() {
-        drawer.classList.remove('open');
-        overlay.hidden = true;
-        body.classList.remove('no-scroll');
-        openBtn.setAttribute('aria-expanded', 'false');
-        drawer.setAttribute('aria-hidden', 'true');
-      }
-
-      openBtn.addEventListener('click', openDrawer);
-      closeBtn.addEventListener('click', closeDrawerFn);
-      overlay.addEventListener('click', closeDrawerFn);
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawerFn();
-      });
-    }());
-
-    // Back to top visibility
-    (function () {
-      const btn = document.getElementById('backToTop');
-      function onScroll() {
-        if (window.scrollY > 400) btn.classList.add('is-visible');
-        else btn.classList.remove('is-visible');
-      }
-      btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-      document.addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
-    }());
-  </script>
+ 
 </body>
 </html>

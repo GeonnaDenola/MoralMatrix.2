@@ -48,19 +48,7 @@ body.handbook-page {
 }
 .skip-link:focus { top: 8px; }
 
-/* ------------------------------------
-   HEADER (from your second snippet)
-   ------------------------------------ */
-.site-header {
-  position: sticky; top: 0; z-index: 50;
-  background: var(--brand);
-  box-shadow: 0 1px 0 rgba(255,255,255,.05), 0 10px 30px rgba(0,0,0,.15);
-}
-.header-inner {
-  display: flex; align-items: center; justify-content: space-between;
-  min-height: 72px; gap: 12px;
-  position: relative;
-}
+
 .brand {
   color: #fff; font-weight: 800; letter-spacing: .08em;
   text-transform: uppercase; font-size: 1.05rem;
@@ -148,6 +136,9 @@ body.handbook-page {
 .drawer-links li a[aria-current="page"] { background: rgba(255,255,255,.12); }
 .drawer-links li a[aria-current="page"]:hover { background: rgba(255,255,255,.18); }
 .drawer-links .divider { height: 1px; background: rgba(255,255,255,.15); margin: 10px 4px; }
+@media (min-width: 768px) {
+  .nav-drawer .drawer-links [data-desktop-hide="primary"] { display: none !important; }
+}
 
 /* ------------------------------------
    HERO

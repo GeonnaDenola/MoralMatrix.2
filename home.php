@@ -7,61 +7,9 @@
   <link rel="stylesheet" href="css/home.css" />
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
 
-  <!-- Header -->
-  <header class="site-header">
-    <div class="container header-inner">
-      <!-- logo (now pinned to the left by CSS) -->
-      <a class="brand" href="home.php">MORAL MATRIX</a>
 
-      <!-- Centered top nav: visible on desktop per CSS -->
-      <nav class="primary-nav" aria-label="Primary">
-        <ul>
-          <li><a href="home.php" aria-current="page">Home</a></li>
-          <li><a href="#about">About</a></li>
-          <li><a href="handbook.php">Handbook</a></li>
-          <li><a href="#services">Services</a></li>
-        </ul>
-      </nav>
-
-      <!-- Hamburger -->
-      <button
-        class="hamburger"
-        id="hamburgerBtn"
-        aria-label="Open menu"
-        aria-controls="navDrawer"
-        aria-expanded="false"
-        type="button"
-      >
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Off-canvas Navigation -->
-  <div class="nav-overlay" id="navOverlay" hidden></div>
-
-  <nav class="nav-drawer" id="navDrawer" aria-hidden="true">
-    <div class="drawer-header">
-      <strong>Navigation</strong>
-      <button class="close-drawer" id="closeDrawer" aria-label="Close menu">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
-    <ul class="drawer-links" role="menu">
-      <li><a href="home.php" role="menuitem" aria-current="page">Home</a></li>
-      <li><a href="#about" role="menuitem">About</a></li>
-      <li><a href="handbook.php" role="menuitem">Handbook</a></li>
-      <li><a href="#services" role="menuitem">Services</a></li>
-      <li><a href="login.php" role="menuitem">Student Login</a></li>
-      <li><a href="login.php" role="menuitem">Faculty Login</a></li>
-      <li><a href="login.php" role="menuitem">Security Login</a></li>
-      <li><a href="/moralmatrix/validator/validator_login.php" role="menuitem">Validator Login</a></li>
-    </ul>
-  </nav>
+  <?php include 'includes/home_header.php'; ?>
 
   <!-- Hero -->
   <section class="hero" id="about" aria-label="Welcome section">
@@ -139,69 +87,6 @@
   </footer>
 
   <script>
-    (function () {
-      const btn = document.getElementById('hamburgerBtn');
-      const drawer = document.getElementById('navDrawer');
-      const overlay = document.getElementById('navOverlay');
-      const closeBtn = document.getElementById('closeDrawer');
-      if (!btn || !drawer || !overlay || !closeBtn) return;
-
-      const focusable = () => drawer.querySelectorAll('a, button:not([disabled])');
-
-      function openDrawer() {
-        drawer.classList.add('open');
-        drawer.setAttribute('aria-hidden', 'false');
-        overlay.hidden = false;
-        document.body.classList.add('no-scroll');
-        btn.setAttribute('aria-expanded', 'true');
-
-        const items = focusable();
-        if (items.length) items[0].focus();
-      }
-
-      function closeDrawer() {
-        drawer.classList.remove('open');
-        drawer.setAttribute('aria-hidden', 'true');
-        overlay.hidden = true;
-        document.body.classList.remove('no-scroll');
-        btn.setAttribute('aria-expanded', 'false');
-        btn.focus();
-      }
-
-      btn.addEventListener('click', () => {
-        if (drawer.classList.contains('open')) {
-          closeDrawer();
-        } else {
-          openDrawer();
-        }
-      });
-
-      closeBtn.addEventListener('click', closeDrawer);
-      overlay.addEventListener('click', closeDrawer);
-
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && drawer.classList.contains('open')) {
-          closeDrawer();
-        }
-      });
-
-      drawer.addEventListener('keydown', (event) => {
-        if (event.key !== 'Tab') return;
-        const items = Array.from(focusable());
-        if (!items.length) return;
-        const first = items[0];
-        const last = items[items.length - 1];
-
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      });
-    })();
-
     (function () {
       const yearEl = document.getElementById('year');
       if (yearEl) {
