@@ -15,10 +15,7 @@ html { -webkit-text-size-adjust: 100%; }
   --muted: #6b7280;  /* slate-500 */
   --ring: rgba(0,68,102,.18);
   --glass: rgba(255,255,255,.86);
-  --glass-border: rgba(15, 23, 42, .08);
-
-  --navH: 56px;
-}
+  --glass-border: rgba(15, 23, 42, .08);}
 
 /* PAGE */
 body{
@@ -32,218 +29,10 @@ body{
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* HEADER / NAV */
-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: var(--brand);
-  box-shadow: 0 6px 16px rgba(0,0,0,.25);
-  padding-top: env(safe-area-inset-top);
-}
-
-nav{
-  height: var(--navH);
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-inline: clamp(12px, 3vw, 24px);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-nav ul{ list-style: none; display: flex; align-items: center; gap: clamp(8px, 2vw, 20px); }
-
-nav a{
-  position: relative;
-  color:#fff;
-  text-decoration:none;
-  font-weight:700;
-  letter-spacing:.015em;
-  font-size: clamp(.88rem, .84rem + .25vw, 1rem);
-  padding: 6px 10px;
-  border-radius: 10px;
-  transition:
-    opacity .15s ease,
-    text-shadow .15s ease,
-    background-color .2s ease,
-    transform .08s ease;
-}
-
-/* pretty hover for navbar */
-nav a::after{
-  content:"";
-  position:absolute;
-  left: 10px;
-  right: 10px;
-  bottom: -6px;
-  height: 2px;
-  border-radius: 2px;
-  background: #fff;
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform .2s ease;
-}
-
-nav a:hover,
-nav a:focus-visible{
-  background: rgba(255,255,255,.10);
-  text-shadow: 0 1px 0 rgba(255,255,255,.18);
-}
-
-nav a:hover::after,
-nav a:focus-visible::after{
-  transform: scaleX(1);
-}
-
-nav a:active{ transform: translateY(1px); }
-
-.nav-left a{ font-size: clamp(1rem, .95rem + .5vw, 1.25rem); }
-
-@media (max-width: 520px){ .nav-center{ display:none; } }
-
-/* HAMBURGER (mobile only) */
-.nav-right{ display:flex; align-items:center; gap: 10px; }
-
-
-
-.hamburger{
-  display:none; /* show only on mobile via media query */
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(255,255,255,.28);
-  border-radius: 12px;
-  background: rgba(255,255,255,.10);
-  color: #fff;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background .15s ease, transform .06s ease, box-shadow .2s ease, border-color .2s ease;
-}
-.hamburger:hover,
-.hamburger:focus-visible{
-  outline: none;
-  background: rgba(255,255,255,.16);
-  border-color: rgba(255,255,255,.45);
-  box-shadow: 0 4px 14px rgba(0,0,0,.25), 0 0 0 4px rgba(255,255,255,.12) inset;
-}
-.hamburger:active{ transform: translateY(1px); }
-.hamburger .line{
-  position: absolute;
-  left: 50%;
-  width: 22px;
-  height: 2px;
-  background: currentColor;
-  border-radius: 2px;
-  transform: translateX(-50%);
-  transition: top .18s ease, transform .18s ease, opacity .18s ease;
-}
-.hamburger .line:nth-child(1){ top: 14px; }
-.hamburger .line:nth-child(2){ top: 21px; }
-.hamburger .line:nth-child(3){ top: 28px; }
-
-.hamburger.is-active .line:nth-child(1){
-  top: 21px; transform: translateX(-50%) rotate(45deg);
-}
-.hamburger.is-active .line:nth-child(2){
-  opacity: 0; transform: translateX(-50%) scaleX(0.5);
-}
-.hamburger.is-active .line:nth-child(3){
-  top: 21px; transform: translateX(-50%) rotate(-45deg);
-}
-
-@media (max-width: 520px){
-  .hamburger{ display:grid; place-items:center; }
-}
-
-/* MOBILE MENU (slides from right) */
-.menu-backdrop{
-  position: fixed;
-  inset: var(--navH) 0 0 0; /* keep header visible */
-  background: rgba(0,0,0,.45);
-  backdrop-filter: blur(2px);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity .2s ease, visibility .2s ease;
-  z-index: 45;
-}
-
-.mobile-menu{
-  position: fixed;
-  top: var(--navH);
-  right: 0;
-  height: calc(100svh - var(--navH));
-  /* ⬇️ Make panel half the screen width, with sensible bounds */
-  width: clamp(240px, 50vw, 440px);
-  /* ⬇️ Dark panel per request */
-  background: #1C1D21;
-  color: #fff;
-  border-left: 1px solid #2a2b30;
-  box-shadow: -18px 0 40px rgba(0,0,0,.28);
-  backdrop-filter: saturate(1.05) blur(6px);
-  transform: translateX(100%);
-  transition: transform .26s ease;
-  z-index: 46;
-  display: flex; flex-direction: column;
-  padding: max(16px, env(safe-area-inset-top)) clamp(16px, 4vw, 22px);
-  gap: 12px;
-}
-
-/* remove the extra X button inside the panel */
-.mobile-menu .close-menu{ display: none !important; }
-
-.mobile-menu header{
-  background: transparent; box-shadow: none; padding: 0; position: static;
-}
-
-.mobile-menu .mobile-title{
-  font-weight: 800; font-size: 1rem; letter-spacing: .02em;
-  /* white font for the title */
-  color: #fff;
-}
-
-.mobile-links{
-  list-style: none;
-  display: flex; flex-direction: column; gap: 8px;
-  margin-top: 4px;
-}
-.mobile-links a{
-  display: block;
-  text-decoration: none;
-  /* white font for links */
-  color: #fff;
-  font-weight: 800;
-  letter-spacing: .02em;
-  padding: 12px 14px;
-  border-radius: 12px;
-  transition: background .15s ease, transform .06s ease, color .15s ease;
-}
-.mobile-links a:hover,
-.mobile-links a:focus-visible{
-  outline: none;
-  /* subtle highlight against #1C1D21 */
-  background: rgba(255,255,255,.08);
-  color: #fff;
-}
-.mobile-links a:active{ transform: translateY(1px); }
-
-/* open state driven by body class */
-body.menu-open .menu-backdrop{
-  opacity: 1; visibility: visible; pointer-events: auto;
-}
-body.menu-open .mobile-menu{
-  transform: translateX(0);
-}
-body.no-scroll{
-  overflow: hidden; touch-action: none;
-}
-
 /* LAYOUT */
 .login-page{
-  min-height: calc(100svh - var(--navH));
+  min-height: 100vh;
+  min-height: 100svh;
   padding: clamp(16px, 4vw, 36px);
   display: grid;
   justify-content: center;
@@ -430,7 +219,6 @@ input[type="password"]::-webkit-credentials-auto-fill-button{
   .violation-message p{ font-size: 1rem; }
 }
 @media (max-width: 430px){
-  nav{ height: 52px; }
   .login-box{ padding: 14px; border-radius: 14px; }
   .login-box input{ height: 44px; }
   .form-options{
@@ -440,12 +228,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button{
   .forgot-password{ margin-left: 0; align-self: flex-end; }
 }
 
-.nav-left a::after {
-  display: none !important;          
-}
 
-.nav-left a:hover {
-  background: transparent !important; 
-  text-shadow: none !important;       
-}
+
+
 

@@ -37,46 +37,7 @@ if (isset($_SESSION['error'])) {
   <link rel="stylesheet" href="../css/validator_login.css" />
 </head>
 <body>
-  <header>
-    <nav>
-      <ul class="nav-left">
-        <li><a href="../home.php" aria-label="Go to home">MORAL MATRIX</a></li>
-      </ul>
 
-      <ul class="nav-center">
-        <li><a href="#">ABOUT</a></li>
-        <li><a href="#">SERVICES</a></li>
-      </ul>
-
-      <ul class="nav-right">
-        <li>
-          <button
-            class="hamburger"
-            aria-label="Open menu"
-            aria-controls="mobile-menu"
-            aria-expanded="false"
-          >
-            <span class="line"></span>
-            <span class="line"></span>
-            <span class="line"></span>
-          </button>
-        </li>
-      </ul>
-    </nav>
-  </header>
-
-  <!-- Backdrop + Slide-in Mobile Menu -->
-  <div class="menu-backdrop" aria-hidden="true"></div>
-  <aside id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div class="mobile-title">Menu</div>
-      <button class="close-menu" aria-label="Close menu" title="Close">✕</button>
-    </div>
-    <ul class="mobile-links" role="menu">
-      <li role="none"><a role="menuitem" href="#">ABOUT</a></li>
-      <li role="none"><a role="menuitem" href="#">SERVICES</a></li>
-    </ul>
-  </aside>
 
   <main class="login-page">
     <!-- You can rename or customize this callout -->

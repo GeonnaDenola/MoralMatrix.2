@@ -1,18 +1,13 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-/* Redirect already logged-in users based on account type */
-require __DIR__ . '/config.php'; 
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
-/* ✅ Redirect already logged-in users only if they are logged in */
+/* âœ… Redirect already logged-in users only if they are logged in */
 if (!empty($_SESSION['account_type'])) {
     switch ($_SESSION['account_type']) {
         case 'super_admin': header("Location: " . BASE_PATH . "/super_admin/dashboard.php"); exit;
@@ -33,6 +28,10 @@ unset($_SESSION['error']);
 
 $oldEmail = $_SESSION['old_email'] ?? '';
 unset($_SESSION['old_email']);
+
+$baseUrl = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+$homeHref = $baseUrl !== '' ? $baseUrl . '/home.php' : 'home.php';
+$logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo.jpg' : 'assets/cert/logo.jpg';
 ?>
 <!doctype html>
 <html lang="en">
@@ -66,53 +65,12 @@ unset($_SESSION['old_email']);
   </style>
 </head>
 <body>
-  <header>
-    <nav>
-      <ul class="nav-left">
-        <li><a href="home.php">MORAL MATRIX</a></li>
-      </ul>
-
-      <ul class="nav-center">
-        <li><a href="#">ABOUT</a></li>
-        <li><a href="#">SERVICES</a></li>
-      </ul>
-
-      <!-- RIGHT: hamburger (mobile only) -->
-      <ul class="nav-right">
-        <li>
-          <button
-            class="hamburger"
-            aria-label="Open menu"
-            aria-controls="mobile-menu"
-            aria-expanded="false"
-          >
-            <span class="line"></span>
-            <span class="line"></span>
-            <span class="line"></span>
-          </button>
-        </li>
-      </ul>
-    </nav>
-  </header>
-
-  <!-- Backdrop + Slide-in Mobile Menu -->
-  <div class="menu-backdrop" aria-hidden="true"></div>
-  <aside id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div class="mobile-title">Menu</div>
-      <button class="close-menu" aria-label="Close menu" title="Close">✕</button>
-    </div>
-    <ul class="mobile-links" role="menu">
-      <li role="none"><a role="menuitem" href="#">ABOUT</a></li>
-      <li role="none"><a role="menuitem" href="#">SERVICES</a></li>
-    </ul>
-  </aside>
-
+  
   <main class="login-page">
     <div class="violation-message">
       <h3>STUDENT VIOLATION</h3>
       <p>
-        All students are expected to strictly follow the school’s rules and regulations at all times.
+        All students are expected to strictly follow the school rules and regulations at all times.
         Any misconduct, inappropriate behavior, or violation of these policies will lead to appropriate
         disciplinary action in accordance with the student handbook. Please ensure that you act responsibly
         and respectfully within the school premises and during all school-related activities.
@@ -212,45 +170,9 @@ unset($_SESSION['old_email']);
       );
     })();
 
-    /* --- Mobile hamburger / menu --- */
-    (function () {
-      const body = document.body;
-      const hamBtn = document.querySelector('.hamburger');
-      const menu = document.getElementById('mobile-menu');
-      const backdrop = document.querySelector('.menu-backdrop');
-      const closeBtn = menu?.querySelector('.close-menu');
-
-      if (!hamBtn || !menu || !backdrop) return;
-
-      function setMenu(open){
-        body.classList.toggle('menu-open', open);
-        body.classList.toggle('no-scroll', open);
-        hamBtn.classList.toggle('is-active', open);
-        hamBtn.setAttribute('aria-expanded', String(open));
-        hamBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        if (open) {
-          const firstLink = menu.querySelector('a,button,[tabindex]:not([tabindex="-1"])');
-          firstLink && firstLink.focus();
-        } else {
-          hamBtn.focus();
-        }
-      }
-
-      function toggle(){ setMenu(!body.classList.contains('menu-open')); }
-
-      hamBtn.addEventListener('click', toggle);
-      closeBtn && closeBtn.addEventListener('click', () => setMenu(false));
-      backdrop.addEventListener('click', () => setMenu(false));
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && body.classList.contains('menu-open')) setMenu(false);
-      });
-
-      const mq = window.matchMedia('(min-width: 521px)');
-      mq.addEventListener('change', () => {
-        if (mq.matches && body.classList.contains('menu-open')) setMenu(false);
-      });
-    })();
+    
   </script>
 </body>
 </html>
+
+

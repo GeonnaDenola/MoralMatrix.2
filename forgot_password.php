@@ -60,46 +60,7 @@ $errorMsg = isset($_GET['error']) ? trim($_GET['error']) : '';
   </style>
 </head>
 <body>
-  <header>
-    <nav>
-      <ul class="nav-left">
-        <li><a href="home.php">MORAL MATRIX</a></li>
-      </ul>
-
-      <ul class="nav-center">
-        <li><a href="#">ABOUT</a></li>
-        <li><a href="#">SERVICES</a></li>
-      </ul>
-
-      <ul class="nav-right">
-        <li>
-          <button
-            class="hamburger"
-            aria-label="Open menu"
-            aria-controls="mobile-menu"
-            aria-expanded="false"
-          >
-            <span class="line"></span>
-            <span class="line"></span>
-            <span class="line"></span>
-          </button>
-        </li>
-      </ul>
-    </nav>
-  </header>
-
-  <div class="menu-backdrop" aria-hidden="true"></div>
-  <aside id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div class="mobile-title">Menu</div>
-      <button class="close-menu" aria-label="Close menu" title="Close">&times;</button>
-    </div>
-    <ul class="mobile-links" role="menu">
-      <li role="none"><a role="menuitem" href="#">ABOUT</a></li>
-      <li role="none"><a role="menuitem" href="#">SERVICES</a></li>
-    </ul>
-  </aside>
-
+ 
   <main class="login-page login-page--forgot">
     <div class="login-box" role="form">
       <h3 class="login-welcome">Forgot Password</h3>
