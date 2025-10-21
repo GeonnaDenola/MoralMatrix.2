@@ -9,7 +9,6 @@
 <body class="handbook-page">
   <?php include 'includes/home_header.php'; ?>
 
-
   <!-- Handbook hero -->
   <section class="page-hero" role="img" aria-label="Standards of Conduct hero">
     <div class="hero-inner">
@@ -20,6 +19,7 @@
            cultivate a respectful, service-oriented campus culture for every Moral Matrix learner.</p>
       </div>
 
+      <!-- Right-side, vertically centered meta cards -->
       <div class="hero-meta" aria-label="Meta information">
         <div class="meta-card">
           <span>Audience</span>
@@ -237,7 +237,5 @@
   </main>
 
   <button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
-
- 
 </body>
 </html>
