@@ -83,6 +83,25 @@
   text-decoration: none;
 }
 
+.primary-nav a::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0.35rem;
+  width: 60%;
+  height: 2px;
+  background: rgba(255,255,255,.95);
+  border-radius: 999px;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: center;
+  transition: transform .32s ease;
+}
+
+.primary-nav a:hover::after,
+.primary-nav a:focus-visible::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
 .primary-nav a[aria-current="page"] {
   color: #fff;
 }

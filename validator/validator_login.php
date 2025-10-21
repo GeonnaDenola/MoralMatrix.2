@@ -1,5 +1,7 @@
 <?php
-// Validator Login (mirrors main login UI while preserving validator functionality)
+require_once __DIR__ . '/../config.php';
+
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
