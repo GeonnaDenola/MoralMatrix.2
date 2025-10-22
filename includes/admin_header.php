@@ -235,8 +235,7 @@ $homeUrl = $asset('admin/dashboard.php');
   </div>
 </nav>
 
-<main class="page">
-</main>
+
 
 <script>
   (function(){

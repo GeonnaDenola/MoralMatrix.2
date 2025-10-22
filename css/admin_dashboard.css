@@ -50,8 +50,8 @@ body{
   width: min(1400px, calc(100vw - var(--sidebar-current) - (2 * var(--content-gutter))));
   margin-left: calc(var(--sidebar-current) + var(--content-gutter));
   margin-right: var(--content-gutter);
-  margin-top: var(--header-gap);
   margin-bottom: 32px;
+  margin-top: 130px;
 }
 
 @media (max-width: 1200px){ :root{ --sidebar-current: var(--sidebar-compact); } }
@@ -170,6 +170,7 @@ body{
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
   padding: 20px clamp(14px, 3vw, 28px);
+
 }
 
 .panel{
