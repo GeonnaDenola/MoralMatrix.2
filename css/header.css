@@ -328,21 +328,35 @@ html { scroll-padding-top: var(--header-h); }
   }
 }
 
-/* ===== Centered Header Navigation ===== */
+/* ===== Header Navigation Layout ===== */
 .header-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* brand left, nav centered, actions right */
   gap: 12px;
   position: relative;
 }
 
 .header-nav {
   display: flex;
+  flex: 1;
+  align-items: center;
   gap: 24px;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  min-width: 0;
+}
+
+.header-nav .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  justify-content: center;
+}
+
+.header-nav .nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
 }
 
 .header-nav .nav-link {
