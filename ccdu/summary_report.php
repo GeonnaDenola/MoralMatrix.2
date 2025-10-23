@@ -253,7 +253,7 @@ function pluralLabel($count, $singular, $plural = null) {
       padding-right:clamp(32px,4vw,80px);
     }
     .summary-report{
-      margin:48px auto 96px;
+      margin:100px auto 96px;
       width:min(1200px,100%);
     }
   }

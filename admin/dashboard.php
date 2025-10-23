@@ -21,7 +21,7 @@ $__VIEW_FILE = file_exists($__try1) ? 'account_view.php' : (file_exists($__try2)
   <link rel="stylesheet" href="../css/admin_search.css" />
 </head>
 <body>
-  <main class="page">
+  <main class="page" style>
     <section class="canvas" aria-labelledby="welcomeTitle">
       <header class="page-head">
         <div>
