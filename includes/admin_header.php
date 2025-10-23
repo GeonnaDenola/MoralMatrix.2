@@ -216,7 +216,7 @@ $homeUrl = $asset('admin/dashboard.php');
   <div class="brand">
     <div class="brand-mark" aria-hidden="true">M</div>
     <div class="brand-text">
-      <span class="brand-title">Admin</span>
+      <span class="brand-title">ADMIN</span>
     </div>
   </div>
 
