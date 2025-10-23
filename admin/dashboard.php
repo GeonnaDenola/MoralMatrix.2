@@ -19,6 +19,8 @@ $__VIEW_FILE = file_exists($__try1) ? 'account_view.php' : (file_exists($__try2)
   <!-- Redesigned light UI -->
   <link rel="stylesheet" href="../css/admin_dashboard.css" />
   <link rel="stylesheet" href="../css/admin_search.css" />
+  <link rel="icon" type="image/png" href="/MoralMatrix/assets/logo2.png">
+
 </head>
 <body>
   <main class="page" style>

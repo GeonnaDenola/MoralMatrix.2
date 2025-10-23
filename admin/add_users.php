@@ -331,6 +331,7 @@ if (empty($formValues['password'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Add User Accounts</title>
     <link rel="stylesheet" href="../css/add_users.css"/>
+    <link rel="icon" type="image/png" href="/../MoralMatrix/logo2.png">
 </head>
 <body>
 

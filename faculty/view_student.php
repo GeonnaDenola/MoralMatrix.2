@@ -17,6 +17,13 @@ if (!isset($_GET['student_id'])) {
 }
 
 $studentId = $_GET['student_id'];
+
+function labelize(string $text): string {
+    $cleaned = str_replace(['[', ']', '"'], '', $text);
+    $cleaned = str_replace(['_', '-'], ' ', trim($cleaned));
+    return ucwords($cleaned);
+}
+
 $stmt = $conn->prepare('SELECT * FROM student_account WHERE student_id = ?');
 $stmt->bind_param('s', $studentId);
 $stmt->execute();
@@ -166,9 +173,9 @@ $selfDir = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/');
             <?php foreach ($violations as $violation): ?>
               <?php
                 $reportedAt = !empty($violation['reported_at']) ? date('M d, Y', strtotime($violation['reported_at'])) : 'Date unavailable';
-                $category   = $violation['offense_category'] ?: 'Uncategorized';
-                $offense    = $violation['offense_type'] ?: 'Violation';
-                $details    = $violation['offense_details'] ?: ($violation['description'] ?: 'No additional details provided.');
+                $category   = labelize($violation['offense_category'] ?: 'Uncategorized');
+                $offense    = labelize($violation['offense_type'] ?: 'Violation');
+                $details    = labelize($violation['offense_details'] ?: ($violation['description'] ?: 'No additional details provided.'));
               ?>
               <div class="timeline-item">
                 <h3><?= htmlspecialchars($offense, ENT_QUOTES, 'UTF-8'); ?></h3>

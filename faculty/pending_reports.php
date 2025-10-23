@@ -18,6 +18,12 @@ function cleanText(?string $value): string
     return $value;
 }
 
+function labelize(string $text): string {
+    $cleaned = str_replace(['[', ']', '"'], '', $text);
+    $cleaned = str_replace(['_', '-'], ' ', trim($cleaned));
+    return ucwords($cleaned);
+}
+
 function formatRelativeFromDate(DateTimeImmutable $dt): string
 {
     $now = new DateTimeImmutable();
@@ -182,19 +188,12 @@ if ($result) {
             $studentName = 'Unnamed student';
         }
 
-        $category = cleanText($row['offense_category'] ?? '');
-        if ($category === '') {
-            $category = 'Uncategorized';
-        }
+        $category = labelize(cleanText($row['offense_category'] ?? 'Uncategorized'));
         $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
 
-        $typeRaw = cleanText($row['offense_type'] ?? '');
-        $typeLabel = $typeRaw !== '' ? $typeRaw : 'Type not provided';
-
+        $typeLabel = labelize(cleanText($row['offense_type'] ?? 'Type not provided'));
         $description = cleanText($row['description'] ?? '');
-
-        $statusRaw = cleanText($row['status'] ?? 'Pending');
-        $statusLabel = strtoupper($statusRaw !== '' ? $statusRaw : 'Pending');
+        $statusLabel = labelize(cleanText($row['status'] ?? 'Pending'));
 
         $dateInfo = describeDate($row['reported_at'] ?? null);
         if ($dateInfo['datetime'] instanceof DateTimeImmutable) {

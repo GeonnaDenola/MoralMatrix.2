@@ -23,6 +23,20 @@ if (!$securityId) {
     die('No security id in session. Please login again.');
 }
 
+// ---------- CLEAN LABEL HELPER ----------
+if (!function_exists('labelize')) {
+    /**
+     * Converts snake_case or kebab-case strings into readable labels.
+     * Removes brackets, quotes, underscores, and dashes.
+     * Example: "civilian_attire" → "Civilian Attire"
+     */
+    function labelize(string $text): string {
+        $cleaned = str_replace(['[', ']', '"'], '', $text);
+        $cleaned = str_replace(['_', '-'], ' ', trim($cleaned));
+        return ucwords($cleaned);
+    }
+}
+
 $sql = "
 SELECT sv.violation_id,
        sv.student_id,
@@ -380,10 +394,11 @@ if ($totalReports > 0) {
               $studentName = trim($firstName . ' ' . $lastName);
               if ($studentName === '') { $studentName = 'Unnamed student'; }
               $studentId = (string)($violation['student_id'] ?? '—');
-              $categoryLabel = trim((string)($violation['offense_category'] ?? '')) ?: 'Uncategorized';
-              $typeLabel     = trim((string)($violation['offense_type'] ?? '')) ?: 'Unspecified';
+              $categoryLabel = labelize(trim((string)($violation['offense_category'] ?? ''))) ?: 'Uncategorized';
+              $typeLabel     = labelize(trim((string)($violation['offense_type'] ?? ''))) ?: 'Unspecified';
               $statusLabelRaw = trim((string)($violation['status'] ?? ''));
-              $statusLabel = $statusLabelRaw !== '' ? ucwords(str_replace('_',' ', strtolower($statusLabelRaw))) : 'Approved';
+              $statusLabel = $statusLabelRaw !== '' ? labelize($statusLabelRaw) : 'Approved';
+
               $photoFile = trim((string)($violation['student_photo'] ?? ''));
               $photoSrc  = $photoFile !== '' ? '../admin/uploads/' . $photoFile : '../admin/uploads/placeholder.png';
               $description = trim((string)($violation['description'] ?? ''));

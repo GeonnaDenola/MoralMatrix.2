@@ -59,7 +59,7 @@ include '../includes/student_header.php';
 </head>
 <body>
 
-<div class="dashboard-container" style = "margin-top: 80px;">
+<div class="dashboard-container" style="margin-top: 80px;">
     <h2 class="welcome-text">Welcome, <?= htmlspecialchars($first_name) ?>!</h2>
     <h3 class="section-title">Your Violation History</h3>
 
@@ -67,20 +67,42 @@ include '../includes/student_header.php';
         <?php if ($result->num_rows > 0): ?>
             <?php while ($row = $result->fetch_assoc()): ?>
                 <div class="card">
-                    <?php if (!empty($row['photo'])): ?>
+
+                    <?php
+                    // --- IMAGE HANDLING ---
+                    if (!empty($row['photo'])):
+                        $photoFile = trim($row['photo']);
+                        $photoPath = "../ccdu/uploads/" . basename($photoFile);
+
+                        // Avoid duplicate folder if photo path already contains ccdu/uploads/
+                        if (str_contains($photoFile, 'ccdu/uploads/')) {
+                            $photoPath = "../" . ltrim($photoFile, '/');
+                        }
+                    ?>
                         <div class="card-image">
-                            <img src="../ccdu/uploads/<?= htmlspecialchars($row['photo']) ?>" alt="Evidence">
+                            <img src="<?= htmlspecialchars($photoPath) ?>" alt="Evidence"
+                                 onerror="this.style.display='none'">
                         </div>
                     <?php endif; ?>
+
                     <div class="card-body">
-                        <h4 class="offense-title"><?= htmlspecialchars($row['offense_category']) ?> - <?= htmlspecialchars($row['offense_type']) ?></h4>
-                        <p><strong>Date:</strong> <?= htmlspecialchars($row['reported_at']) ?></p>
-                        <p><strong>Details:</strong> <?= htmlspecialchars($row['offense_details']) ?></p>
-                        <p><strong>Description:</strong> <?= htmlspecialchars($row['description']) ?></p>
+                        <h4 class="offense-title">
+                            <?= htmlspecialchars(labelize($row['offense_category'])) ?> -
+                            <?= htmlspecialchars(labelize($row['offense_type'])) ?>
+                        </h4>
+
+                        <p><strong>Details:</strong> <?= htmlspecialchars(labelize($row['offense_details'])) ?></p>
+                        <p><strong>Description:</strong> <?= htmlspecialchars(labelize($row['description'])) ?></p>
                     </div>
-                 <!--   <div class="card-footer">
-                        <span class="badge <?= strtolower($row['status']) ?>"><?= htmlspecialchars($row['status']) ?></span>
-                    </div> -->
+
+                    <!-- Optional footer if needed later -->
+                    <!--
+                    <div class="card-footer">
+                        <span class="badge <?= strtolower($row['status']) ?>">
+                            <?= htmlspecialchars($row['status']) ?>
+                        </span>
+                    </div>
+                    -->
                 </div>
             <?php endwhile; ?>
         <?php else: ?>

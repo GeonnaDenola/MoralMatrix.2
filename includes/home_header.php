@@ -9,7 +9,7 @@ $loginHref = $baseUrl !== '' ? $baseUrl . '/login.php' : 'login.php';
 $validatorHref = $baseUrl !== '' ? $baseUrl . '/validator/validator_login.php' : 'validator/validator_login.php';
 $aboutHref = $isHome ? '#about' : $homeHref . '#about';
 $servicesHref = $isHome ? '#services' : $homeHref . '#services';
-$logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo.jpg' : 'assets/cert/logo.jpg';
+$logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo2.png' : 'assets/cert/logo2.png';
 ?>
 
 <!-- Header -->
@@ -17,9 +17,9 @@ $logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo.jpg' : 'assets/cert/l
   <div class="container header-inner">
     <!-- logo (now pinned to the left by CSS) -->
     <a class="brand" href="<?= htmlspecialchars($homeHref, ENT_QUOTES) ?>">
-      <img class="brand-logo" src="<?= htmlspecialchars($logoSrc, ENT_QUOTES) ?>" alt="Moral Matrix logo" />
+     <img class="brand-logo" src="<?= htmlspecialchars($logoSrc, ENT_QUOTES) ?>" alt="Moral Matrix logo" />
       <span class="brand-name">MORAL MATRIX</span>
-    </a>
+    </a> 
 
     <!-- Centered top nav: visible on desktop per CSS -->
     <nav class="primary-nav" aria-label="Primary">

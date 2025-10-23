@@ -6,6 +6,12 @@ require_role('faculty');
 include '../config.php';
 include '../includes/faculty_header.php';
 
+function labelize(string $text): string {
+    $cleaned = str_replace(['[', ']', '"'], '', $text);
+    $cleaned = str_replace(['_', '-'], ' ', trim($cleaned));
+    return ucwords($cleaned);
+}
+
 // DB connect
 $servername = $database_settings['servername'];
 $username   = $database_settings['username'];
@@ -194,20 +200,12 @@ function faculty_to_search_index(string $value): string
 
             $studentId = (string)($row['student_id'] ?? '-');
 
-            $categoryLabel = trim((string)($row['offense_category'] ?? ''));
-            if ($categoryLabel === '') {
-                $categoryLabel = 'Uncategorized';
-            }
+            $categoryLabel = labelize((string)($row['offense_category'] ?? 'Uncategorized'));
 
-            $typeLabel = trim((string)($row['offense_type'] ?? ''));
-            if ($typeLabel === '') {
-                $typeLabel = 'Unspecified';
-            }
+            $typeLabel     = labelize((string)($row['offense_type'] ?? 'Unspecified'));
 
             $statusLabelRaw = trim((string)($row['status'] ?? ''));
-            $statusLabel = $statusLabelRaw !== ''
-                ? ucwords(strtolower($statusLabelRaw))
-                : 'Approved';
+            $statusLabel   = labelize((string)($row['status'] ?? 'Approved'));
 
             $description = trim((string)($row['description'] ?? ''));
 

@@ -1,8 +1,8 @@
 <?php
 require '../auth.php';
-require_role('faculty');
+require_role('security');
 require '../config.php';
-include '../includes/faculty_header.php';
+include '../includes/security_header.php';
 
 // ---------- HELPER FUNCTION ----------
 if (!function_exists('labelize')) {

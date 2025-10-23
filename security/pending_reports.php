@@ -16,6 +16,11 @@ function cleanText(?string $value): string {
     $value = preg_replace('/\s+/u', ' ', trim((string)$value)) ?? '';
     return $value;
 }
+function labelize(string $text): string {
+    $cleaned = str_replace(['[', ']', '"'], '', $text);
+    $cleaned = str_replace(['_', '-'], ' ', trim($cleaned));
+    return ucwords($cleaned);
+}
 function formatRelativeFromDate(DateTimeImmutable $dt): string {
     $now = new DateTimeImmutable();
     $diff = $now->diff($dt);
@@ -153,16 +158,13 @@ if ($result) {
         $studentName = cleanText(implode(' ', [ $row['first_name'] ?? '', $row['last_name'] ?? '' ]));
         if ($studentName === '') $studentName = 'Unnamed student';
 
-        $category = cleanText($row['offense_category'] ?? '');
-        if ($category === '') $category = 'Uncategorized';
+        $category = labelize(cleanText($row['offense_category'] ?? '')) ?: 'Uncategorized';
         $categoryCounts[$category] = ($categoryCounts[$category] ?? 0) + 1;
 
-        $typeRaw = cleanText($row['offense_type'] ?? '');
-        $typeLabel = $typeRaw !== '' ? $typeRaw : 'Type not provided';
+        $typeLabel = labelize(cleanText($row['offense_type'] ?? '')) ?: 'Type Not Provided';
 
         $description = cleanText($row['description'] ?? '');
-        $statusRaw = cleanText($row['status'] ?? 'Pending');
-        $statusLabel = strtoupper($statusRaw !== '' ? $statusRaw : 'Pending');
+        $statusLabel = labelize(cleanText($row['status'] ?? 'Pending'));
 
         $dateInfo = describeDate($row['reported_at'] ?? null);
         if ($dateInfo['datetime'] instanceof DateTimeImmutable) {
@@ -409,7 +411,7 @@ if ($totalPending > 0) {
                                     </svg>
                                     <?= h($violation['reported_at']['relative'] ?: $violation['reported_at']['full']); ?>
                                 </time>
-                                <a class="review-link" href="view_violation_pending.php?id=<?= $violation['id']; ?>">
+                                <a class="review-link" href="view_violation_approved.php?id=<?= $violation['id']; ?>">
                                     Review details
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M5 12h14"></path>

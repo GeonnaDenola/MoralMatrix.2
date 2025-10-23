@@ -239,7 +239,7 @@ $homeUrl = $asset('super_admin/dashboard.php');
     </a>
 
     <a class="nav-item<?php echo activeClass('summary_report.php'); ?>"
-       href="<?php echo htmlspecialchars($asset('admin/summary_report.php'), ENT_QUOTES); ?>"
+       href="<?php echo htmlspecialchars($asset('super_admin/summary_report.php'), ENT_QUOTES); ?>"
        <?php echo $active==='summary_report.php'?'aria-current="page"':''; ?>>
       <span class="nav-ico" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 5v14h18V5H3zm4 12H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V7h2v2zm12 8H9v-2h10v2zm0-4H9v-2h10v2zm0-4H9V7h10v2z"/></svg>
