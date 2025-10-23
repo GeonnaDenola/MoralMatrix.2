@@ -46,6 +46,7 @@ body.validator-dashboard{
   padding: calc(var(--header-h, 64px) + 24px) clamp(20px, 5vw, 60px) 80px;
   display: flex;
   justify-content: center;
+  margin-top: 110px;
 }
 
 .vd-shell{
