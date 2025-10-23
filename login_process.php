@@ -83,7 +83,7 @@ if ($_SESSION['actor_role'] === 'security') {
 
 if ((int)$row['change_pass'] === 1) {
   $conn->close();
-  header("Location: /change_password.php"); exit; // ✅ Removed /MoralMatrix
+  header("Location: $basePath/change_password.php"); exit; // ✅ Removed /MoralMatrix
 }
 
 $role = $_SESSION['actor_role'];
