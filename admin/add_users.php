@@ -29,46 +29,27 @@ try{
 function clean($v){ return is_string($v) ? trim($v) : $v; }
 
 /** Save an uploaded photo safely under project_root/uploads/photos and return filename (or '') */
-function handle_photo_upload(string $field, string $appRoot, ?string &$err): string{
+/** Simplified photo upload: saves to /admin/uploads/ */
+function handle_photo_upload(string $field, string $appRoot, ?string &$err): string {
     $err = '';
-    if(!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE){
-        return '';
+    $photo = '';
+
+    if (isset($_FILES[$field]) && is_uploaded_file($_FILES[$field]['tmp_name']) && $_FILES[$field]['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = dirname(__DIR__) . "/admin/uploads/";
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+
+        $original = basename($_FILES[$field]['name']);
+        $safeBase = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
+        $photo = time() . "_" . $safeBase;
+
+        $targetPath = $uploadDir . $photo;
+        if (!move_uploaded_file($_FILES[$field]['tmp_name'], $targetPath)) {
+            $photo = "";
+            $err = "⚠️ Failed to save uploaded photo.";
+        }
     }
-    if($_FILES[$field]['error'] !== UPLOAD_ERR_OK){
-        $err = "⚠️ Error uploading photo.";
-        return '';
-    }
-    // Validate size (<= 5MB)
-    if($_FILES[$field]['size'] > 5 * 1024 * 1024){
-        $err = "⚠️ Photo too large (max 5MB).";
-        return '';
-    }
-    // Validate mime
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($_FILES[$field]['tmp_name']);
-    $allowed = [
-        'image/jpeg' => 'jpg',
-        'image/png'  => 'png',
-        'image/webp' => 'webp',
-        'image/gif'  => 'gif',
-    ];
-    if(!isset($allowed[$mime])){
-        $err = "⚠️ Invalid image type. Use JPG/PNG/WebP/GIF.";
-        return '';
-    }
-    $ext   = $allowed[$mime];
-    $dir   = $appRoot . '/uploads/photos';
-    if(!is_dir($dir) && !mkdir($dir, 0777, true)){
-        $err = "⚠️ Cannot create photos directory.";
-        return '';
-    }
-    $name  = bin2hex(random_bytes(8)) . '.' . $ext;
-    $dest  = $dir . '/' . $name;
-    if(!move_uploaded_file($_FILES[$field]['tmp_name'], $dest)){
-        $err = "⚠️ Failed to save uploaded photo.";
-        return '';
-    }
-    return $name; // store filename only
+
+    return $photo;
 }
 
 /** Build absolute base URL to app root (one level above /admin) */

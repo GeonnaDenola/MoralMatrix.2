@@ -428,7 +428,7 @@ function closeModal() {
 
   function loadAdmins() {
     setLoadingState();
-    fetch("/MoralMatrix/super_admin/get_admin.php")
+    fetch("<?= $basePath ?>/super_admin/get_admin.php")
       .then(function (response) {
         if (!response.ok) {
           throw new Error("Network response was not ok");
@@ -465,7 +465,7 @@ function closeModal() {
       return;
     }
 
-    fetch("/MoralMatrix/super_admin/delete_admin.php", {
+    fetch("<?= $basePath ?>/super_admin/delete_admin.php", {
       method: "POST",
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
       body: "id=" + encodeURIComponent(id)

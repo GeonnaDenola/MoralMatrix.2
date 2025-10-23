@@ -1,10 +1,10 @@
 <?php
-// send_violation_sms.php
+// send_violation_whatsapp.php
+// Sends a WhatsApp message to the guardian using Twilio's WhatsApp Sandbox
 // Requirements:
-//  - ../config.php should contain DB settings in $database_settings array
-//  - Twilio credentials & FROM number should be set in environment variables
-//    e.g. export TWILIO_SID=..., TWILIO_TOKEN=..., TWILIO_FROM=+1202555XXXX
-//  - composer autoload must be available
+//  - ../config.php should contain $database_settings and $twilio_settings arrays
+//  - Twilio sandbox must be active and joined by the guardian
+//  - composer autoload must include Twilio SDK
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -12,34 +12,32 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Twilio\Rest\Client;
 use Twilio\Exceptions\RestException;
 
-// ----------------- Configuration -----------------
-$sid = $twilio_settings['twilio_sid']   ?? getenv('TWILIO_SID');
+/* ----------------- TWILIO CONFIGURATION ----------------- */
+$sid   = $twilio_settings['twilio_sid']   ?? getenv('TWILIO_SID');
 $token = $twilio_settings['twilio_token'] ?? getenv('TWILIO_TOKEN');
-$from = $twilio_settings['twilio_from']  ?? getenv('TWILIO_FROM');
+$from  = $twilio_settings['twilio_whatsapp_from'] ?? 'whatsapp:+14155238886'; // Twilio Sandbox number
 
 if (!$sid || !$token || !$from) {
-    // Don't leak specifics in production — log instead.
-    error_log("Twilio credentials or FROM number not configured.");
+    error_log("Twilio WhatsApp credentials not configured properly.");
     http_response_code(500);
     echo "Server configuration error.";
     exit;
 }
 
-// ----------------- Inputs & Validation -----------------
-$studentIdRaw   = $_GET['student_id']   ?? '';
-$violationIdRaw = $_GET['violation_id'] ?? '';
+/* ----------------- INPUT VALIDATION ----------------- */
+$studentIdRaw   = $_POST['student_id']   ?? $_GET['student_id']   ?? '';
+$violationIdRaw = $_POST['violation_id'] ?? $_GET['violation_id'] ?? '';
 
-// Validate numeric IDs (cast to int)
-$studentId   = filter_var($studentIdRaw, FILTER_VALIDATE_INT);
-$violationId = filter_var($violationIdRaw, FILTER_VALIDATE_INT);
+$studentId   = trim($studentIdRaw);
+$violationId = is_numeric($violationIdRaw) ? (int)$violationIdRaw : null;
 
-if ($studentId === false || $violationId === false) {
+if ($studentId === '' || $violationId === null) {
     http_response_code(400);
     echo "Invalid parameters.";
     exit;
 }
 
-// ----------------- DB: fetch violation + guardian -----------------
+/* ----------------- FETCH GUARDIAN + VIOLATION DATA ----------------- */
 $conn = new mysqli(
     $database_settings['servername'],
     $database_settings['username'],
@@ -80,12 +78,12 @@ if (!$data) {
     exit;
 }
 
-// Ensure required fields exist
-$guardianName = trim($data['guardian'] ?? '');
+/* ----------------- SANITIZE AND VALIDATE FIELDS ----------------- */
+$guardianName      = trim($data['guardian'] ?? '');
 $guardianMobileRaw = trim($data['guardian_mobile'] ?? '');
-$offenseCategory = $data['offense_category'] ?? '';
-$offenseType = $data['offense_type'] ?? '';
-$reportedAt = $data['reported_at'] ?? null;
+$offenseCategory   = $data['offense_category'] ?? '';
+$offenseType       = $data['offense_type'] ?? '';
+$reportedAt        = $data['reported_at'] ?? null;
 
 if (!$guardianMobileRaw || !$guardianName || !$reportedAt) {
     error_log("Missing DB fields for violation_id={$violationId}");
@@ -94,87 +92,74 @@ if (!$guardianMobileRaw || !$guardianName || !$reportedAt) {
     exit;
 }
 
-// ----------------- Normalize phone number to +63XXXXXXXXX -----------------
+/* ----------------- NORMALIZE TO +63 FORMAT ----------------- */
 function normalizePHMobile($raw) {
-    // Remove non-digits and plus
     $clean = preg_replace('/[^\d\+]/', '', $raw);
-
-    // If it starts with a +, keep it temporarily
-    if (strpos($clean, '+') === 0) {
-        $clean = substr($clean, 1);
-    }
-
-    // Now $clean has only digits. Handle these cases:
-    // - starts with 63  -> +63...
-    // - starts with 0   -> 0xxxx -> +63xxxx (strip leading 0)
-    // - starts with 9   -> local mobile w/o leading 0 -> +63...
-    // - otherwise return false
-    if (strpos($clean, '63') === 0) {
-        return '+' . $clean;
-    } elseif (strpos($clean, '0') === 0) {
-        // drop leading 0
-        return '+63' . substr($clean, 1);
-    } elseif (strpos($clean, '9') === 0 && strlen($clean) >= 9) {
-        return '+63' . $clean;
-    } else {
-        return false;
-    }
+    if (strpos($clean, '+') === 0) $clean = substr($clean, 1);
+    if (strpos($clean, '63') === 0) return '+' . $clean;
+    if (strpos($clean, '0') === 0) return '+63' . substr($clean, 1);
+    if (strpos($clean, '9') === 0) return '+63' . $clean;
+    return false;
 }
-
-$to = normalizePHMobile($guardianMobileRaw);
-if (!$to) {
-    error_log("Invalid guardian mobile for violation_id={$violationId}: raw={$guardianMobileRaw}");
+$toNumber = normalizePHMobile($guardianMobileRaw);
+if (!$toNumber) {
     http_response_code(400);
     echo "Invalid guardian mobile.";
     exit;
 }
 
-// ----------------- Format date in Asia/Manila explicitly -----------------
+/* ----------------- FORMAT DATE ----------------- */
 try {
     $dt = new DateTime($reportedAt, new DateTimeZone('UTC'));
 } catch (Exception $e) {
-    // if DB stores local time already, try without UTC
     try {
         $dt = new DateTime($reportedAt);
     } catch (Exception $e2) {
-        error_log("Invalid reported_at for violation_id={$violationId}: {$reportedAt}");
+        error_log("Invalid reported_at for violation_id={$violationId}");
         http_response_code(500);
         echo "Server error.";
         exit;
     }
 }
 $dt->setTimezone(new DateTimeZone('Asia/Manila'));
-$datePretty = $dt->format('M d, Y h:i A'); // e.g., Oct 06, 2025 09:45 PM
+$datePretty = $dt->format('M d, Y h:i A');
 
-// ----------------- Prepare SMS message (be mindful of length) -----------------
+/* ----------------- MESSAGE CONTENT ----------------- */
 $message = sprintf(
-    "Dear %s, your child has committed a violation (%s - %s) on %s. Please come to school for a meeting.",
+    "Dear %s, this is the Center for Character Development Unit (Disciplinary Office) of Mabalacat City College. "
+    . "This message is to inform you that your child was reported for a %s (%s) on %s. "
+    . "Kindly visit the office within the week for further discussion. Thank you.",
     $guardianName,
     $offenseCategory,
     $offenseType,
     $datePretty
 );
 
-// ----------------- Send SMS via Twilio -----------------
-$twilio = new Client($sid, $token);
+/* ----------------- SEND WHATSAPP MESSAGE ----------------- */
+$client = new Client($sid, $token);
 
 try {
-    $sms = $twilio->messages->create($to, [
-        'from' => $from,
-        'body' => $message
-    ]);
+    $msg = $client->messages->create(
+        "whatsapp:" . $toNumber,
+        [
+            'from' => $from, // 'whatsapp:+14155238886' sandbox
+            'body' => $message
+        ]
+    );
+
+    error_log("WhatsApp sent: SID={$msg->sid}, To={$toNumber}, Status={$msg->status}");
     $status = 'success';
+
 } catch (RestException $e) {
-    // Twilio REST exceptions
-    error_log("Twilio RestException: " . $e->getMessage());
+    error_log("❌ Twilio WhatsApp REST error: " . $e->getMessage());
     $status = 'failed';
 } catch (Exception $e) {
-    // Generic fallback
-    error_log("Twilio exception: " . $e->getMessage());
+    error_log("❌ Twilio WhatsApp general error: " . $e->getMessage());
     $status = 'failed';
 }
 
-// ----------------- Redirect back (sanitized) -----------------
-$redirect = 'view_student.php?student_id=' . rawurlencode($studentId) . '&sms_status=' . rawurlencode($status);
+/* ----------------- REDIRECT BACK ----------------- */
+$redirect = 'view_student.php?student_id=' . rawurlencode($studentId) . '&wa_status=' . rawurlencode($status);
 header("Location: {$redirect}");
 exit;
+?>

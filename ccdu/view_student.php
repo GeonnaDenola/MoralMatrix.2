@@ -4,6 +4,13 @@ require '../config.php';
 require __DIR__.'/_scanner.php';
 require 'violation_hrs.php';
 
+// Fallback: ensure labelize() exists (Hostinger safety)
+if (!function_exists('labelize')) {
+    function labelize(string $text): string {
+        return ucwords(str_replace(['_', '-'], ' ', trim($text)));
+    }
+}
+
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 if (!empty($_SESSION['sms_alert']) && is_array($_SESSION['sms_alert'])) {
     $smsFlash = $_SESSION['sms_alert'];
@@ -339,8 +346,9 @@ function viol_page_url($p, $pp = null){
         <?php else: ?>
           <div class="cards-grid">
             <?php foreach ($violationsPage as $v):
-              $cat  = htmlspecialchars($v['offense_category']);
-              $type = htmlspecialchars($v['offense_type']);
+          $cat  = htmlspecialchars(labelize($v['offense_category']));
+$type = htmlspecialchars(labelize($v['offense_type']));
+
               $desc = htmlspecialchars($v['description'] ?? '');
               $date = date('M d, Y h:i A', strtotime($v['reported_at']));
 
@@ -353,7 +361,11 @@ function viol_page_url($p, $pp = null){
               $chips = [];
               if (!empty($v['offense_details'])) {
                 $decoded = json_decode($v['offense_details'], true);
-                if (is_array($decoded)) { foreach ($decoded as $d) { $chips[] = htmlspecialchars($d); } }
+                if (is_array($decoded)) { 
+                    foreach ($decoded as $d) { 
+                       $chips[] = htmlspecialchars(labelize($d)); 
+                    } 
+                }
               }
               $href = $selfDir . "/violation_view.php?id=" . urlencode($v['violation_id']) . "&student_id=" . urlencode($student_id);
             ?>

@@ -3,7 +3,10 @@
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 require __DIR__ . '/../config.php';
 
-include '../includes/header.php';
+if (empty($skipHeader)) {
+    include '../includes/header.php';
+}
+
 
 $conn = new mysqli(
   $database_settings['servername'],
@@ -253,7 +256,7 @@ function pluralLabel($count, $singular, $plural = null) {
       padding-right:clamp(32px,4vw,80px);
     }
     .summary-report{
-      margin:100px auto 96px;
+      margin:48px auto 96px;
       width:min(1200px,100%);
     }
   }
@@ -368,6 +371,53 @@ function pluralLabel($count, $singular, $plural = null) {
     .metric-card .value{font-size:2.1rem;}
     .metric-card .value small{font-size:.72rem;}
   }
+  /* ===== PDF Print Optimization ===== */
+@media print {
+  body.summary-report-page {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remove big gaps and shadows */
+  .summary-report {
+    margin: 0 !important;
+    padding: 0 20px !important;
+    gap: 12px !important;
+  }
+
+  .card, .metric-card, .data-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important; /* keep tables together */
+  }
+
+  /* Compress spacing inside tables */
+  table {
+    margin-top: 4px !important;
+    margin-bottom: 8px !important;
+    page-break-inside: auto !important;
+  }
+  th, td {
+    padding: 6px 8px !important;
+  }
+
+  /* Prevent each section from forcing a new page */
+  section {
+    page-break-before: auto !important;
+    page-break-after: auto !important;
+  }
+
+  /* Hide buttons and filters */
+  .filters,
+  .filters-actions,
+  .btn,
+  .status-text {
+    display: none !important;
+  }
+}
+
 </style>
 </head>
 <body class="summary-report-page">
@@ -410,13 +460,20 @@ function pluralLabel($count, $singular, $plural = null) {
           </select>
         </div>
       </div>
-      <div class="filters-actions">
-        <button class="btn" type="submit">Apply Filters</button>
-        <p class="status-text">
-          Showing <?= htmlspecialchars(prettyRangeLabel($startOk, $start, $endOk, $end)) ?> &middot; Period:
-          <strong><?= htmlspecialchars(prettyPeriodName($period)) ?></strong>
-        </p>
-      </div>
+<?php if (empty($skipHeader)): ?>
+<div class="filters-actions">
+  <button class="btn" type="submit">Apply Filters</button>
+  <a class="btn" style="background:#444;"
+     href="violations_report_pdf.php?start=<?=urlencode($start)?>&end=<?=urlencode($end)?>&period=<?=urlencode($period)?>">
+     Download PDF
+  </a>
+  <p class="status-text">
+    Showing <?= htmlspecialchars(prettyRangeLabel($startOk, $start, $endOk, $end)) ?> &middot;
+    Period: <strong><?= htmlspecialchars(prettyPeriodName($period)) ?></strong>
+  </p>
+</div>
+<?php endif; ?>
+
     </form>
 
     <section class="kpi">
