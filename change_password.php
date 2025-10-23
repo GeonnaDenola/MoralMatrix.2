@@ -2,7 +2,6 @@
 session_start();
 require __DIR__ . '/config.php';
 
-
 $database_settings = $database_settings ?? []; // fallback if config didn't set
 $servername = $database_settings['servername'] ?? 'localhost';
 $username   = $database_settings['username'] ?? '';
@@ -26,7 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (empty($newPassword) || empty($confirmPassword)) {
         $message = "Please fill in all fields.";
         $message_type = "warning";
-    } elseif ($newPassword !== $confirmPassword) {
+    } elseif (($newPassword) !== ($confirmPassword)) {
         $message = "Passwords do not match.";
         $message_type = "warning";
     } elseif (strlen($newPassword) < 6) {
@@ -60,7 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     exit();
                 } else {
                     // if account type invalid, show success but do not redirect
-                    $message = "Password updated — but account type unknown for redirect.";
+                    $message = "Password updated but account type unknown for redirect.";
                     $message_type = "success";
                 }
             } else {
@@ -88,49 +87,10 @@ $conn->close();
 
   <!-- Styles (external) -->
   <link rel="stylesheet" href="css/change_password.css" />
+  <link rel="stylesheet" href="css/shared-header.css" />
 </head>
 <body>
-  <header>
-    <nav>
-      <ul class="nav-left">
-        <li><a href="home.php">MORAL MATRIX</a></li>
-      </ul>
-
-      <ul class="nav-center">
-        <li><a href="#">ABOUT</a></li>
-        <li><a href="#">SERVICES</a></li>
-      </ul>
-
-      <ul class="nav-right">
-        <li>
-          <button
-            class="hamburger"
-            aria-label="Open menu"
-            aria-controls="mobile-menu"
-            aria-expanded="false"
-          >
-            <span class="line"></span>
-            <span class="line"></span>
-            <span class="line"></span>
-          </button>
-        </li>
-      </ul>
-    </nav>
-  </header>
-
-  <!-- Backdrop + Slide-in Mobile Menu -->
-  <div class="menu-backdrop" aria-hidden="true"></div>
-  <aside id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Mobile navigation">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <div class="mobile-title">Menu</div>
-      <button class="close-menu" aria-label="Close menu" title="Close">✕</button>
-    </div>
-    <ul class="mobile-links" role="menu">
-      <li role="none"><a role="menuitem" href="#">ABOUT</a></li>
-      <li role="none"><a role="menuitem" href="#">SERVICES</a></li>
-    </ul>
-  </aside>
-
+ <?php include __DIR__ . '/includes/home_header.php'; ?>
   <main class="change-page">
     <div class="change-box" role="form" aria-labelledby="change-heading">
       <h3 id="change-heading" class="change-welcome">Change Password</h3>
@@ -172,53 +132,5 @@ $conn->close();
       </form>
     </div>
   </main>
-
-  <script>
-    /* --- Mobile hamburger / menu --- */
-    (function () {
-      const body = document.body;
-      const hamBtn = document.querySelector('.hamburger');
-      const menu = document.getElementById('mobile-menu');
-      const backdrop = document.querySelector('.menu-backdrop');
-      const closeBtn = menu?.querySelector('.close-menu');
-
-      if (!hamBtn || !menu || !backdrop) return;
-
-      function setMenu(open){
-        body.classList.toggle('menu-open', open);
-        body.classList.toggle('no-scroll', open);
-        hamBtn.classList.toggle('is-active', open);
-        hamBtn.setAttribute('aria-expanded', String(open));
-        hamBtn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        if (open) {
-          const firstLink = menu.querySelector('a,button,[tabindex]:not([tabindex="-1"])');
-          firstLink && firstLink.focus();
-        } else {
-          hamBtn.focus();
-        }
-      }
-
-      function toggle(){ setMenu(!body.classList.contains('menu-open')); }
-
-      hamBtn.addEventListener('click', toggle);
-      closeBtn && closeBtn.addEventListener('click', () => setMenu(false));
-      backdrop.addEventListener('click', () => setMenu(false));
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && body.classList.contains('menu-open')) setMenu(false);
-      });
-
-      const mq = window.matchMedia('(min-width: 521px)');
-      if (mq.addEventListener) {
-        mq.addEventListener('change', () => {
-          if (mq.matches && body.classList.contains('menu-open')) setMenu(false);
-        });
-      } else {
-        mq.addListener(() => {
-          if (mq.matches && body.classList.contains('menu-open')) setMenu(false);
-        });
-      }
-    })();
-  </script>
 </body>
 </html>
