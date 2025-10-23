@@ -120,27 +120,47 @@ if (empty($formValues['password'])) {
       <div class="actions-bar">
         <h3 class="page-title">Admin Accounts</h3>
         <div class="actions-right">
-<div class="searchBar">
-  <span class="search-icon">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="8"></circle>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-    </svg>
-  </span>
-  <input id="searchInput" class="search-input" type="search" placeholder="Search by name, id, email..." />
-</div>
+          <div class="searchBar" role="search">
+            <span class="search-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <input
+              id="searchInput"
+              class="search-input"
+              type="search"
+              placeholder="Search by name, ID, email..."
+              aria-label="Search admin accounts"
+            />
+          </div>
 
-          <button class="btn primary" onclick="openModal()">Add Administrator</button>
+          <button type="button" class="btn" onclick="openModal()">Add Administrator</button>
         </div>
       </div>
 
-      <section class="list-area">
+      <section class="list-area" aria-label="Admin account list">
         <div class="list-heading">
           <span class="muted">Account List</span>
         </div>
 
-        <div class="container" id="adminContainer">
-          Loading...
+        <div class="container" id="adminContainer" role="list" aria-live="polite">
+          <!-- populated dynamically -->
+        </div>
+
+        <div class="pagination-bar" id="paginationBar">
+          <span class="pagination-info" id="paginationInfo">Loading...</span>
+          <div class="pagination-controls">
+            <button type="button" class="pagination-btn" id="paginationPrev" disabled>
+              <span aria-hidden="true">←</span>
+              <span>Prev</span>
+            </button>
+            <button type="button" class="pagination-btn" id="paginationNext" disabled>
+              <span>Next</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -264,82 +284,236 @@ function closeModal() {
     }
   }
 
-  // Load admins dynamically with labels (kept as you had it)
-  function loadAdmins(){
+  const adminState = {
+    all: [],
+    filtered: [],
+    currentPage: 1,
+    pageSize: 3
+  };
+
+  const ui = {
+    container: document.getElementById("adminContainer"),
+    search: document.getElementById("searchInput"),
+    paginationInfo: document.getElementById("paginationInfo"),
+    prev: document.getElementById("paginationPrev"),
+    next: document.getElementById("paginationNext")
+  };
+
+  function setLoadingState(message = "Loading...") {
+    if (ui.container) {
+      ui.container.innerHTML = `<div class="empty-state">${message}</div>`;
+    }
+    if (ui.paginationInfo) {
+      ui.paginationInfo.textContent = message;
+    }
+    if (ui.prev) ui.prev.disabled = true;
+    if (ui.next) ui.next.disabled = true;
+  }
+
+  function buildAdminCard(admin) {
+    const card = document.createElement("div");
+    card.classList.add("card");
+    card.setAttribute("role", "listitem");
+
+    const cardLeft = document.createElement("div");
+    cardLeft.classList.add("card-left");
+
+    const avatar = document.createElement("img");
+    avatar.classList.add("avatar");
+    avatar.src = admin.photo ? `../uploads/${admin.photo}` : "placeholder.png";
+    const fullName = [admin.first_name, admin.middle_name, admin.last_name]
+      .filter(value => !!value && value !== "null")
+      .map(value => value.toString().trim())
+      .filter(Boolean)
+      .join(" ");
+    avatar.alt = (fullName || "Administrator") + " profile photo";
+    cardLeft.appendChild(avatar);
+
+    const info = document.createElement("div");
+    info.classList.add("info");
+
+    const metaId = document.createElement("p");
+    metaId.classList.add("meta", "meta-id");
+    metaId.textContent = `ID: ${admin.admin_id || "N/A"}`;
+    info.appendChild(metaId);
+
+    const nameEl = document.createElement("p");
+    nameEl.classList.add("name");
+    nameEl.textContent = fullName || "Unnamed Admin";
+    info.appendChild(nameEl);
+
+    const emailEl = document.createElement("p");
+    emailEl.classList.add("meta");
+    emailEl.textContent = admin.email || "No email provided";
+    info.appendChild(emailEl);
+
+    const mobileEl = document.createElement("p");
+    mobileEl.classList.add("meta");
+    mobileEl.textContent = `Mobile: ${admin.mobile || "N/A"}`;
+    info.appendChild(mobileEl);
+
+    cardLeft.appendChild(info);
+
+    const actions = document.createElement("div");
+    actions.classList.add("card-actions");
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "btn ghost small";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", function () {
+      editAdmin(admin.record_id);
+    });
+    actions.appendChild(editBtn);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "btn danger small";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", function () {
+      deleteAdmin(admin.record_id);
+    });
+    actions.appendChild(deleteBtn);
+
+    card.append(cardLeft, actions);
+    return card;
+  }
+
+  function renderAdmins() {
+    if (!ui.container) return;
+
+    const total = adminState.filtered.length;
+    const totalPages = total > 0 ? Math.ceil(total / adminState.pageSize) : 1;
+
+    adminState.currentPage = Math.min(Math.max(adminState.currentPage, 1), totalPages);
+
+    const start = (adminState.currentPage - 1) * adminState.pageSize;
+    const pageItems = adminState.filtered.slice(start, start + adminState.pageSize);
+
+    ui.container.innerHTML = "";
+
+    if (pageItems.length === 0) {
+      ui.container.innerHTML = `<div class="empty-state">No records found.</div>`;
+    } else {
+      pageItems.forEach(function (admin) {
+        ui.container.appendChild(buildAdminCard(admin));
+      });
+    }
+
+    if (ui.paginationInfo) {
+      ui.paginationInfo.textContent = total === 0
+        ? "No matching records"
+        : `Page ${adminState.currentPage} of ${totalPages} • ${total} total`;
+    }
+
+    if (ui.prev) ui.prev.disabled = total === 0 || adminState.currentPage <= 1;
+    if (ui.next) ui.next.disabled = total === 0 || adminState.currentPage >= totalPages;
+  }
+
+  function applySearchFilter(query) {
+    const q = (query || "").trim().toLowerCase();
+    if (!q) {
+      adminState.filtered = [...adminState.all];
+    } else {
+      adminState.filtered = adminState.all.filter(function (admin) {
+        return [admin.admin_id, admin.first_name, admin.middle_name, admin.last_name, admin.email, admin.mobile]
+          .some(function (value) {
+            return value && value.toString().toLowerCase().includes(q);
+          });
+      });
+    }
+    adminState.currentPage = 1;
+    renderAdmins();
+  }
+
+  function loadAdmins() {
+    setLoadingState();
     fetch("/MoralMatrix/super_admin/get_admin.php")
-      .then(response => response.json())
-      .then(data=>{
-        const container = document.getElementById("adminContainer");
-        container.innerHTML = "";
-
-        if (!Array.isArray(data) || data.length === 0){
-          container.innerHTML = "<p class='muted'>No records found.</p>";
-          return;
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
         }
-
-        data.forEach(admin => {
-          const card = document.createElement("div");
-          card.classList.add("card");
-          card.innerHTML = `
-            <div class="card-left">
-              <img class="avatar" src="${admin.photo ? '../uploads/' + admin.photo : 'placeholder.png'}" alt="Photo">
-              <div class="info">
-                <p class="meta"><strong>ID:</strong> ${admin.admin_id}</p>
-                <p class="name">${admin.first_name} ${admin.middle_name} ${admin.last_name}</p>
-                <p class="meta">${admin.email}</p>
-                <p class="meta">Mobile: ${admin.mobile}</p>
-              </div>
-            </div>
-            <div class="card-actions">
-              <button class="btn small" onclick="editAdmin(${admin.record_id})">Edit</button>
-              <button class="btn danger small" onclick="deleteAdmin(${admin.record_id})">Delete</button>
-            </div>
-          `;
-          container.appendChild(card);
-        });
+        return response.json();
       })
-      .catch(error => {
-        const c = document.getElementById("adminContainer");
-        c.innerHTML = "<p class='muted'>Error Loading Data.</p>";
-        console.error("Error fetching student data: ", error);
+      .then(function (data) {
+        if (!Array.isArray(data)) {
+          data = [];
+        }
+        adminState.all = data;
+        applySearchFilter(ui.search ? ui.search.value : "");
+      })
+      .catch(function (error) {
+        console.error("Error fetching admin data:", error);
+        setLoadingState("Unable to load admin data right now.");
       });
   }
 
-  function editAdmin(id){
-    window.location.href = "edit_admin.php?id=" + id;
+  function editAdmin(id) {
+    if (id === undefined || id === null || id === "") {
+      return;
+    }
+    window.location.href = "edit_admin.php?id=" + encodeURIComponent(id);
   }
 
-  function deleteAdmin(id){
-    if(!confirm("Are you sure you want to delete this admin?")) return;
+  function deleteAdmin(id) {
+    if (id === undefined || id === null || id === "") {
+      alert("Missing record identifier.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this admin?")) {
+      return;
+    }
 
     fetch("/MoralMatrix/super_admin/delete_admin.php", {
       method: "POST",
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
       body: "id=" + encodeURIComponent(id)
     })
-    .then(response => response.json())
-    .then(result => {
-      if(result.success){
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (result) {
+      if (result.success) {
         alert("Admin deleted successfully.");
         loadAdmins();
-      }else{
-        alert("Error: " + result.error);
+      } else {
+        alert("Error: " + (result.error || "Unknown error."));
       }
     })
-    .catch(err => console.error("Delete error: ", err));
+    .catch(function (err) {
+      console.error("Delete error: ", err);
+      alert("Unable to delete admin right now.");
+    });
   }
 
-  // optional: connect search input to client-side filter
-  document.addEventListener('DOMContentLoaded', function(){
-    const search = document.getElementById('searchInput');
-    search.addEventListener('input', function(){
-      const q = this.value.trim().toLowerCase();
-      const cards = document.querySelectorAll('#adminContainer .card');
-      cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(q) ? '' : 'none';
+  document.addEventListener('DOMContentLoaded', function () {
+    if (ui.search) {
+      ui.search.addEventListener('input', function (event) {
+        applySearchFilter(event.target.value);
       });
-    });
+    }
+
+    if (ui.prev) {
+      ui.prev.addEventListener('click', function () {
+        if (adminState.currentPage > 1) {
+          adminState.currentPage -= 1;
+          renderAdmins();
+        }
+      });
+    }
+
+    if (ui.next) {
+      ui.next.addEventListener('click', function () {
+        const totalPages = adminState.filtered.length > 0
+          ? Math.ceil(adminState.filtered.length / adminState.pageSize)
+          : 1;
+        if (adminState.currentPage < totalPages) {
+          adminState.currentPage += 1;
+          renderAdmins();
+        }
+      });
+    }
 
     loadAdmins();
   });
