@@ -84,12 +84,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $picked = array_merge($picked, $_POST[$g]);
         }
     }
-    $offense_details = $picked ? json_encode($picked, JSON_UNESCAPED_UNICODE) : null;
+    $offense_details = json_encode($picked ?: [], JSON_UNESCAPED_UNICODE);
+
 
     // ---- Photo upload ----
     $photo = "";
-    if (isset($_FILES["photo"]) && is_uploaded_file($_FILES["photo"]["tmp_name"]) && $_FILES["photo"]["error"] === UPLOAD_ERR_OK) {
-        $uploadDir = dirname(__DIR__) . "/admin/uploads/";
+    if (
+        isset($_FILES["photo"]) &&
+        is_uploaded_file($_FILES["photo"]["tmp_name"]) &&
+        $_FILES["photo"]["error"] === UPLOAD_ERR_OK
+    ) {
+        $uploadDir = __DIR__ . "/uploads/"; // ✅ save under ccdu/uploads/
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
         $original = basename($_FILES["photo"]["name"]);
@@ -97,7 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photo = time() . "_" . $safeBase;
 
         $targetPath = $uploadDir . $photo;
-        if (!move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+
+        if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+            // ✅ store relative path in DB (good practice)
+            $photo = "ccdu/uploads/" . $photo;
+        } else {
+            error_log("❌ Failed to move uploaded file from temp: " . $_FILES["photo"]["tmp_name"]);
             $photo = "";
         }
     }

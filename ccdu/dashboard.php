@@ -1,14 +1,23 @@
 <?php
-session_start();
+include '../config.php';
 
-// Redirect to login if not logged in or wrong role
-if (empty($_SESSION['account_type']) || $_SESSION['account_type'] !== 'ccdu') {
-    header('Location: ../login.php');
-    exit();
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
+if (empty($_SESSION['account_type'])) {
+    // Not logged in
+    header("Location: " . BASE_URL . "/login.php");
+    exit;
+}
+
+// Optional: restrict roles per page
+$requiredRole = 'ccdu'; // e.g. for CCDU pages only
+if ($_SESSION['account_type'] !== $requiredRole) {
+    http_response_code(403);
+    echo "Access Denied.";
+    exit;
 }
 
 include '../includes/header.php';
-include '../config.php';
 include __DIR__ . '/_scanner.php';
 
 $active = basename($_SERVER['PHP_SELF']);

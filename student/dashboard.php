@@ -45,6 +45,13 @@ $stmt->bind_param("s", $student_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
+// ---------- COMMUNITY SERVICE HOURS ----------
+require_once __DIR__ . '/../ccdu/violation_hrs.php';
+
+$requiredHours  = communityServiceHours($conn, $student_id);
+$loggedHours    = communityServiceLogged($conn, $student_id);
+$remainingHours = communityServiceRemaining($conn, $student_id);
+
 // ---------- INCLUDE HEADER ----------
 include '../includes/student_header.php';
 ?>
@@ -55,12 +62,30 @@ include '../includes/student_header.php';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Student Dashboard</title>
-<link rel="stylesheet" href="../css/student_dashboard.css">
+<link rel="stylesheet" href="../css/student_dashboard.css?v=<?= time() ?>">
 </head>
 <body>
 
 <div class="dashboard-container" style="margin-top: 80px;">
     <h2 class="welcome-text">Welcome, <?= htmlspecialchars($first_name) ?>!</h2>
+
+    <h3 class="section-title">Your Community Service Hours</h3>
+
+    <div class="hours-cards">
+        <div class="hours-card">
+            <h4>Required</h4>
+            <p class="hours required"><?= number_format($requiredHours, 2) ?> h</p>
+        </div>
+        <div class="hours-card">
+            <h4>Logged</h4>
+            <p class="hours logged"><?= number_format($loggedHours, 2) ?> h</p>
+        </div>
+        <div class="hours-card">
+            <h4>Remaining</h4>
+            <p class="hours remaining"><?= number_format($remainingHours, 2) ?> h</p>
+        </div>
+    </div>
+    
     <h3 class="section-title">Your Violation History</h3>
 
     <div class="card-container">
@@ -93,6 +118,13 @@ include '../includes/student_header.php';
 
                         <p><strong>Details:</strong> <?= htmlspecialchars(labelize($row['offense_details'])) ?></p>
                         <p><strong>Description:</strong> <?= htmlspecialchars(labelize($row['description'])) ?></p>
+
+                        <?php if (!empty($row['reported_at'])): ?>
+                            <p class="violation-date">
+                                <strong>Recorded on:</strong>
+                                <?= date('F j, Y g:i A', strtotime($row['reported_at'])) ?>
+                            </p>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Optional footer if needed later -->

@@ -1,33 +1,43 @@
 <?php
-// ccdu/_scanner.php — robust USB scanner listener + diagnostics
+// ccdu/_scanner.php — QR scanner router (fixed for Hostinger + localhost)
 declare(strict_types=1);
 
+// Only include config once (safe for repeated includes)
+if (!defined('BASE_URL')) {
+    require_once __DIR__ . '/../config.php';
+}
+
+/**
+ * Build a QR gateway URL that always matches your BASE_URL.
+ * For example:
+ *   Local:      http://localhost/MoralMatrix/qr.php
+ *   Hostinger:  https://mccmoralmatrix.com/qr.php
+ */
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$base   = defined('BASE_URL')
-  ? rtrim(BASE_URL, '/')
-  : (rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/\\') ?: ''); // project root from /ccdu/...
-$qrGate = $scheme.'://'.$host.$base.'/qr.php';
+$base   = rtrim(BASE_URL, '/');
+
+// --- Force the Hostinger domain in production ---
+if (!$base && $host !== 'mccmoralmatrix.com') {
+    $host = 'mccmoralmatrix.com';
+}
+
+$qrGate = $scheme . '://' . $host . $base . '/qr.php';
 ?>
 <script>
 (() => {
-  // ===== Config =====
-  const QR_GATE_URL = <?= json_encode($qrGate) ?>; // e.g. http://localhost/MoralMatrix/qr.php
-  const GAP_RESET_MS = 80;     // new burst if idle > this
-  const AUTO_FIRE_MS = 140;    // if no Enter, fire when idle reaches this
+  const QR_GATE_URL = <?= json_encode($qrGate) ?>;
+  const GAP_RESET_MS = 80;
+  const AUTO_FIRE_MS = 140;
   const MAX_LEN = 256;
 
-  // ===== State =====
-  let active = true;           // toggle with Ctrl+Shift+S
-  let buf = '';                // incoming chars
-  let lastTs = 0;              // last key time
+  let active = true;
+  let buf = '';
+  let lastTs = 0;
   let idleTimer = null;
 
-  // ===== Tiny overlay for visibility =====
   const ui = document.createElement('div');
-  ui.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:99999;'
-    + 'font:12px system-ui;background:#eef6ff;color:#0369a1;'
-    + 'padding:6px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.9';
+  ui.style.cssText = 'position:fixed;right:10px;bottom:10px;z-index:99999;font:12px system-ui;background:#eef6ff;color:#0369a1;padding:6px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:.9';
   ui.textContent = 'Scan ready (Ctrl+Shift+S to toggle)';
   const line = document.createElement('div');
   line.style.cssText = 'margin-top:4px;color:#64748b;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
@@ -39,8 +49,7 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
     ui.firstChild.nodeValue = msg;
   }
   function showReady(){
-    setStatus(active ? 'Scan ready (Ctrl+Shift+S to toggle)'
-                     : 'Scan paused (Ctrl+Shift+S to toggle)', true);
+    setStatus(active ? 'Scan ready (Ctrl+Shift+S to toggle)' : 'Scan paused (Ctrl+Shift+S to toggle)', true);
   }
   function resetBuf(){
     buf = '';
@@ -54,20 +63,17 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
     idleTimer = setTimeout(() => { if (buf) process(buf); }, AUTO_FIRE_MS);
   }
 
-  // ===== Navigation helper + clickable fallback =====
   function navigate(url){
-    try{
-      if (window.top && window.top.location && window.top.location.origin === window.location.origin){
+    try {
+      if (window.top && window.top.location && window.top.location.origin === window.location.origin) {
         window.top.location.assign(url);
         return;
       }
-    }catch(e){/* ignore cross-origin */}
+    } catch(e) {}
     window.location.assign(url);
   }
 
-  // ===== Parser / router =====
   function normalize(s){
-    // convert fancy dashes (– — etc.) to hyphen, trim spaces/newlines
     return (s || '').replace(/[\u2010-\u2015]/g, '-').trim();
   }
 
@@ -78,25 +84,17 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
 
     let dest = null;
 
-    // 1) Full URL
     if (/^https?:\/\//i.test(val)) dest = val;
-
-    // 2) Path-only URL (/MoralMatrix/qr.php?... or /ccdu/...)
     if (!dest && val.startsWith('/')) dest = val;
 
-    // 3) student_id anywhere (e.g. "SID: 0000-0000")
     if (!dest){
       const mId = val.match(/([0-9]{4}-[0-9]{4})/);
       if (mId) dest = `${QR_GATE_URL}?student_id=${encodeURIComponent(mId[1])}`;
     }
-
-    // 4) 64-hex key anywhere
     if (!dest){
       const mK = val.match(/[a-f0-9]{64}/i);
       if (mK) dest = `${QR_GATE_URL}?k=${mK[0]}`;
     }
-
-    // 5) explicit query fragments
     if (!dest){
       const qsId = val.match(/student_id=([0-9]{4}-[0-9]{4})/i);
       if (qsId) dest = `${QR_GATE_URL}?student_id=${encodeURIComponent(qsId[1])}`;
@@ -108,17 +106,13 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
 
     if (dest){
       if (dest.startsWith('/')) dest = location.origin + dest;
-      
       console.log('[scanner] navigating to:', dest);
-      // clickable fallback in case browser blocks immediate nav
       const link = document.createElement('a');
       link.href = dest;
       link.textContent = 'Open scanned link';
       link.style.cssText = 'margin-left:8px;text-decoration:underline;cursor:pointer';
       ui.appendChild(link);
-      // try to navigate now
       setTimeout(() => navigate(dest), 0);
-      // remove link after a few seconds
       setTimeout(() => { link.remove?.(); }, 4000);
       resetBuf();
       return;
@@ -129,7 +123,6 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
     resetBuf();
   }
 
-  // ===== Hotkey: pause/resume =====
   window.addEventListener('keydown', e => {
     if (e.ctrlKey && e.shiftKey && e.code === 'KeyS'){
       active = !active;
@@ -137,17 +130,14 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
     }
   });
 
-  // ===== Capture keystrokes globally =====
   window.addEventListener('keydown', e => {
     if (!active) return;
-
     if (e.key === 'Enter'){
       e.preventDefault();
       if (buf) process(buf);
       resetBuf();
       return;
     }
-
     if (e.key && e.key.length === 1){
       const now = performance.now();
       if (lastTs && (now - lastTs) > GAP_RESET_MS){
@@ -155,7 +145,6 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
         line.textContent = '';
       }
       lastTs = now;
-
       if (buf.length < MAX_LEN){
         buf += e.key;
         line.textContent = buf;
@@ -163,7 +152,6 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
       armIdleFire();
       return;
     }
-
     if (e.key === 'Backspace'){
       buf = buf.slice(0, -1);
       line.textContent = buf;
@@ -171,15 +159,11 @@ $qrGate = $scheme.'://'.$host.$base.'/qr.php';
     }
   }, true);
 
-  // ===== Also handle scanners that paste the whole payload (no per-key events) =====
   window.addEventListener('paste', (e) => {
     if (!active) return;
     const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
     if (text){ process(text); resetBuf(); }
   });
-
-  // Keep the page focused so scanners type here
   window.addEventListener('blur', () => { if (active) window.focus(); });
 })();
 </script>
-

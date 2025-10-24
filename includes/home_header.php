@@ -74,6 +74,8 @@ $logoSrc = $baseUrl !== '' ? $baseUrl . '/assets/cert/logo2.png' : 'assets/cert/
     <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Student Login</a></li>
     <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Faculty Login</a></li>
     <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Security Login</a></li>
+    <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">CCDU Login</a></li>
+    <li><a href="<?= htmlspecialchars($loginHref, ENT_QUOTES) ?>" role="menuitem">Admin Login</a></li>
     <li><a href="<?= htmlspecialchars($validatorHref, ENT_QUOTES) ?>" role="menuitem">Validator Login</a></li>
   </ul>
 </nav>

@@ -306,7 +306,7 @@ if ($totalPending > 0) {
                     </svg>
                     View approved cases
                 </a>
-                <a class="button button--primary" href="/moralmatrix/security/report_student.php">
+                <a class="button button--primary" href="<?= BASE_URL ?>/security/report_student.php">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 5v14"></path>
                         <path d="M5 12h14"></path>

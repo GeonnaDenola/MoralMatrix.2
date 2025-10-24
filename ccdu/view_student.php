@@ -354,8 +354,11 @@ $type = htmlspecialchars(labelize($v['offense_type']));
 
               $photoRel = $selfDir . '/uploads/placeholder.png';
               if (!empty($v['photo'])) {
-                $tryAbs = __DIR__ . '/uploads/' . $v['photo'];
-                if (is_file($tryAbs)) { $photoRel = $selfDir . '/uploads/' . rawurlencode($v['photo']); }
+                  // The DB value already includes 'ccdu/uploads/...'
+                  $tryAbs = dirname(__DIR__) . '/' . $v['photo']; // e.g. C:\xampp\htdocs\MoralMatrix\ccdu\uploads\file.jpg
+                  if (is_file($tryAbs)) {
+                      $photoRel = '../' . ltrim($v['photo'], '/'); // relative for <img src>
+                  }
               }
 
               $chips = [];

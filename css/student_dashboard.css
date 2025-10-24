@@ -122,6 +122,72 @@ body {
     grid-column: 1/-1;
 }
 
+/* ===============================
+   COMMUNITY SERVICE HOURS CARDS
+   =============================== */
+.hours-cards {
+  display: flex !important;
+  justify-content: center;
+  align-items: stretch;
+  gap: 20px;
+  flex-wrap: nowrap;
+  margin: 25px auto 40px;
+  max-width: 700px;
+  width: 100%;
+  text-align: center;
+}
+
+.hours-card {
+  flex: 1 1 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  padding: 14px 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  min-width: 160px;
+}
+.hours-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 12px rgba(0,0,0,0.12);
+}
+
+.hours-card h4 {
+  font-size: 15px;
+  color: #374151;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.hours {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.hours.required { color: #0f172a; }  /* dark navy */
+.hours.logged { color: #047857; }    /* green */
+.hours.remaining { color: #b91c1c; } /* red */
+
+/* 🧱 Force horizontal even if container limits width */
+.dashboard-container .hours-cards {
+  display: flex !important;
+  justify-content: center;
+}
+
+/* 📱 Responsive stacking */
+@media (max-width: 600px) {
+  .hours-cards {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .hours-card {
+    flex: 1 1 100%;
+    max-width: 280px;
+  }
+}
+
+
 /* ---------------- RESPONSIVE ---------------- */
 @media (max-width: 1024px) {
     .welcome-text { font-size: 1.8rem; }
@@ -140,3 +206,4 @@ body {
     .section-title { font-size: 1.1rem; }
     .offense-title { font-size: 1rem; }
 }
+

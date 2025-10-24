@@ -4,7 +4,6 @@ declare(strict_types=1);
 require '../auth.php';
 require_role('security');
 require '../config.php';
-
 require_once __DIR__ . '/../lib/notify.php';
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -58,14 +57,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
   }
   $offense_details = $picked ? json_encode(array_values(array_unique($picked)), JSON_UNESCAPED_UNICODE) : null;
 
-  // Optional photo upload (saved to /admin/uploads)
+  // Optional photo upload (saved to /security/uploads)
   $photo = '';
   if (
     isset($_FILES['photo']) &&
     is_uploaded_file($_FILES['photo']['tmp_name']) &&
     ($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
   ) {
-    $uploadDir = dirname(__DIR__) . '/admin/uploads/';
+    $uploadDir = dirname(__DIR__) . '/uploads/';
     if (!is_dir($uploadDir)) {
       @mkdir($uploadDir, 0775, true);
     }
@@ -100,11 +99,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
   $stmt->execute();
   $stmt->close();
 
-   // ===== CREATE NOTIFICATION FOR CCDU =====
+  // ===== CREATE NOTIFICATION FOR CCDU =====
   $violationId = $conn->insert_id;
-
-  // (Optional) fetch student's display name for a nicer message
   $studentFullName = '';
+
   if ($violationId) {
     $stmtN = $conn->prepare(
       "SELECT CONCAT(TRIM(COALESCE(first_name,'')), ' ', TRIM(COALESCE(last_name,''))) AS n
@@ -117,23 +115,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
   }
   if ($studentFullName === '') { $studentFullName = 'Student ' . $student_id; }
 
-  // Use the values you already have from the POST handler
-  // $submitted_by and $submitted_role were set above.
+  // Use BASE_URL for absolute web compatibility
   Notify::create($conn, [
-    'target_role'  => 'ccdu',                              // visible to CCDU users
-    'type'         => 'warning',                           // color/style in your UI
+    'target_role'  => 'ccdu',
+    'type'         => 'warning',
     'title'        => 'New violation reported by Security',
     'body'         => $studentFullName . ' • Student ID: ' . $student_id,
-    'url'          => '/ccdu/pending_reports.php#v' . $violationId,
+    'url'          => BASE_URL . '/ccdu/pending_reports.php#v' . $violationId, // ✅ fixed
     'violation_id' => $violationId,
     'created_by'   => $submitted_by,
-    // leave target_user_id unset (NULL) for role-wide notification
   ]);
   // ===== END NOTIFICATION =====
 
-
-  // Redirect (no output has occurred yet)
-  header('Location: /security/view_student.php?student_id=' . urlencode($student_id) . '&saved=1', true, 303);
+  // ✅ Use BASE_URL for redirect
+  header('Location: ' . BASE_URL . '/security/view_student.php?student_id=' . urlencode($student_id) . '&saved=1', true, 303);
   exit;
 }
 
@@ -174,7 +169,7 @@ if ($errorMessage === null) {
 $conn->close();
 
 /* ---------- Render HTML ---------- */
-$active = 'report_student.php'; // highlights the "Report Student" item in the sidebar
+$active = 'report_student.php';
 ?>
 <!doctype html>
 <html lang="en">
@@ -182,12 +177,14 @@ $active = 'report_student.php'; // highlights the "Report Student" item in the s
   <meta charset="utf-8">
   <title>Security • Add Violation</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ✅ Fixed paths using BASE_URL -->
   <link rel="stylesheet" href="<?= BASE_URL ?>/css/header.css">
   <link rel="stylesheet" href="<?= BASE_URL ?>/css/security_add_violation.css">
 </head>
 <body>
 
-<?php include $_SERVER['DOCUMENT_ROOT'] . BASE_URL . '/includes/security_header.php'; ?>
+<?php include __DIR__ . '/../includes/security_header.php'; ?>
 
 <main class="page">
   <div class="violation-shell">
@@ -428,6 +425,13 @@ $active = 'report_student.php'; // highlights the "Report Student" item in the s
     <label for="description_moderate" class="field-label">Report description</label>
     <textarea id="description_moderate" name="description" rows="3" placeholder="Provide context, witnesses, or devices involved."></textarea>
   </div>
+
+    <div class="field upload-field">
+      <label for="moderatePhoto" class="field-label">Attach photo (optional)</label>
+      <input type="file" id="lightPhoto" name="photo" accept="image/*" onchange="previewPhoto(this, 'moderatePreview')" class="file-control">
+      <span class="helper-text">Accepted formats: JPG, PNG, or WEBP up to 5MB.</span>
+      <img id="moderatePreview" class="photo-preview" alt="Mmoderate offense preview" hidden>
+    </div>
 
     <div class="form-actions">
     <button type="submit" class="btn btn-primary">Submit violation</button>
