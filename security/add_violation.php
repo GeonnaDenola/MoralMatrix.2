@@ -58,29 +58,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
   $offense_details = $picked ? json_encode(array_values(array_unique($picked)), JSON_UNESCAPED_UNICODE) : null;
 
   // Optional photo upload (saved to /security/uploads)
-  $photo = '';
-  if (
-    isset($_FILES['photo']) &&
-    is_uploaded_file($_FILES['photo']['tmp_name']) &&
-    ($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK
-  ) {
-    $uploadDir = dirname(__DIR__) . '/uploads/';
-    if (!is_dir($uploadDir)) {
-      @mkdir($uploadDir, 0775, true);
+    $photo = "";
+    if (
+        isset($_FILES["photo"]) &&
+        is_uploaded_file($_FILES["photo"]["tmp_name"]) &&
+        $_FILES["photo"]["error"] === UPLOAD_ERR_OK
+    ) {
+        $uploadDir = __DIR__ . "/uploads/"; // ✅ save under ccdu/uploads/
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+
+        $original = basename($_FILES["photo"]["name"]);
+        $safeBase = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
+        $photo = time() . "_" . $safeBase;
+
+        $targetPath = $uploadDir . $photo;
+
+        if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+            // ✅ store relative path in DB (good practice)
+            $photo = "security/uploads/" . $photo;
+        } else {
+            error_log("❌ Failed to move uploaded file from temp: " . $_FILES["photo"]["tmp_name"]);
+            $photo = "";
+        }
     }
-    // MIME check (basic)
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime  = $finfo->file($_FILES['photo']['tmp_name']);
-    $allowed = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
-    if (isset($allowed[$mime])) {
-      $base = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($_FILES['photo']['name']));
-      $photo = time() . '_' . $base;
-      $dest  = $uploadDir . $photo;
-      if (!move_uploaded_file($_FILES['photo']['tmp_name'], $dest)) {
-        $photo = '';
-      }
-    }
-  }
 
   if (session_status() === PHP_SESSION_NONE) session_start();
   $submitted_by   = $_SESSION['actor_id']   ?? 'unknown';
