@@ -54,7 +54,7 @@ $stmtv->close();
 $conn->close();
 
 /* ===== Derived UI fields ===== */
-$uploadsUrl = '/MoralMatrix/admin/uploads/';
+$uploadsUrl = '/admin/uploads/';
 
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
 $cssUrl  = '/css/security_view_student.css';
