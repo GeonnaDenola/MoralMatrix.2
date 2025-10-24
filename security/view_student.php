@@ -57,7 +57,7 @@ $conn->close();
 $uploadsUrl = '/MoralMatrix/admin/uploads/';
 
 $selfDir = rtrim(str_replace('\\','/', dirname($_SERVER['PHP_SELF'])), '/');
-$cssUrl  = '/MoralMatrix/css/security_view_student.css';
+$cssUrl  = '/css/security_view_student.css';
 
 ?>
 <!DOCTYPE html>
