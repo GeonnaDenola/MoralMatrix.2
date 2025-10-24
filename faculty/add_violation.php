@@ -57,32 +57,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $offense_details = json_encode(array_values(array_unique($picked)), JSON_UNESCAPED_UNICODE);
 
-    $photo = '';
-    if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-      $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      $ext = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
+        $photo = "";
+    if (
+        isset($_FILES["photo"]) &&
+        is_uploaded_file($_FILES["photo"]["tmp_name"]) &&
+        $_FILES["photo"]["error"] === UPLOAD_ERR_OK
+    ) {
+        $uploadDir = __DIR__ . "/uploads/"; // ✅ save under ccdu/uploads/
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
 
-      if (in_array($ext, $allowed, true)) {
-        $baseUploads = realpath(__DIR__ . '/../uploads');
-        if ($baseUploads === false) {
-          $baseUploads = __DIR__ . '/../uploads';
-        }
-        $uploadDir = rtrim($baseUploads, '/\\') . '/violations/';
-        if (!is_dir($uploadDir)) {
-          mkdir($uploadDir, 0775, true);
-        }
+        $original = basename($_FILES["photo"]["name"]);
+        $safeBase = preg_replace('/[^A-Za-z0-9._-]/', '_', $original);
+        $photo = time() . "_" . $safeBase;
 
-        $safeName   = bin2hex(random_bytes(8)) . '.' . $ext;
-        $targetPath = $uploadDir . $safeName;
+        $targetPath = $uploadDir . $photo;
 
-        if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetPath)) {
-          $photo = 'violations/' . $safeName;
+        if (move_uploaded_file($_FILES["photo"]["tmp_name"], $targetPath)) {
+            // ✅ store relative path in DB (good practice)
+            $photo = "faculty/uploads/" . $photo;
         } else {
-          $formError = 'Error uploading photo. Please try again.';
+            error_log("❌ Failed to move uploaded file from temp: " . $_FILES["photo"]["tmp_name"]);
+            $photo = "";
         }
-      } else {
-        $formError = 'Invalid photo type. Allowed: jpg, jpeg, png, gif, webp.';
-      }
     }
 
     if ($formError === '') {
