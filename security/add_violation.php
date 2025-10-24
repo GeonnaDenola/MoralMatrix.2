@@ -87,9 +87,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
   $submitted_role = $_SESSION['actor_role'] ?? 'security';
 
   // Insert as PENDING (CCDU will approve/reject)
-  $sql = "INSERT INTO student_violation
-          (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by, submitted_role)
-          VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)";
+$sql = "INSERT INTO student_violation
+        (student_id, offense_category, offense_type, offense_details, description, photo, status, submitted_by, reported_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, NOW())";
   $stmt = $conn->prepare($sql);
   $stmt->bind_param(
     'ssssssss',

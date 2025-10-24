@@ -12,6 +12,13 @@ if ($conn->connect_error) {
     die('Connection failed: ' . $conn->connect_error);
 }
 
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
+$facultyId = $_SESSION['actor_id'] ?? $_SESSION['faculty_id'] ?? null;
+if (!$facultyId) {
+    die('Unauthorized: faculty not logged in.');
+}
+
 if (!isset($_GET['student_id'])) {
     die('No student selected.');
 }
@@ -35,10 +42,10 @@ $violations = [];
 $stmtv = $conn->prepare('
     SELECT violation_id, offense_category, offense_type, offense_details, description, reported_at
     FROM student_violation
-    WHERE student_id = ?
+    WHERE student_id = ? AND submitted_by = ?
     ORDER BY reported_at DESC, violation_id DESC
 ');
-$stmtv->bind_param('s', $studentId);
+$stmtv->bind_param('ss', $studentId, $facultyId);
 $stmtv->execute();
 $resv = $stmtv->get_result();
 while ($row = $resv->fetch_assoc()) {
@@ -70,7 +77,7 @@ $selfDir = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/');
       $level    = $student['level']    ?: '—';
       $section  = $student['section']  ?: '—';
       $inst     = $student['institute']?: '—';
-      $photoSrc = !empty($student['photo']) ? '../admin/uploads/' . $student['photo'] : 'placeholder.png';
+      $photoSrc = !empty($student['photo']) ? '../admin/uploads/' . $student['photo'] : '../admin/uploads/placeholder.png';
       $yearParts = [];
       if ($level !== '—') {
           $yearParts[] = 'Year ' . $level;
@@ -190,7 +197,7 @@ $selfDir = rtrim(str_replace('\\', '/', dirname($_SERVER['PHP_SELF'])), '/');
           </div>
         <?php else: ?>
           <div class="empty-state">
-            This student does not have any recorded violations yet.
+            You haven’t reported any violations for this student yet.
           </div>
         <?php endif; ?>
       </section>
