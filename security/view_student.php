@@ -13,7 +13,7 @@ function h(?string $v): string {
   return htmlspecialchars((string)$v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 function formatDate($dt) {
-    if (empty($dt) || $dt === '0000-00-00 00:00:00') {
+    if (empty($dt) || $dt === '0000-00-00 00:00:00' || strtotime($dt) === false) {
         return 'Date unavailable';
     }
     return date('F j, Y • g:i A', strtotime($dt));
