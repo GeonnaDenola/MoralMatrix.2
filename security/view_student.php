@@ -67,12 +67,15 @@ $stmtv->execute();
 $resv = $stmtv->get_result();
 
 while ($row = $resv->fetch_assoc()) {
-  // Clean all labels using labelize()
   foreach ($row as $k => $v) {
-    $row[$k] = labelize((string)$v);
+    // Don't format reported_at — keep it raw for strtotime()
+    if ($k !== 'reported_at') {
+      $row[$k] = labelize((string)$v);
+    }
   }
   $violations[] = $row;
 }
+
 $stmtv->close();
 $conn->close();
 
@@ -188,7 +191,12 @@ $addViolationUrl = asset('security/add_violation.php?student_id=' . urlencode($s
                   <span><?= h(labelize($v['offense_category'])) ?></span>
                 </div>
                 <p><?= h(labelize($v['offense_details'] ?: $v['description'])) ?></p>
-                <p><?= h(formatDate($v['reported_at'])) ?></p>
+                <?php
+                  $reportedAt = !empty($v['reported_at'])
+                      ? date('M d, Y', strtotime($v['reported_at']))
+                      : 'Date unavailable';
+                ?>
+<p><?= h($reportedAt) ?></p>
               </div>
             <?php endforeach; ?>
           </div>
