@@ -77,11 +77,27 @@ $currentQS     = (string)($_SERVER['QUERY_STRING'] ?? '');
 $triggeredByKey = ($kParam !== '') || ($origStudent !== '' && !preg_match($ID_PATTERN, $origStudent)) || ($origStudent !== '' && $origStudent !== $student_id);
 $alreadyCanonical = ($currentPath === $canonicalPath) && ($currentQS === $canonicalQS);
 
-if ($triggeredByKey && !$alreadyCanonical) {
-    header('Location: '.$scheme.'://'.$host.$canonicalPath.'?'.$canonicalQS, true, 302);
-    $conn->close();
-    exit;
+// Determine current session role (if logged in)
+$accountType = strtolower($_SESSION['account_type'] ?? '');
+
+// When QR is scanned:
+if ($triggeredByKey) {
+    if ($accountType === '') {
+        // ❌ No session — not logged in
+        // Redirect to login instead of exposing student data
+        header('Location: ' . $scheme . '://' . $host . '/login.php');
+        $conn->close();
+        exit;
+    }
+
+    // ✅ Logged in user, but not already canonicalized
+    if (!$alreadyCanonical) {
+        header('Location: ' . $scheme . '://' . $host . $canonicalPath . '?' . $canonicalQS, true, 302);
+        $conn->close();
+        exit;
+    }
 }
+
 
 /* ---------------- Student ---------------- */
 $sql = "SELECT * FROM student_account WHERE student_id = ?";
