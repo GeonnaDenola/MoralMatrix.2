@@ -41,7 +41,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         die("❌ Failed to save reset token. Check column names in DB.");
     }
 
-    $reset_link = "http://localhost/MoralMatrix/reset_password.php?token=" . $token;
+    // Detect base URL dynamically (works on localhost + Hostinger)
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'];
+    $base   = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+
+    // Build full reset link
+    $reset_link = $scheme . '://' . $host . $base . '/reset_password.php?token=' . urlencode($token);
+
 
     // Send email
     $subject = "Moral Matrix Password Reset";

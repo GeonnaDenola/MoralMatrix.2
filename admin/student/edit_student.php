@@ -45,7 +45,7 @@ $photoUrl = !empty($student['photo']) ? '../uploads/' . htmlspecialchars($studen
     <div class="form-header">
       <h2 id="formTitle">Edit Student Information</h2>
 
-      <a class="back-link" href="/moralmatrix/admin/dashboard.php" aria-label="Return to Dashboard">
+      <a class="back-link" href="../admin/dashboard.php" aria-label="Return to Dashboard">
         ← Back to Dashboard
       </a>
     </div>
