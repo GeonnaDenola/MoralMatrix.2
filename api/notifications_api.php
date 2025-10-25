@@ -39,10 +39,17 @@ switch ($role) {
     $where = "target_role = 'student' AND target_user_id = ?";
     $types = 's'; $params[] = $actorId;
     break;
-  case 'faculty':
-  case 'security':
-    $where = "target_role = ? AND target_user_id = ?";
-    $types = 'ss'; $params[] = $role; $params[] = $actorId;
+case 'security':
+    // Security sees all security-targeted notifications + personal ones
+    $where = "(target_role = 'security' AND (target_user_id IS NULL OR target_user_id = ?))";
+    $types = 's';
+    $params[] = $actorId;
+    break;
+case 'faculty':
+    // Faculty sees only faculty-targeted or personal ones
+    $where = "(target_role = 'faculty' AND (target_user_id IS NULL OR target_user_id = ?))";
+    $types = 's';
+    $params[] = $actorId;
     break;
   default:
     http_response_code(403);

@@ -207,7 +207,12 @@ $homeUrl = $asset('security/dashboard.php');
     <!-- Desktop slot (JS will move contents into the sidebar on mobile) -->
     <div class="header-actions-slot" data-desktop-target>
       <div class="actions" data-mobile-source>
-        <?php include $_SERVER['DOCUMENT_ROOT'] . BASE_PATH . '/includes/notif_bar.php'; ?>
+        <?php
+          $notifInclude = __DIR__ . '/notif_bar.php';
+          if (is_file($notifInclude)) {
+            include $notifInclude;
+          }
+        ?>
         <a class="profile-chip" href="<?php echo htmlspecialchars($profileUrl, ENT_QUOTES); ?>" aria-label="View profile">
           <span class="profile-avatar">
             <?php if (!empty($headerUser['photo'])): ?>
