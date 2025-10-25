@@ -189,7 +189,7 @@ function faculty_to_search_index(string $value): string
             $studentPhotoFile = $row['student_photo'] ?? '';
             $studentPhotoSrc = $studentPhotoFile
                 ? '../admin/uploads/' . $studentPhotoFile
-                : 'placeholder.png';
+                : '../admin/uploads/placeholder.png';
 
             $firstName = trim((string)($row['first_name'] ?? ''));
             $lastName  = trim((string)($row['last_name'] ?? ''));
