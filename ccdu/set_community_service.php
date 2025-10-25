@@ -87,6 +87,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_validator'])) 
                 $errorMsg = "Error assigning validator: " . htmlspecialchars($stmt->error);
                 break;
             }
+
+            // ===== Send Email Notification to Student =====
+require_once __DIR__ . '/../lib/email_lib.php';
+
+$stmtStudent = $conn->prepare("SELECT first_name, last_name, email FROM student_account WHERE student_id = ?");
+$stmtStudent->bind_param("s", $student_id);
+$stmtStudent->execute();
+$resStudent = $stmtStudent->get_result();
+$student = $resStudent->fetch_assoc();
+$stmtStudent->close();
+
+if ($student && filter_var($student['email'], FILTER_VALIDATE_EMAIL)) {
+    $toEmail = $student['email'];
+    $toName  = trim($student['first_name'] . ' ' . $student['last_name']);
+
+    $mail = moralmatrix_mailer();
+    $mail->addAddress($toEmail, $toName);
+    $mail->Subject = "Community Service Assignment — Moral Matrix";
+
+    $mail->Body = '
+        <div style="font-family:system-ui,Segoe UI,Roboto,Arial">
+            <h2>Dear ' . htmlspecialchars($toName) . ',</h2>
+            <p>You have been assigned to <strong>Community Service</strong> as part of your disciplinary resolution.</p>
+            <p><strong>Assigned By:</strong> CCDU</p>
+            <p><strong>Validator ID:</strong> ' . htmlspecialchars($validator_id) . '</p>
+            <p><strong>Date Assigned:</strong> ' . date('F j, Y • g:i A') . '</p>
+            <p>Please coordinate with your assigned validator for your schedule and reporting requirements.</p>
+            <p>Log in to your Moral Matrix account for more details.</p>
+            <br>
+            <p>— Moral Matrix CCDU Team</p>
+        </div>
+    ';
+    $mail->AltBody = strip_tags($mail->Body);
+
+    try {
+        $mail->send();
+    } catch (Throwable $e) {
+        error_log("Email error (community service): " . $mail->ErrorInfo);
+    }
+}
+
         }
         $stmt->close();
 
