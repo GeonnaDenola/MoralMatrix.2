@@ -458,6 +458,13 @@ include '../includes/faculty_header.php';
     <textarea id="description_moderate" name="description" rows="3" placeholder="Provide context, witnesses, or devices involved."></textarea>
   </div>
 
+    <div class="field upload-field">
+      <label for="moderatePhoto" class="field-label">Attach photo (optional)</label>
+      <input type="file" id="lightPhoto" name="photo" accept="image/*" onchange="previewPhoto(this, 'moderatePreview')" class="file-control">
+      <span class="helper-text">Accepted formats: JPG, PNG, or WEBP up to 5MB.</span>
+      <img id="moderatePreview" class="photo-preview" alt="Mmoderate offense preview" hidden>
+    </div>
+
     <div class="form-actions">
     <button type="submit" class="btn btn-primary">Submit violation</button>
   </div>

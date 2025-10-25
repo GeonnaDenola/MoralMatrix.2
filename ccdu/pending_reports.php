@@ -1,5 +1,8 @@
 <?php
 session_start();
+//echo $_SERVER['DOCUMENT_ROOT'];
+//die();
+
 include '../includes/header.php';
 include '../config.php';
 include 'page_buttons.php';
@@ -31,6 +34,12 @@ function highlight($text, $needle){
     $safe = h($text);
     $needle = preg_quote(h($needle), '/');
     return preg_replace("/($needle)/i", '<mark class="pr-hl">$1</mark>', $safe);
+}
+
+function labelize($text) {
+    // Replace underscores and hyphens with spaces, lowercase → title case
+    $clean = str_replace(['_', '-'], ' ', trim((string)$text));
+    return ucwords(strtolower($clean));
 }
 
 /* ----------------------- Read query params ----------------------- */
@@ -236,7 +245,7 @@ function build_query(array $overrides=[]): string {
       <?php while ($row = $result->fetch_assoc()): ?>
         <?php
           $violationId   = (int)$row['violation_id'];
-          $photo         = trim($row['photo'] ?? '');
+      //    $photo         = trim($row['photo'] ?? '');
           $firstName     = $row['student_first_name'] ?? '';
           $lastName      = $row['student_last_name'] ?? '';
           $fullName      = trim($firstName.' '.$lastName);
@@ -253,11 +262,33 @@ function build_query(array $overrides=[]): string {
           $courseLine    = trim(h($course).' '.h($level).'-'.h($section));
           $reportedAt    = h(date('M d, Y · h:i A', strtotime($row['reported_at'] ?? '')));
           $ago           = time_ago($row['reported_at'] ?? '');
+
+$photo = trim($row['photo'] ?? '');
+$submittedRole = strtolower(trim($row['submitted_role'] ?? ''));
+
+// Normalize photo path — handle cases where DB already stores 'faculty/uploads/...'
+if ($photo !== '') {
+    // Remove leading folder names if already included in DB
+    $photo = str_replace(['faculty/uploads/', 'security/uploads/', '../faculty/uploads/', '../security/uploads/'], '', $photo);
+
+    // Determine correct folder
+    if ($submittedRole === 'faculty') {
+        $photoWeb = "../faculty/uploads/" . $photo;
+    } elseif ($submittedRole === 'security') {
+        $photoWeb = "../security/uploads/" . $photo;
+    } else {
+        $photoWeb = "uploads/" . $photo;
+    }
+} else {
+    $photoWeb = '';
+}
         ?>
         <article class="pr-card">
           <div class="pr-media">
             <?php if ($photo !== ''): ?>
-              <img src="uploads/<?= h($photo) ?>" alt="Evidence photo for <?= h($fullName) ?>" loading="lazy"/>
+             <img src="<?= h($photoWeb) ?>"
+         alt="Evidence photo for <?= h($fullName) ?>"
+         loading="lazy" />
             <?php else: ?>
               <div class="pr-media__placeholder" aria-label="No evidence photo provided">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM3 15l5-5 4 4 3-3 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -276,7 +307,8 @@ function build_query(array $overrides=[]): string {
               </div>
               <div class="pr-meta-row">
                 <span class="pr-label">Course</span>
-                <span class="pr-value"><?= $courseLine ?></span>
+                <span class="pr-value"><?= h(labelize($courseLine)) ?></span>
+
               </div>
 
               <div class="pr-chips">
@@ -284,7 +316,7 @@ function build_query(array $overrides=[]): string {
                   <span class="pr-chip pr-chip--category" data-val="<?= h($categoryLbl) ?>"><?= h($categoryLbl) ?></span>
                 <?php endif; ?>
                 <?php if ($type): ?>
-                  <span class="pr-chip pr-chip--type"><?= h($type) ?></span>
+                  <span class="pr-chip pr-chip--type"><?= h(labelize($type)) ?></span>
                 <?php endif; ?>
               </div>
 
