@@ -267,21 +267,28 @@ $photo = trim($row['photo'] ?? '');
 $submittedRole = strtolower(trim($row['submitted_role'] ?? ''));
 
 // Normalize photo path — handle cases where DB already stores 'faculty/uploads/...'
+$photo = trim($row['photo'] ?? '');
+$submittedRole = strtolower(trim($row['submitted_role'] ?? ''));
+
+$photoWeb = BASE_URL . '/uploads/placeholder.png'; // default placeholder
+
 if ($photo !== '') {
-    // Remove leading folder names if already included in DB
+    // Clean old paths
     $photo = str_replace(['faculty/uploads/', 'security/uploads/', '../faculty/uploads/', '../security/uploads/'], '', $photo);
 
-    // Determine correct folder
+    // Choose folder based on role
     if ($submittedRole === 'faculty') {
-        $photoWeb = "../faculty/uploads/" . $photo;
+        $folder = 'faculty/uploads';
     } elseif ($submittedRole === 'security') {
-        $photoWeb = "../security/uploads/" . $photo;
+        $folder = 'security/uploads';
     } else {
-        $photoWeb = "uploads/" . $photo;
+        $folder = 'uploads';
     }
-} else {
-    $photoWeb = '';
+
+    // Build full web URL path
+    $photoWeb = rtrim(BASE_URL, '/') . '/' . $folder . '/' . rawurlencode($photo);
 }
+
         ?>
         <article class="pr-card">
           <div class="pr-media">

@@ -118,9 +118,22 @@ if ($submitterId !== '' && $audienceRole !== null) {
     $body = implode(' | ', $details);
 
     $targetPath = $audienceRole . '/view_student.php?student_id=' . urlencode($studentId) . '#v' . $violationId;
-    $url = function_exists('mm_base_uri')
-        ? mm_base_uri($targetPath)
-        : rtrim((string)BASE_URL, '/') . '/' . ltrim($targetPath, '/');
+
+    // Build correct absolute URL for both local and Hostinger
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+
+    if (defined('BASE_URL') && strpos(BASE_URL, 'http') === 0) {
+        // BASE_URL is already a full domain (Hostinger)
+        $url = rtrim(BASE_URL, '/') . '/' . ltrim($targetPath, '/');
+    } elseif (defined('BASE_URL')) {
+        // Localhost with folder like /MoralMatrix
+        $url = $scheme . $host . rtrim(BASE_URL, '/') . '/' . ltrim($targetPath, '/');
+    } else {
+        // Fallback absolute path
+        $url = $scheme . $host . '/' . ltrim($targetPath, '/');
+    }
+
 
     try {
         Notify::create($conn, [
