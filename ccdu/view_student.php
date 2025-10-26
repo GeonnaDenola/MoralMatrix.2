@@ -1,6 +1,8 @@
 <?php
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
 include '../includes/header.php';
 require '../config.php';
+
 require __DIR__.'/_scanner.php';
 require 'violation_hrs.php';
 
@@ -12,6 +14,7 @@ if (!function_exists('labelize')) {
 }
 
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
 if (!empty($_SESSION['sms_alert']) && is_array($_SESSION['sms_alert'])) {
     $smsFlash = $_SESSION['sms_alert'];
     unset($_SESSION['sms_alert']);

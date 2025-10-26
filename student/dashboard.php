@@ -72,15 +72,15 @@ include '../includes/student_header.php';
     <h3 class="section-title">Your Community Service Hours</h3>
 
     <div class="hours-cards">
-        <div class="hours-card">
+        <div class="hours-card" title="Total hours of your required Community Service">
             <h4>Required</h4>
             <p class="hours required"><?= number_format($requiredHours, 2) ?> h</p>
         </div>
-        <div class="hours-card">
+        <div class="hours-card" title="Total hours of completed Community Service">
             <h4>Logged</h4>
             <p class="hours logged"><?= number_format($loggedHours, 2) ?> h</p>
         </div>
-        <div class="hours-card">
+        <div class="hours-card" title="Total hours of remaining Community Service">
             <h4>Remaining</h4>
             <p class="hours remaining"><?= number_format($remainingHours, 2) ?> h</p>
         </div>

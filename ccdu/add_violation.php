@@ -4,6 +4,8 @@ ob_start();
 session_start();
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
+
 require_once __DIR__ . '/../lib/email_lib.php';
 require_once __DIR__ . '/../lib/notify.php';
 

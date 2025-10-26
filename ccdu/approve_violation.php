@@ -5,6 +5,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
+
 require_once __DIR__ . '/../lib/notify.php';
 
 $accountType = strtolower((string)($_SESSION['account_type'] ?? ''));

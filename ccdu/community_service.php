@@ -2,6 +2,7 @@
 // /MoralMatrix/ccdu/community_service.php
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 require __DIR__ . '/../config.php';
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
 
 $conn = new mysqli(
   $database_settings['servername'],

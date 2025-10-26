@@ -1,6 +1,8 @@
 <?php
 include '../includes/header.php';
 include '../config.php';
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
+
 include 'page_buttons.php'; // (not used anymore, but left in place)
 include __DIR__ . '/_scanner.php';
 

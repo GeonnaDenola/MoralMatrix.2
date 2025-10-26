@@ -4,6 +4,7 @@ include '../includes/header.php';
 include 'page_buttons.php';
 
 require '../config.php';
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
 require_once __DIR__ . '/../lib/email_lib.php';
 include __DIR__ . '/_scanner.php';
 

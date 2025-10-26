@@ -1,6 +1,8 @@
 <?php
 include '../config.php';
 
+require_once __DIR__ . '/../auth.php'; // adjust path as needed
+
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 if (empty($_SESSION['account_type'])) {
