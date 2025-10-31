@@ -1,9 +1,10 @@
 <?php
+declare(strict_types=1);
 require '../auth.php';
 require_role('super_admin');
 
 include '../includes/superadmin_header.php';
-require '../config.php';
+require_once __DIR__ . '/../config.php';
 
 $basePath = defined('BASE_PATH') ? BASE_PATH : '';
 

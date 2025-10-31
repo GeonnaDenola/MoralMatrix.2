@@ -216,49 +216,30 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $stmtAcc->close();
 
         /* Student QR generate & save + key record */
-        $qrFilePath = null;
-        if($account_type === 'student'){
-            // ensure qr_key exists or insert a new one
-            $qrKey = bin2hex(random_bytes(32)); // 64 hex
-            // try insert; if duplicate due to unique(student_id), fetch existing
-            $insQR = $conn->prepare("INSERT IGNORE INTO student_qr_keys (student_id, qr_key) VALUES (?, ?)");
-            $insQR->bind_param("ss", $idNumber, $qrKey);
-            $insQR->execute();
-            $affected = $conn->affected_rows;
-            $insQR->close();
+/* Student QR key (no files) */
+$qrKeyForEmail = null;
+if ($account_type === 'student') {
+    $qrKey = bin2hex(random_bytes(32)); // 64-hex key
+    $insQR = $conn->prepare("INSERT IGNORE INTO student_qr_keys (student_id, qr_key) VALUES (?, ?)");
+    $insQR->bind_param("ss", $idNumber, $qrKey);
+    $insQR->execute();
+    $affected = $conn->affected_rows;
+    $insQR->close();
 
-            if($affected === 0){
-                $sel = $conn->prepare("SELECT qr_key FROM student_qr_keys WHERE student_id = ? LIMIT 1");
-                $sel->bind_param("s", $idNumber);
-                $sel->execute();
-                $row = $sel->get_result()->fetch_assoc();
-                if(!empty($row['qr_key'])){
-                    $qrKey = $row['qr_key'];
-                }
-                $sel->close();
-            }
-
-            // Build absolute URL to resolver at app root
-            $qrURL = app_base_url() . '/qr.php?k=' . urlencode($qrKey);
-
-            // Generate SVG
-            $options = new QROptions([
-                'outputType' => QRCode::OUTPUT_MARKUP_SVG,
-                'scale'      => 6,
-                'eccLevel'   => QRCode::ECC_L,
-            ]);
-            $svg = (new QRCode($options))->render($qrURL);
-
-            // Save as project_root/uploads/qrcodes/{student_id}.svg
-            $qrDir = $appRoot . '/uploads/qrcodes';
-            if(!is_dir($qrDir) && !mkdir($qrDir, 0777, true)){
-                throw new RuntimeException('⚠️ Failed to create QR directory.');
-            }
-            $qrFilePath = $qrDir . '/' . $idNumber . '.svg';
-            if(file_put_contents($qrFilePath, $svg) === false){
-                throw new RuntimeException('⚠️ Failed to save QR file.');
-            }
+    if ($affected === 0) { // already exists, fetch it
+        $sel = $conn->prepare("SELECT qr_key FROM student_qr_keys WHERE student_id = ? LIMIT 1");
+        $sel->bind_param("s", $idNumber);
+        $sel->execute();
+        $row = $sel->get_result()->fetch_assoc();
+        if (!empty($row['qr_key'])) {
+            $qrKey = $row['qr_key'];
         }
+        $sel->close();
+    }
+
+    $qrKeyForEmail = $qrKey; // keep for email section
+}
+
 
         // All good
         $conn->commit();
@@ -282,22 +263,52 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
             $loginUrl = app_base_url() . '/login.php';
 
-            $html = '
-                <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
-                    <h2>Welcome, '.htmlspecialchars($toName).'</h2>
-                    <p>Your account has been created.</p>
-                    <p><strong>'.$idLabel.':</strong> '.htmlspecialchars($idNumber).'</p>
-                    <p>Sign in here: <a href="'.htmlspecialchars($loginUrl).'">'.htmlspecialchars($loginUrl).'</a></p>'.
-                    ($account_type==='student' ? '<p>Your QR code is attached (SVG).</p>' : '').
-                '</div>';
+$qrHtml = '';
+if ($account_type === 'student' && !empty($qrKeyForEmail)) {
+    $qrURL = app_base_url() . '/qr.php?k=' . urlencode($qrKeyForEmail);
+
+    // Render PNG to BASE64 in memory
+    $opts = new QROptions([
+        'outputType'    => QRCode::OUTPUT_IMAGE_PNG,
+        'scale'         => 6,              // good for email
+        'eccLevel'      => QRCode::ECC_M,  // M or Q is enough
+        'addQuietzone'  => true,
+        'quietzoneSize' => 2,
+        'imageBase64'   => true,           // return base64 string
+    ]);
+    $png = (new QRCode($opts))->render($qrURL);
+    if (strpos($png, 'base64,') !== false) {
+        $png = substr($png, strpos($png, 'base64,') + 7);
+    }
+
+    // Embed as CID (no files)
+    $cid = 'qr_' . preg_replace('/[^A-Za-z0-9]/', '_', $idNumber);
+    $mail->addStringEmbeddedImage(base64_decode($png), $cid, 'qr.png', 'base64', 'image/png');
+
+    // HTML that shows the inline QR and a link that works everywhere
+    $qrHtml = '
+        <p><strong>Your QR Code:</strong></p>
+        <p><img src="cid:' . $cid . '" alt="QR Code" style="width:160px;height:auto;border:0;"></p>
+        <p><a href="' . htmlspecialchars($qrURL) . '" target="_blank">Open QR in browser</a></p>';
+}
+
+$html = '
+    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.5">
+        <h2>Welcome, ' . htmlspecialchars($toName) . '</h2>
+        <p>Your account for <strong>MoralMatrix</strong> has been successfully created.</p>
+        <p><strong>' . $idLabel . ':</strong> ' . htmlspecialchars($idNumber) . '</p>
+        <p><strong>Email:</strong>' . htmlspecialchars($toEmail) . '</a></p>
+        <p><strong>Temporary Password:</strong> ' . htmlspecialchars($formValues['password']) . '</p>
+        <p>Sign in here: <a href="' . htmlspecialchars($loginUrl) . '">' . htmlspecialchars($loginUrl) . '</a></p>
+        ' . $qrHtml . '
+        <p style="color:#555;font-size:13px;">Please change your password after your first login for security reasons.</p>
+    </div>';
+
 
             $mail->Subject = 'Welcome to MoralMatrix';
             $mail->Body    = $html;
             $mail->AltBody = strip_tags(str_replace(['<br>','<br/>','<br />'], "\n", $html));
 
-            if($account_type === 'student' && $qrFilePath && is_file($qrFilePath)){
-                $mail->addAttachment($qrFilePath);
-            }
             @$mail->send();
         } catch(Throwable $mailErr){
             error_log('Welcome email error: '.$mailErr->getMessage());
@@ -308,7 +319,6 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
     } catch(Throwable $e){
         // Rollback if in tx
-        if($conn->errno === 0){ /* nothing */ }
         try { $conn->rollback(); } catch(Throwable $ignore){}
         $msg = $e->getMessage();
         // If this was a mysqli exception, prefer its message

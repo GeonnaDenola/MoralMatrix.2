@@ -67,12 +67,30 @@ if (!password_verify($inputPassword, $row['password'])) {
 
 session_regenerate_id(true);
 
+$role = strtolower(trim((string)$row['account_type']));
+$role = preg_replace('/[\s-]+/', '_', $role); // e.g. "Super Admin" -> "super_admin"
+
+$actorId = !empty($row['id_number']) ? $row['id_number'] : $row['record_id'];
+
 // Common session keys
 $_SESSION['record_id']    = $row['record_id'];
-$_SESSION['actor_id']     = $row['id_number'];
 $_SESSION['email']        = $row['email'];
 $_SESSION['account_type'] = $row['account_type'];
 $_SESSION['actor_role']   = strtolower((string)$row['account_type']);
+// after verifying password, before writing to $_SESSION
+session_regenerate_id(true);
+
+// SAFE actor_id (never empty, avoids empty('0') trap)
+$actorId = '';
+if (isset($row['id_number']) && trim((string)$row['id_number']) !== '') {
+    $actorId = trim((string)$row['id_number']);
+} else {
+    $actorId = 'acct:' . (string)$row['record_id']; // guaranteed non-empty
+}
+
+$_SESSION['actor_id'] = $actorId;
+
+
 
 if ($_SESSION['actor_role'] === 'student') {
   $_SESSION['student_id'] = $row['id_number'];
@@ -92,7 +110,7 @@ $conn->close();
 // ✅ Route by role (no /MoralMatrix prefix)
 switch ($role) {
   case 'super_admin':
-    header("Location: $basePath/super_admin/dashboard.php"); exit;
+    header("Location: $basePath/super_admin/index.php"); exit;
   case 'administrator':
     header("Location: $basePath/admin/index.php"); exit;
   case 'faculty':

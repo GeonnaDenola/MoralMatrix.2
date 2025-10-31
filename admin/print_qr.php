@@ -95,13 +95,24 @@ try {
 
 $binary = maybe_decode_data_uri($binary);
 
-// Save a copy of the SVG file
+// ✅ Always save to project_root/uploads/qrcodes
 $qrDir = dirname(__DIR__) . '/uploads/qrcodes';
+
 if (!is_dir($qrDir)) {
-  @mkdir($qrDir, 0755, true);
+    if (!mkdir($qrDir, 0755, true) && !is_dir($qrDir)) {
+        throw new RuntimeException("❌ Cannot create directory: $qrDir");
+    }
 }
+
 $file = $qrDir . '/' . $studentId . '.svg';
-@file_put_contents($file, $binary);
+
+// Save the SVG file
+if (file_put_contents($file, $binary) === false) {
+    throw new RuntimeException("❌ Failed to save QR SVG to: $file");
+}
+
+error_log("✅ QR SVG saved to: " . realpath($file));
+
 
 /* ---------------- Output ---------------- */
 while (ob_get_level() > 0) ob_end_clean();
